@@ -294,7 +294,7 @@ class ImageCompressor(ToolPlugin):
         
         # 设置区域
         settings_card = Card(title="压缩设置")
-        settings_layout = QGridLayout(file_card.content)
+        settings_layout = QGridLayout(settings_card.content)
         
         settings_layout.addWidget(QLabel("输出格式:"), 0, 0)
         self.format_combo = QComboBox()
@@ -1067,7 +1067,7 @@ class ToolboxWindow(QMainWindow):
         for i in range(self.nav_layout.count()):
             widget = self.nav_layout.itemAt(i).widget()
             if isinstance(widget, SidebarButton):
-                widget.setChecked(widget.text().contains(name))
+                widget.setChecked(name in widget.text())
         
         # 切换页面
         if name in self.plugins:
