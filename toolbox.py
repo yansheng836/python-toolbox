@@ -444,6 +444,7 @@ class ImageCompressor(ToolPlugin):
     
     def compression_finished(self, success, message):
         self.start_btn.setEnabled(True)
+        self.status_label.setText("")
         if success:
             QMessageBox.information(self.parent, "完成", message)
         else:
