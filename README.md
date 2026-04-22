@@ -2,42 +2,71 @@
 
 ---
 
-# ToolBox
+# 工具箱 (ToolBox)
 
-工具箱应用。
+基于 PyQt6 的 Windows 桌面工具集，深色 UI，支持插件扩展。
 
-用Python写一个Windows桌面应用-工具箱，需要有漂亮的UI，可以扩展。支持图片压缩，一组图片转PDF等功能。
+初始模板来源：https://www.kimi.com/chat/19db0c86-0b22-8d2f-8000-09135f9f8673?chat_enter_method=history
 
-https://www.kimi.com/chat/19db0c86-0b22-8d2f-8000-09135f9f8673?chat_enter_method=history
+## 功能
+
+- **图片压缩** — 批量压缩 JPG/PNG/WebP，可调质量（1-100%），支持自定义输出目录和格式转换
+- **图片转PDF** — 多张图片合并为单个 PDF，支持调整顺序，页面大小可选（自动/A4/A3/原图）
+- **插件扩展** — 将自定义工具放入 `plugins/` 目录即可自动加载
+
+## 安装依赖
+
+```shell
+pip install -r requirements.txt
+```
+
+依赖包：
+
+| 包 | 用途 |
+|----|------|
+| PyQt6 | GUI 框架 |
+| Pillow | 图片处理 |
+| img2pdf | PDF 转换（首选） |
+| PyMuPDF | PDF 转换（备选） |
+| pyinstaller | 打包为可执行文件 |
+
+## 运行
+
+```shell
+python toolbox.py
+```
 
 ## 打包
 
-使用pyinstaller.bat，能正常打包，但是程序有问题，运行不了。
-
 ```shell
-# ========== Windows ==========
-# 单文件 EXE
-pyinstaller --onefile --windowed toolbox.py
-
-# 完整配置（推荐）
+# 推荐：使用 spec 文件打包
 pyinstaller toolbox.spec
+
+# 快速单文件打包
+pyinstaller --onefile --windowed toolbox.py
 
 # 使用 UPX 压缩（减小体积）
 pyinstaller --upx-dir=/path/to/upx toolbox.spec
-
-
-# ========== macOS ==========
-# 生成 .app Bundle
-pyinstaller --windowed --onefile --osx-bundle-identifier com.company.toolbox toolbox.py
-
-# 签名（可选，避免安全警告）
-codesign --deep --force --verify --verbose --sign "Developer ID" dist/Toolbox.app
-
-
-# ========== Linux ==========
-# 生成可执行文件
-pyinstaller --onefile --windowed toolbox.py
-
-# 创建 .deb/.rpm 需要使用其他工具（如 fpm）
 ```
 
+## 插件开发
+
+在 `plugins/` 目录下新建 `.py` 文件，继承 `ToolPlugin` 并实现 `create_ui()`：
+
+```python
+from toolbox import ToolPlugin
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
+
+class MyTool(ToolPlugin):
+    name = "我的工具"
+    description = "工具描述"
+    icon = "🔧"
+
+    def create_ui(self) -> QWidget:
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.addWidget(QLabel("Hello, World!"))
+        return widget
+```
+
+启动时会自动发现并加载，无需修改主程序。

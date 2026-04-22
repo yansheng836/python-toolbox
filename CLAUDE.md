@@ -21,8 +21,6 @@ pyinstaller --onefile --windowed toolbox.py
 pyinstaller --upx-dir=/path/to/upx toolbox.spec
 ```
 
-> Note: The built executable currently has runtime issues (packaging succeeds but the app won't run). `toolbox2.py` is an older/alternative version.
-
 ## Architecture
 
 `toolbox.py` is a single-file PyQt6 desktop app (工具箱 - "Toolbox") with a plugin-based architecture.
@@ -30,7 +28,7 @@ pyinstaller --upx-dir=/path/to/upx toolbox.spec
 ### Core Structure
 
 - `ToolboxWindow` — main window; owns the sidebar (`QVBoxLayout`) and a `QStackedWidget` for tool pages
-- `ThemeManager` / `Theme` — dark/light palette; generates Qt stylesheets
+- `Theme` — dark/light color palette constants; applied via Qt stylesheets
 - `ToolPlugin` (abstract base) — all tools inherit this; must implement `create_ui() -> QWidget`
 - Built-in tools: `ImageCompressor`, `ImageToPDF`
 - External plugins: auto-discovered from `plugins/` via `importlib`; added dynamically to sidebar and stack
