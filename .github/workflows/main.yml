@@ -1,0 +1,92 @@
+name: Daily Execution of Main Script
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '0 16 1 * *'  # 每月北京时间 00:00（UTC 16:00）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Set Beijing Timezone
+      uses: szenius/set-timezone@v1.2
+      with:
+        timezoneLinux: "Asia/Shanghai"
+
+    # Check out repository under $GITHUB_WORKSPACE, so the job can access it
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Run using Python 3.8 for consistency and aiohttp
+    - name: Set up Python 3.12.7
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12.7'
+        architecture: 'x64'
+        cache: 'pip'
+
+    # 安装字体
+    - name: Install Chinese Fonts
+      run: |
+        # matplotlib中文乱码，需要安装字体包
+        sudo apt-get update
+        sudo apt-get install -y fonts-wqy-zenhei fonts-wqy-microhei fonts-noto-cjk
+
+    # Install dependencies with `pip`
+    - name: Install requirements
+      run: |
+        python3 -m pip install --upgrade pip setuptools wheel
+        python3 -m pip install -r requirements.txt
+
+    # Generate all statistics images
+    - name: Spider data and dealwith
+      run: |
+        python3 --version
+        python3 download_star_repo_from_user.py
+        python3 download_owner_repo_from_user.py
+      env:
+        ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        EXCLUDED: ${{ secrets.EXCLUDED }}
+        EXCLUDED_LANGS: ${{ secrets.EXCLUDED_LANGS }}
+        EXCLUDE_FORKED_REPOS: true
+
+    # Commit all changed files to the repository
+    - name: Commit to the repo
+      run: |
+        echo 'Commit to the repo'
+        #git config --global user.name "yansheng836/github-api"
+        #git config --global user.email "github-api[bot]@yansheng836.github.io"
+        git config --global user.name "yansheng836bot"
+        git config --global user.email "yansheng836bot@163.com"
+        # 兼容git status中文乱码问题
+        git config --global core.quotepath false
+        # 配置 Git 自动处理换行符：git windows 有^M linux没有
+        # Windows 系统推荐设置：
+        # git config --global core.autocrlf true
+        # Linux/macOS 系统推荐设置
+        #git config --global core.autocrlf input
+        # 忽略行尾的回车
+        git config --global core.whitespace cr-at-eol
+
+        git status
+        git add .
+        # Force the build to succeed, even if no files were changed
+
+        #git commit -m 'Update generated files' || true
+        # 如果文件没有更新时
+        if [[ -n $(git status --porcelain) ]]; then
+            git commit -m "Update generated files on $(date +'%Y-%m-%d %H:%M:%S')"
+            git push
+        else
+            echo '没改变，不提交'
+            #git commit --allow-empty -m 'Update generated files(no file change)'
+        fi
+
