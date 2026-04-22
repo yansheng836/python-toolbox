@@ -1,0 +1,1 @@
+pyinstaller --name="工具箱" --windowed --onefile --icon=icon.ico toolbox.py
