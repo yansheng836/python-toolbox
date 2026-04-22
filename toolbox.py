@@ -1025,7 +1025,7 @@ class ToolboxWindow(QMainWindow):
             
             # 创建导航按钮
             btn = SidebarButton(plugin.name, plugin.icon)
-            btn.clicked.connect(lambda: self.switch_plugin(plugin.name))
+            btn.clicked.connect(lambda checked, n=plugin.name: self.switch_plugin(n))
             self.nav_layout.addWidget(btn)
             
             # 添加页面
