@@ -264,7 +264,7 @@ class ImageCompressor(ToolPlugin):
         
         # 文件选择区域
         file_card = Card(title="选择图片")
-        file_layout = QVBoxLayout(file_card.content)
+        file_layout = file_card.content_layout
         
         self.file_list = QTextEdit()
         self.file_list.setPlaceholderText("拖拽图片到此处，或点击按钮选择...")
@@ -294,7 +294,8 @@ class ImageCompressor(ToolPlugin):
         
         # 设置区域
         settings_card = Card(title="压缩设置")
-        settings_layout = QGridLayout(settings_card.content)
+        settings_layout = QGridLayout()
+        settings_card.content_layout.addLayout(settings_layout)
         
         settings_layout.addWidget(QLabel("输出格式:"), 0, 0)
         self.format_combo = QComboBox()
@@ -347,7 +348,7 @@ class ImageCompressor(ToolPlugin):
         
         # 进度和操作
         progress_card = Card()
-        progress_layout = QVBoxLayout(progress_card.content)
+        progress_layout = progress_card.content_layout
         
         self.progress_bar = QProgressBar()
         self.progress_bar.setStyleSheet("""
@@ -536,7 +537,7 @@ class ImageToPDF(ToolPlugin):
         
         # 图片列表
         list_card = Card(title="图片列表")
-        list_layout = QVBoxLayout(list_card.content)
+        list_layout = list_card.content_layout
         
         self.table = QTableWidget()
         self.table.setColumnCount(3)
@@ -584,7 +585,8 @@ class ImageToPDF(ToolPlugin):
         
         # 设置
         settings_card = Card(title="PDF设置")
-        settings_layout = QGridLayout(settings_card.content)
+        settings_layout = QGridLayout()
+        settings_card.content_layout.addLayout(settings_layout)
         
         settings_layout.addWidget(QLabel("页面大小:"), 0, 0)
         self.size_combo = QComboBox()
