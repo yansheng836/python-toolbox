@@ -602,8 +602,27 @@ class ImageToPDF(ToolPlugin):
             }
         """)
         settings_layout.addWidget(self.size_combo, 0, 1)
-        
-        settings_layout.addWidget(QLabel("输出路径:"), 1, 0)
+
+        # 新增：压缩选项
+        settings_layout.addWidget(QLabel("启用压缩:"), 1, 0)
+        self.compress_check = QCheckBox()
+        self.compress_check.setChecked(True)
+        settings_layout.addWidget(self.compress_check, 1, 1)
+
+        settings_layout.addWidget(QLabel("JPEG质量:"), 2, 0)
+        quality_layout = QHBoxLayout()
+        self.quality_slider = QSlider(Qt.Orientation.Horizontal)
+        self.quality_slider.setRange(1, 100)
+        self.quality_slider.setValue(85)
+        self.quality_label = QLabel("85%")
+        self.quality_slider.valueChanged.connect(
+            lambda v: self.quality_label.setText(f"{v}%")
+        )
+        quality_layout.addWidget(self.quality_slider)
+        quality_layout.addWidget(self.quality_label)
+        settings_layout.addLayout(quality_layout, 2, 1)
+
+        settings_layout.addWidget(QLabel("输出路径:"), 3, 0)
         path_layout = QHBoxLayout()
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("选择保存位置...")
@@ -621,7 +640,7 @@ class ImageToPDF(ToolPlugin):
         self.browse_btn.setMaximumWidth(80)
         path_layout.addWidget(self.output_path)
         path_layout.addWidget(self.browse_btn)
-        settings_layout.addLayout(path_layout, 1, 1)
+        settings_layout.addLayout(path_layout, 3, 1)
         
         layout.addWidget(settings_card)
         
