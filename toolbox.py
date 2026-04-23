@@ -1475,10 +1475,22 @@ class WelcomePage(QWidget):
 
 # ==================== 主窗口 ====================
 class ToolboxWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, app=None):
         super().__init__()
+        self._app = app
         self.setWindowTitle("工具箱")
         self.setMinimumSize(1200, 800)
+
+        # 设置窗口图标
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        icon_path = os.path.join(current_dir, "icon.ico")
+        if os.path.exists(icon_path):
+            # 使用绝对路径
+            abs_icon_path = os.path.abspath(icon_path)
+            self.setWindowIcon(QIcon(abs_icon_path))
+            # 确保任务栏图标也设置
+            if hasattr(self, '_app') and self._app:
+                self._app.setWindowIcon(QIcon(abs_icon_path))
         
         # 加载设置
         self.settings = QSettings("Toolbox", "App")
@@ -1665,10 +1677,16 @@ class ToolboxWindow(QMainWindow):
             self.tray = QSystemTrayIcon(self)
             self.tray.setToolTip("工具箱")
             
-            # 简单图标
-            pixmap = QPixmap(32, 32)
-            pixmap.fill(QColor("#6366f1"))
-            self.tray.setIcon(QIcon(pixmap))
+            # 设置图标
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            icon_path = os.path.join(current_dir, "icon.ico")
+            if os.path.exists(icon_path):
+                self.tray.setIcon(QIcon(icon_path))
+            else:
+                # 如果没有自定义图标，使用简单的彩色图标
+                pixmap = QPixmap(32, 32)
+                pixmap.fill(QColor("#6366f1"))
+                self.tray.setIcon(QIcon(pixmap))
             
             menu = QMenu()
             show_action = menu.addAction("显示")
@@ -1709,17 +1727,31 @@ class ToolboxWindow(QMainWindow):
 # ==================== 入口 ====================
 def main():
     app = QApplication(sys.argv)
-    
+
     # 设置应用属性
     app.setApplicationName("工具箱")
     app.setApplicationVersion("1.0.0")
-    
+    app.setOrganizationName("Toolbox")
+    app.setOrganizationDomain("toolbox.com")
+
     # 设置字体
     font = QFont("Microsoft YaHei UI", 10)
     app.setFont(font)
+
+    # 设置任务栏和窗口图标
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    icon_path = os.path.join(current_dir, "icon.ico")
+    if os.path.exists(icon_path):
+        app_icon = QIcon(icon_path)
+        # 尝试多种方法设置任务栏图标
+        app.setWindowIcon(app_icon)
+        # 设置应用 ID，这有助于 Windows 识别图标
+        app.setDesktopFileName("toolbox.desktop")
+        # 再次设置确保生效
+        app.setWindowIcon(app_icon)
     
     # 创建并显示窗口
-    window = ToolboxWindow()
+    window = ToolboxWindow(app)
     window.show()
     
     sys.exit(app.exec())
