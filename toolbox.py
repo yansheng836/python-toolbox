@@ -793,7 +793,30 @@ class PDFWorker(QThread):
         self.page_size = page_size
         self.compress = compress
         self.quality = quality
-    
+
+    @staticmethod
+    def compress_image(image_path, quality):
+        """压缩图片到内存，返回 BytesIO 对象"""
+        import io
+        from PIL import Image
+
+        img = Image.open(image_path)
+        if img.mode in ('RGBA', 'LA', 'P'):
+            # 转为 RGB（去掉透明通道，用白色背景）
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            if img.mode in ('RGBA', 'LA'):
+                background.paste(img, mask=img.split()[-1])
+                img = background
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+
+        buf = io.BytesIO()
+        img.save(buf, format='JPEG', quality=quality, optimize=True)
+        buf.seek(0)
+        return buf
+
     def run(self):
         try:
             if IMG2PDF_AVAILABLE:
