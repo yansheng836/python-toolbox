@@ -676,7 +676,8 @@ class ImageToPDF(ToolPlugin):
         self.update_table()
     
     def remove_selected(self):
-        indices = sorted([i.row() for i in self.table.selectedIndexes()], reverse=True)
+        # 使用 set 去重，避免同一行的多个单元格索引被重复处理
+        indices = sorted(set([i.row() for i in self.table.selectedIndexes()]), reverse=True)
         for i in indices:
             if 0 <= i < len(self.files):
                 self.files.pop(i)
