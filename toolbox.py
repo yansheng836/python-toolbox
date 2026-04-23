@@ -1436,8 +1436,8 @@ class WelcomePage(QWidget):
             for plugin_name, plugin in self.plugins.items():
                 if text == "图片压缩" and "图片压缩" in plugin.name:
                     text = plugin.name
-                elif text == "图片缩放" and "Image Scaler" in plugin.name:
-                    text = "图片批量缩放"
+                elif text == "图片缩放" and ("图片批量缩放" in plugin.name or "Image Scaler" in plugin.name):
+                    text = plugin.name
                 elif text == "图片转PDF" and "图片转PDF" in plugin.name:
                     text = plugin.name
                 elif text == "图片格式转换" and "图片格式转换" in plugin.name:
@@ -1628,16 +1628,16 @@ class ToolboxWindow(QMainWindow):
         try:
             plugin = plugin_class(self)
             self.plugins[plugin.name] = plugin
-            
+
             # 创建导航按钮
             btn = SidebarButton(plugin.name, plugin.icon)
             btn.clicked.connect(lambda checked, n=plugin.name: self.switch_plugin(n))
             self.nav_layout.addWidget(btn)
-            
+
             # 添加页面
             widget = plugin.get_widget()
             self.content.addWidget(widget)
-            
+
         except Exception as e:
             print(f"注册插件失败 {plugin_class.name}: {e}")
     
@@ -1653,23 +1653,21 @@ class ToolboxWindow(QMainWindow):
         plugins_dir = Path("plugins")
         if not plugins_dir.exists():
             return
-            
+
         for file in plugins_dir.glob("*.py"):
             try:
                 spec = importlib.util.spec_from_file_location(file.stem, file)
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)
-                
+
                 for attr_name in dir(module):
                     attr = getattr(module, attr_name)
-                    if (isinstance(attr, type) and 
-                        issubclass(attr, ToolPlugin) and 
+                    if (isinstance(attr, type) and
+                        issubclass(attr, ToolPlugin) and
                         attr != ToolPlugin):
                         self.register_plugin(attr)
             except Exception as e:
                 print(f"加载插件失败 {file}: {e}")
-                import traceback
-                traceback.print_exc()
     
     def switch_plugin(self, name):
         """切换插件页面"""
@@ -1678,7 +1676,7 @@ class ToolboxWindow(QMainWindow):
             widget = self.nav_layout.itemAt(i).widget()
             if isinstance(widget, SidebarButton):
                 widget.setChecked(name in widget.text())
-        
+
         # 切换页面
         if name in self.plugins:
             widget = self.plugins[name].get_widget()

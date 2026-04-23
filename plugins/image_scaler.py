@@ -10,8 +10,8 @@ except ImportError:
     PIL_AVAILABLE = False
 
 # 导入主程序中的ToolPlugin基类
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 try:
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from toolbox import ToolPlugin
 except ImportError:
     # 如果导入失败，定义一个简化的基类
@@ -374,7 +374,7 @@ class ImageScalerWidget(QWidget):
 
 class ImageScaler(ToolPlugin):
     icon = "📏"
-    name = "Image Scaler"
+    name = "图片批量缩放"
 
     def create_ui(self):
         return ImageScalerWidget()
