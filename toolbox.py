@@ -821,13 +821,33 @@ class PDFWorker(QThread):
         try:
             if IMG2PDF_AVAILABLE:
                 # 使用img2pdf
-                with open(self.output, "wb") as f:
-                    f.write(img2pdf.convert(self.files))
+                if self.compress:
+                    # 压缩所有图片
+                    compressed_images = []
+                    for i, img_path in enumerate(self.files):
+                        buf = self.compress_image(img_path, self.quality)
+                        compressed_images.append(buf)
+                        self.progress.emit(i + 1)
+
+                    with open(self.output, "wb") as f:
+                        f.write(img2pdf.convert(compressed_images))
+                else:
+                    # 不压缩，直接用原图
+                    for i, _ in enumerate(self.files):
+                        self.progress.emit(i + 1)
+                    with open(self.output, "wb") as f:
+                        f.write(img2pdf.convert(self.files))
             elif FITZ_AVAILABLE:
                 # 使用PyMuPDF
                 doc = fitz.open()
                 for i, img_path in enumerate(self.files):
-                    img = fitz.open(img_path)
+                    if self.compress:
+                        # 使用压缩后的图片
+                        buf = self.compress_image(img_path, self.quality)
+                        img = fitz.open("jpg", buf.getvalue())
+                    else:
+                        img = fitz.open(img_path)
+
                     rect = img[0].rect
                     pdfbytes = img.convert_to_pdf()
                     img_pdf = fitz.open("pdf", pdfbytes)
@@ -839,17 +859,22 @@ class PDFWorker(QThread):
                 # 使用PIL
                 images = []
                 for i, f in enumerate(self.files):
-                    img = Image.open(f)
-                    if img.mode in ('RGBA', 'LA', 'P'):
-                        img = img.convert('RGB')
+                    if self.compress:
+                        # 使用压缩后的图片
+                        buf = self.compress_image(f, self.quality)
+                        img = Image.open(buf)
+                    else:
+                        img = Image.open(f)
+                        if img.mode in ('RGBA', 'LA', 'P'):
+                            img = img.convert('RGB')
                     images.append(img)
                     self.progress.emit(i + 1)
-                
+
                 if images:
                     images[0].save(
-                        self.output, "PDF", 
-                        resolution=100.0, 
-                        save_all=True, 
+                        self.output, "PDF",
+                        resolution=100.0,
+                        save_all=True,
                         append_images=images[1:]
                     )
             
