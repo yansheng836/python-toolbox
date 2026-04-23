@@ -517,6 +517,231 @@ class CompressionWorker(QThread):
             self.finished.emit(False, f"压缩失败: {str(e)}")
 
 
+class FormatConvertWorker(QThread):
+    """图片格式转换工作线程"""
+    progress = pyqtSignal(int)
+    status = pyqtSignal(str)
+    finished = pyqtSignal(bool, str)
+
+    FORMAT_MAP = {
+        "JPEG": ("JPEG", "jpg"),
+        "PNG":  ("PNG",  "png"),
+        "WebP": ("WEBP", "webp"),
+        "BMP":  ("BMP",  "bmp"),
+        "TIFF": ("TIFF", "tiff"),
+        "GIF":  ("GIF",  "gif"),
+    }
+
+    def __init__(self, files, output_dir, target_fmt):
+        super().__init__()
+        self.files = files
+        self.output_dir = output_dir
+        self.target_fmt = target_fmt
+
+    def run(self):
+        try:
+            processed = 0
+            pil_fmt, ext = self.FORMAT_MAP[self.target_fmt]
+            for i, file_path in enumerate(self.files):
+                self.status.emit(f"正在转换: {os.path.basename(file_path)}")
+                img = Image.open(file_path)
+                img = self._prepare_image(img, pil_fmt)
+                base = os.path.splitext(os.path.basename(file_path))[0]
+                out_dir = self.output_dir or os.path.dirname(file_path)
+                out_path = os.path.join(out_dir, f"{base}.{ext}")
+                img.save(out_path, pil_fmt)
+                processed += 1
+                self.progress.emit(i + 1)
+            self.finished.emit(True, f"成功转换 {processed} 张图片！")
+        except Exception as e:
+            self.finished.emit(False, f"转换失败: {str(e)}")
+
+    def _prepare_image(self, img, pil_fmt):
+        """处理模式兼容性，JPEG/BMP 不支持透明通道"""
+        if pil_fmt in ("JPEG", "BMP"):
+            if img.mode == "P":
+                img = img.convert("RGBA")
+            if img.mode in ("RGBA", "LA"):
+                bg = Image.new("RGB", img.size, (255, 255, 255))
+                bg.paste(img, mask=img.split()[-1])
+                return bg
+            return img.convert("RGB") if img.mode != "RGB" else img
+        if pil_fmt == "GIF":
+            return img.convert("P") if img.mode not in ("P", "L", "RGB") else img
+        return img  # PNG/WebP/TIFF 支持透明，直接保留
+
+
+class FormatConverter(ToolPlugin):
+    """图片格式批量转换工具"""
+    name = "图片格式转换"
+    description = "批量转换图片格式，支持 JPEG/PNG/WebP/BMP/TIFF/GIF"
+    icon = "🔄"
+
+    FORMATS = ["JPEG", "PNG", "WebP", "BMP", "TIFF", "GIF"]
+
+    def create_ui(self) -> QWidget:
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(16)
+
+        title = QLabel("🔄 图片格式批量转换")
+        title.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
+        layout.addWidget(title)
+
+        desc = QLabel("纯格式转换，保持原始质量，支持 JPEG / PNG / WebP / BMP / TIFF / GIF")
+        desc.setStyleSheet("color: #94a3b8; font-size: 13px;")
+        layout.addWidget(desc)
+
+        # 文件选择
+        file_card = Card(title="选择图片")
+        self.file_list = QTextEdit()
+        self.file_list.setPlaceholderText("点击按钮选择图片...")
+        self.file_list.setMaximumHeight(120)
+        self.file_list.setStyleSheet("""
+            QTextEdit {
+                background-color: #0f172a;
+                border: 2px dashed #334155;
+                border-radius: 8px;
+                color: #94a3b8;
+                padding: 8px;
+            }
+        """)
+        file_card.content_layout.addWidget(self.file_list)
+
+        btn_layout = QHBoxLayout()
+        add_btn = AnimatedButton("添加图片")
+        add_btn.clicked.connect(self.add_images)
+        clear_btn = AnimatedButton("清空列表")
+        clear_btn.clicked.connect(self.clear_images)
+        btn_layout.addWidget(add_btn)
+        btn_layout.addWidget(clear_btn)
+        btn_layout.addStretch()
+        file_card.content_layout.addLayout(btn_layout)
+        layout.addWidget(file_card)
+
+        # 转换设置
+        settings_card = Card(title="转换设置")
+        settings_layout = QGridLayout()
+        settings_card.content_layout.addLayout(settings_layout)
+
+        settings_layout.addWidget(QLabel("目标格式:"), 0, 0)
+        self.fmt_combo = QComboBox()
+        self.fmt_combo.addItems(self.FORMATS)
+        self.fmt_combo.setStyleSheet("""
+            QComboBox {
+                background-color: #0f172a;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 6px;
+                color: #f1f5f9;
+            }
+        """)
+        settings_layout.addWidget(self.fmt_combo, 0, 1)
+
+        settings_layout.addWidget(QLabel("输出目录:"), 1, 0)
+        out_row = QHBoxLayout()
+        self.output_path = QLineEdit()
+        self.output_path.setPlaceholderText("默认保存到原图目录")
+        self.output_path.setStyleSheet("""
+            QLineEdit {
+                background-color: #0f172a;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 6px;
+                color: #f1f5f9;
+            }
+        """)
+        browse_btn = AnimatedButton("浏览")
+        browse_btn.setMaximumWidth(80)
+        browse_btn.clicked.connect(self.browse_output)
+        out_row.addWidget(self.output_path)
+        out_row.addWidget(browse_btn)
+        settings_layout.addLayout(out_row, 1, 1)
+        layout.addWidget(settings_card)
+
+        # 进度和操作
+        action_card = Card()
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        action_card.content_layout.addWidget(self.progress_bar)
+
+        self.start_btn = AnimatedButton("开始转换")
+        self.start_btn.setMinimumHeight(48)
+        self.start_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #10b981, stop:1 #059669);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+            }
+            QPushButton:hover { background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 #34d399, stop:1 #10b981); }
+            QPushButton:disabled { background: #334155; color: #64748b; }
+        """)
+        self.start_btn.clicked.connect(self.start_convert)
+        action_card.content_layout.addWidget(self.start_btn)
+
+        self.status_label = QLabel("")
+        self.status_label.setStyleSheet("color: #94a3b8;")
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        action_card.content_layout.addWidget(self.status_label)
+        layout.addWidget(action_card)
+        layout.addStretch()
+
+        self.files = []
+        return widget
+
+    def add_images(self):
+        files, _ = QFileDialog.getOpenFileNames(
+            None, "选择图片", "",
+            "图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff *.tif *.gif)"
+        )
+        if files:
+            self.files.extend(files)
+            self.file_list.setText("\n".join(self.files))
+
+    def clear_images(self):
+        self.files = []
+        self.file_list.clear()
+
+    def browse_output(self):
+        path = QFileDialog.getExistingDirectory(None, "选择输出目录")
+        if path:
+            self.output_path.setText(path)
+
+    def start_convert(self):
+        if not self.files:
+            QMessageBox.warning(None, "警告", "请先添加图片！")
+            return
+
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setMaximum(len(self.files))
+        self.progress_bar.setValue(0)
+        self.start_btn.setEnabled(False)
+
+        self.worker = FormatConvertWorker(
+            self.files,
+            self.output_path.text() or None,
+            self.fmt_combo.currentText()
+        )
+        self.worker.progress.connect(self.progress_bar.setValue)
+        self.worker.status.connect(self.status_label.setText)
+        self.worker.finished.connect(self.convert_finished)
+        self.worker.start()
+
+    def convert_finished(self, success, message):
+        self.start_btn.setEnabled(True)
+        self.status_label.setText("")
+        self.progress_bar.setVisible(False)
+        if success:
+            QMessageBox.information(None, "完成", message)
+        else:
+            QMessageBox.critical(None, "错误", message)
+
+
 class ImageToPDF(ToolPlugin):
     """图片转PDF工具"""
     name = "图片转PDF"
@@ -1116,6 +1341,7 @@ class ToolboxWindow(QMainWindow):
         """注册内置插件"""
         self.register_plugin(ImageCompressor)
         self.register_plugin(ImageToPDF)
+        self.register_plugin(FormatConverter)
     
     def load_plugins(self):
         """从plugins目录加载外部插件"""
