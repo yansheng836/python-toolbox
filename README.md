@@ -49,6 +49,26 @@ pyinstaller --onefile --windowed toolbox.py
 pyinstaller --upx-dir=/path/to/upx toolbox.spec
 ```
 
+### 移除非必要的包以减少体积
+
+在toolbox.spec中，使用excludes参数移除非必要的包。
+
+直接执行
+
+```shell
+pyinstaller toolbox.spec
+```
+
+效果
+
+```shell
+$ ll dist/ -h
+total 314M
+-rwxr-xr-x 1 荷塘月色 197121  62M  4月 23 09:45  Toolbox.exe*
+-rwxr-xr-x 1 荷塘月色 197121 252M  4月 23 09:26 '工具箱 - 副本.exe'*
+
+```
+
 ## 插件开发
 
 在 `plugins/` 目录下新建 `.py` 文件，继承 `ToolPlugin` 并实现 `create_ui()`：

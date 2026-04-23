@@ -1,1 +1,1 @@
-pyinstaller --name="å·¥å…·ç®±" --windowed --onefile --icon=icon.ico toolbox.py
+pyinstaller --name="¹¤¾ßÏä" --windowed --onefile --icon=icon.ico toolbox.py

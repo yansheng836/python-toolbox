@@ -11,7 +11,6 @@ a = Analysis(
     binaries=[],
     datas=[
         ('plugins', 'plugins'),
-        ('assets', 'assets'),
     ],
     hiddenimports=[
         'PIL',
@@ -24,7 +23,38 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        'tkinter',
+        'matplotlib',
+        'pandas',
+        'numpy',
+        'scipy',
+        'unittest',
+        'email',
+        'http.server',
+        'xmlrpc',
+        'pydoc',
+        'lib2to3',
+        'distutils',
+        'setuptools',
+        'PyQt6.QtWebEngine',
+        'PyQt6.QtWebEngineCore',
+        'PyQt6.QtWebEngineWidgets',
+        'PyQt6.QtNetwork',
+        'PyQt6.QtSql',
+        'PyQt6.QtTest',
+        'PyQt6.QtXml',
+        'PyQt6.QtXmlPatterns',
+        'PyQt6.QtBluetooth',
+        'PyQt6.QtPositioning',
+        'PyQt6.QtQuick',
+        'PyQt6.QtQml',
+        'PyQt6.QtSensors',
+        'PyQt6.QtSerialPort',
+        'PyQt6.QtWebChannel',
+        'PyQt6.QtWebSockets',
+    ],
+    optimize=2,
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -52,7 +82,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='assets/icon.ico',  # Windows 图标
+    icon='icon.ico',  # Windows 图标
 )
 
 # macOS 特定配置
