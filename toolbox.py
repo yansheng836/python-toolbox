@@ -762,7 +762,11 @@ class ImageToPDF(ToolPlugin):
         self.progress.setValue(0)
         
         self.worker = PDFWorker(
-            self.files, output, self.size_combo.currentText()
+            self.files,
+            output,
+            self.size_combo.currentText(),
+            self.compress_check.isChecked(),
+            self.quality_slider.value()
         )
         self.worker.progress.connect(self.progress.setValue)
         self.worker.finished.connect(self.conversion_finished)
@@ -782,11 +786,13 @@ class PDFWorker(QThread):
     progress = pyqtSignal(int)
     finished = pyqtSignal(bool, str)
     
-    def __init__(self, files, output, page_size):
+    def __init__(self, files, output, page_size, compress=True, quality=85):
         super().__init__()
         self.files = files
         self.output = output
         self.page_size = page_size
+        self.compress = compress
+        self.quality = quality
     
     def run(self):
         try:
