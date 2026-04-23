@@ -1388,8 +1388,9 @@ class PDFWorker(QThread):
 
 class WelcomePage(QWidget):
     """欢迎页面"""
-    def __init__(self, parent=None):
+    def __init__(self, plugins=None, parent=None):
         super().__init__(parent)
+        self.plugins = plugins or {}
         self.setup_ui()
     
     def setup_ui(self):
@@ -1427,9 +1428,22 @@ class WelcomePage(QWidget):
         
         for icon, text, desc in [
             ("🖼️", "图片压缩", "批量压缩，保持质量"),
+            ("📏", "图片缩放", "批量缩放，精确控制"),
             ("📄", "图片转PDF", "多图合并，一键转换"),
             ("🔌", "插件扩展", "轻松添加新功能")
         ]:
+            # 使用实际加载的插件名称
+            for plugin_name, plugin in self.plugins.items():
+                if text == "图片压缩" and "图片压缩" in plugin.name:
+                    text = plugin.name
+                elif text == "图片缩放" and "Image Scaler" in plugin.name:
+                    text = "图片批量缩放"
+                elif text == "图片转PDF" and "图片转PDF" in plugin.name:
+                    text = plugin.name
+                elif text == "图片格式转换" and "图片格式转换" in plugin.name:
+                    text = plugin.name
+                elif text == "图片拼接" and "图片拼接" in plugin.name:
+                    text = plugin.name
             card = QFrame()
             card.setStyleSheet("""
                 QFrame {
@@ -1581,7 +1595,7 @@ class ToolboxWindow(QMainWindow):
         """)
         
         # 欢迎页
-        self.welcome_page = WelcomePage()
+        self.welcome_page = WelcomePage(self.plugins)
         self.content.addWidget(self.welcome_page)
         
         main_layout.addWidget(self.content, 1)
@@ -1654,6 +1668,8 @@ class ToolboxWindow(QMainWindow):
                         self.register_plugin(attr)
             except Exception as e:
                 print(f"加载插件失败 {file}: {e}")
+                import traceback
+                traceback.print_exc()
     
     def switch_plugin(self, name):
         """切换插件页面"""
