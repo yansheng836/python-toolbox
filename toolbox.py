@@ -809,7 +809,7 @@ class ImageStitcher(ToolPlugin):
     """图片拼接工具"""
     name = "图片拼接"
     description = "多图横向/纵向合并为一张"
-    icon = "🪄"
+    icon = "📐"
 
     def create_ui(self) -> QWidget:
         widget = QWidget()
@@ -1687,18 +1687,8 @@ class ToolboxWindow(QMainWindow):
             self.activateWindow()
     
     def closeEvent(self, event):
-        if hasattr(self, 'tray') and self.tray.isVisible():
-            self.hide()
-            self.tray.showMessage(
-                "工具箱", 
-                "应用已最小化到系统托盘",
-                QSystemTrayIcon.MessageIcon.Information,
-                2000
-            )
-            event.ignore()
-        else:
-            self.save_geometry()
-            event.accept()
+        self.save_geometry()
+        event.accept()
     
     def save_geometry(self):
         self.settings.setValue("geometry", self.saveGeometry())
