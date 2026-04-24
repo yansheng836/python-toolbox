@@ -82,7 +82,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='icon.ico',  # Windows 图标
+    icon='favicon.ico',  # Windows 图标
 )
 
 # macOS 特定配置
