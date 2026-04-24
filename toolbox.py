@@ -1428,22 +1428,11 @@ class WelcomePage(QWidget):
         
         for icon, text, desc in [
             ("🖼️", "图片压缩", "批量压缩，保持质量"),
-            ("📏", "图片缩放", "批量缩放，精确控制"),
             ("📄", "图片转PDF", "多图合并，一键转换"),
-            ("🔌", "插件扩展", "轻松添加新功能")
+            ("🔄", "图片格式转换", "格式转换，保持质量"),
+            ("📐", "图片拼接", "多图合并，自由拼接"),
+            ("📏", "图片批量缩放", "批量缩放，精确控制"),
         ]:
-            # 使用实际加载的插件名称
-            for plugin_name, plugin in self.plugins.items():
-                if text == "图片压缩" and "图片压缩" in plugin.name:
-                    text = plugin.name
-                elif text == "图片缩放" and ("图片批量缩放" in plugin.name or "Image Scaler" in plugin.name):
-                    text = plugin.name
-                elif text == "图片转PDF" and "图片转PDF" in plugin.name:
-                    text = plugin.name
-                elif text == "图片格式转换" and "图片格式转换" in plugin.name:
-                    text = plugin.name
-                elif text == "图片拼接" and "图片拼接" in plugin.name:
-                    text = plugin.name
             card = QFrame()
             card.setStyleSheet("""
                 QFrame {
@@ -1456,17 +1445,40 @@ class WelcomePage(QWidget):
             card_layout = QVBoxLayout(card)
             
             icon_label = QLabel(icon)
-            icon_label.setStyleSheet("font-size: 32px;")
+            # 设置自适应大小策略
+            icon_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+            # 创建字体，使用点大小而非像素
+            font = icon_label.font()
+            font.setPointSize(24)  # 基础大小
+            font.setBold(True)
+            icon_label.setFont(font)
+
+            # 设置固定宽高比，保持图标不变形
+            icon_label.setMinimumSize(48, 48)  # 设置最小尺寸
+
+            # 添加拉伸因子，让图标能够随容器放大
+            card_layout.setStretch(0, 2)  # 图标占据更多空间
+            card_layout.setStretch(1, 1)  # 文字占据较少空间
+
             card_layout.addWidget(icon_label)
             
             text_label = QLabel(text)
-            text_label.setStyleSheet("font-size: 16px; font-weight: 700; color: #f1f5f9;")
+            # 使用字体而不是像素大小，更容易缩放
+            font = text_label.font()
+            font.setPointSize(14)
+            font.setBold(True)
+            text_label.setFont(font)
+            text_label.setStyleSheet("color: #f1f5f9;")
             text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             card_layout.addWidget(text_label)
-            
+
             desc_label = QLabel(desc)
-            desc_label.setStyleSheet("font-size: 12px; color: #94a3b8;")
+            desc_font = desc_label.font()
+            desc_font.setPointSize(11)
+            desc_label.setFont(desc_font)
+            desc_label.setStyleSheet("color: #94a3b8;")
             desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             card_layout.addWidget(desc_label)
             
