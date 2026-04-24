@@ -1152,12 +1152,13 @@ class ImageToPDF(ToolPlugin):
         self.convert_btn.setMinimumHeight(48)
         self.convert_btn.setStyleSheet("""
             QPushButton {
-                background-color: #8b5cf6;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #10b981, stop:1 #059669);
                 color: white;
                 border: none;
                 border-radius: 8px;
                 font-size: 16px;
-                font-weight: 700;
+                font-weight: 600;
             }
             QPushButton:hover {
                 background-color: #7c3aed;
