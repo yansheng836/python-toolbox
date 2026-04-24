@@ -262,6 +262,8 @@ class ImageScalerWidget(QWidget):
 
         # 操作区
         action_card = Card()
+        button_layout = QHBoxLayout()
+
         self.start_btn = AnimatedButton("开始缩放")
         self.start_btn.setMinimumHeight(48)
         self.start_btn.setStyleSheet("""
@@ -277,7 +279,26 @@ class ImageScalerWidget(QWidget):
         """)
         self.start_btn.clicked.connect(self.start_scaling)
         self.start_btn.setEnabled(False)
-        action_card.content_layout.addWidget(self.start_btn)
+        button_layout.addWidget(self.start_btn)
+
+        self.cancel_btn = AnimatedButton("取消")
+        self.cancel_btn.setMinimumHeight(48)
+        self.cancel_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #ef4444, stop:1 #dc2626);
+                color: white; border: none; border-radius: 8px;
+                font-size: 16px; font-weight: 600;
+            }
+            QPushButton:hover { background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 #f87171, stop:1 #ef4444); }
+            QPushButton:disabled { background: #334155; color: #64748b; }
+        """)
+        self.cancel_btn.clicked.connect(self.cancel_scaling)
+        self.cancel_btn.setEnabled(False)
+        button_layout.addWidget(self.cancel_btn)
+
+        action_card.content_layout.addLayout(button_layout)
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
