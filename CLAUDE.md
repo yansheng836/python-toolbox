@@ -2,6 +2,30 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Structure
+
+```
+toolbox/
+├── toolbox.py              # Main application file
+├── requirements.txt        # Python dependencies
+├── icon.ico               # Application icon
+└── test/                 # Test files directory
+    ├── test_button.py      # Button UI component tests
+    ├── test_icon.py        # Icon and theme tests  
+    ├── test_plugin.py      # Plugin system tests
+    ├── test_scaling.py     # Image scaling functionality tests
+    ├── test_scaling_complete.py  # Complete scaling workflow tests
+    ├── test_scaling_function.py  # Scaling function unit tests
+    ├── test_sidebar.py     # Sidebar navigation tests
+    ├── create_test_images.py  # Test image generator
+    ├── check_plugins.py    # Plugin validation tests
+    ├── debug_plugins.py    # Plugin debugging utilities
+    ├── final_test.py       # End-to-end application tests
+    ├── simple_check.py     # Quick system checks
+    ├── simple_test.py      # Basic functionality tests
+    └── toolbox2.py        # Backup/alternative implementation
+```
+
 ## Commands
 
 ```bash
@@ -10,6 +34,10 @@ pip install -r requirements.txt
 
 # Run the application
 python toolbox.py
+
+# Run tests
+cd test/
+python -m unittest discover -v
 
 # Build executable (Windows, recommended)
 pyinstaller toolbox.spec
@@ -54,3 +82,15 @@ Long operations run in `QThread` workers (`CompressionWorker`, `PDFWorker`) that
 | img2pdf | Primary PDF conversion |
 | PyMuPDF (fitz) | Fallback PDF conversion |
 | pyinstaller | Build executables |
+
+## Testing
+
+All test files are located in the `test/` directory. Test files use a `test_` prefix for easy identification. Common test patterns:
+
+- `test_button.py` - Button UI component tests
+- `test_icon.py` - Icon and theme tests  
+- `test_plugin.py` - Plugin system tests
+- `test_scaling.py` - Image scaling functionality tests
+- `test_sidebar.py` - Sidebar navigation tests
+
+When adding new features, create corresponding test files in the `test/` directory to maintain code quality and stability.
