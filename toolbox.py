@@ -1388,8 +1388,9 @@ class PDFWorker(QThread):
 
 class WelcomePage(QWidget):
     """欢迎页面"""
-    def __init__(self, parent=None):
+    def __init__(self, plugins=None, parent=None):
         super().__init__(parent)
+        self.plugins = plugins or {}
         self.setup_ui()
     
     def setup_ui(self):
@@ -1427,9 +1428,22 @@ class WelcomePage(QWidget):
         
         for icon, text, desc in [
             ("🖼️", "图片压缩", "批量压缩，保持质量"),
+            ("📏", "图片缩放", "批量缩放，精确控制"),
             ("📄", "图片转PDF", "多图合并，一键转换"),
             ("🔌", "插件扩展", "轻松添加新功能")
         ]:
+            # 使用实际加载的插件名称
+            for plugin_name, plugin in self.plugins.items():
+                if text == "图片压缩" and "图片压缩" in plugin.name:
+                    text = plugin.name
+                elif text == "图片缩放" and ("图片批量缩放" in plugin.name or "Image Scaler" in plugin.name):
+                    text = plugin.name
+                elif text == "图片转PDF" and "图片转PDF" in plugin.name:
+                    text = plugin.name
+                elif text == "图片格式转换" and "图片格式转换" in plugin.name:
+                    text = plugin.name
+                elif text == "图片拼接" and "图片拼接" in plugin.name:
+                    text = plugin.name
             card = QFrame()
             card.setStyleSheet("""
                 QFrame {
@@ -1475,10 +1489,22 @@ class WelcomePage(QWidget):
 
 # ==================== 主窗口 ====================
 class ToolboxWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, app=None):
         super().__init__()
+        self._app = app
         self.setWindowTitle("工具箱")
         self.setMinimumSize(1200, 800)
+
+        # 设置窗口图标
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        icon_path = os.path.join(current_dir, "icon.ico")
+        if os.path.exists(icon_path):
+            # 使用绝对路径
+            abs_icon_path = os.path.abspath(icon_path)
+            self.setWindowIcon(QIcon(abs_icon_path))
+            # 确保任务栏图标也设置
+            if hasattr(self, '_app') and self._app:
+                self._app.setWindowIcon(QIcon(abs_icon_path))
         
         # 加载设置
         self.settings = QSettings("Toolbox", "App")
@@ -1569,7 +1595,7 @@ class ToolboxWindow(QMainWindow):
         """)
         
         # 欢迎页
-        self.welcome_page = WelcomePage()
+        self.welcome_page = WelcomePage(self.plugins)
         self.content.addWidget(self.welcome_page)
         
         main_layout.addWidget(self.content, 1)
@@ -1602,16 +1628,16 @@ class ToolboxWindow(QMainWindow):
         try:
             plugin = plugin_class(self)
             self.plugins[plugin.name] = plugin
-            
+
             # 创建导航按钮
             btn = SidebarButton(plugin.name, plugin.icon)
             btn.clicked.connect(lambda checked, n=plugin.name: self.switch_plugin(n))
             self.nav_layout.addWidget(btn)
-            
+
             # 添加页面
             widget = plugin.get_widget()
             self.content.addWidget(widget)
-            
+
         except Exception as e:
             print(f"注册插件失败 {plugin_class.name}: {e}")
     
@@ -1627,17 +1653,17 @@ class ToolboxWindow(QMainWindow):
         plugins_dir = Path("plugins")
         if not plugins_dir.exists():
             return
-            
+
         for file in plugins_dir.glob("*.py"):
             try:
                 spec = importlib.util.spec_from_file_location(file.stem, file)
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)
-                
+
                 for attr_name in dir(module):
                     attr = getattr(module, attr_name)
-                    if (isinstance(attr, type) and 
-                        issubclass(attr, ToolPlugin) and 
+                    if (isinstance(attr, type) and
+                        issubclass(attr, ToolPlugin) and
                         attr != ToolPlugin):
                         self.register_plugin(attr)
             except Exception as e:
@@ -1650,7 +1676,7 @@ class ToolboxWindow(QMainWindow):
             widget = self.nav_layout.itemAt(i).widget()
             if isinstance(widget, SidebarButton):
                 widget.setChecked(name in widget.text())
-        
+
         # 切换页面
         if name in self.plugins:
             widget = self.plugins[name].get_widget()
@@ -1665,10 +1691,16 @@ class ToolboxWindow(QMainWindow):
             self.tray = QSystemTrayIcon(self)
             self.tray.setToolTip("工具箱")
             
-            # 简单图标
-            pixmap = QPixmap(32, 32)
-            pixmap.fill(QColor("#6366f1"))
-            self.tray.setIcon(QIcon(pixmap))
+            # 设置图标
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            icon_path = os.path.join(current_dir, "icon.ico")
+            if os.path.exists(icon_path):
+                self.tray.setIcon(QIcon(icon_path))
+            else:
+                # 如果没有自定义图标，使用简单的彩色图标
+                pixmap = QPixmap(32, 32)
+                pixmap.fill(QColor("#6366f1"))
+                self.tray.setIcon(QIcon(pixmap))
             
             menu = QMenu()
             show_action = menu.addAction("显示")
@@ -1709,17 +1741,31 @@ class ToolboxWindow(QMainWindow):
 # ==================== 入口 ====================
 def main():
     app = QApplication(sys.argv)
-    
+
     # 设置应用属性
     app.setApplicationName("工具箱")
     app.setApplicationVersion("1.0.0")
-    
+    app.setOrganizationName("Toolbox")
+    app.setOrganizationDomain("toolbox.com")
+
     # 设置字体
     font = QFont("Microsoft YaHei UI", 10)
     app.setFont(font)
+
+    # 设置任务栏和窗口图标
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    icon_path = os.path.join(current_dir, "icon.ico")
+    if os.path.exists(icon_path):
+        app_icon = QIcon(icon_path)
+        # 尝试多种方法设置任务栏图标
+        app.setWindowIcon(app_icon)
+        # 设置应用 ID，这有助于 Windows 识别图标
+        app.setDesktopFileName("toolbox.desktop")
+        # 再次设置确保生效
+        app.setWindowIcon(app_icon)
     
     # 创建并显示窗口
-    window = ToolboxWindow()
+    window = ToolboxWindow(app)
     window.show()
     
     sys.exit(app.exec())
