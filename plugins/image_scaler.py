@@ -191,50 +191,57 @@ class ImageScalerWidget(QWidget):
                 border-radius: 6px;
                 padding: 4px;
                 color: #f1f5f9;
+                text-align: left;
             }
         """
 
-        settings_layout.addWidget(QLabel("缩放方式:"), 0, 0)
+        settings_layout.addWidget(QLabel("缩放方式:"), 0, 0, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         self.scale_type_combo = QComboBox()
         self.scale_type_combo.addItems(["百分比缩放", "指定宽度", "指定高度"])
         self.scale_type_combo.setStyleSheet(combo_style)
         self.scale_type_combo.currentTextChanged.connect(self.on_scale_type_changed)
-        settings_layout.addWidget(self.scale_type_combo, 0, 1)
+        settings_layout.addWidget(self.scale_type_combo, 0, 1, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
         self.maintain_aspect = QCheckBox("保持宽高比")
         self.maintain_aspect.setChecked(True)
         self.maintain_aspect.setStyleSheet("color: #f1f5f9;")
         self.maintain_aspect.stateChanged.connect(self.on_scale_type_changed)
-        settings_layout.addWidget(self.maintain_aspect, 1, 0, 1, 2)
+        settings_layout.addWidget(self.maintain_aspect, 1, 0, 1, 2, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
-        settings_layout.addWidget(QLabel("缩放值:"), 2, 0)
+        settings_layout.addWidget(QLabel("缩放值:"), 2, 0, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         self.scale_value_input = QSpinBox()
         self.scale_value_input.setRange(1, 200)
         self.scale_value_input.setValue(50)
         self.scale_value_input.setSuffix(" %")
         self.scale_value_input.setStyleSheet(spin_style)
-        settings_layout.addWidget(self.scale_value_input, 2, 1)
+        settings_layout.addWidget(self.scale_value_input, 2, 1, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
+        # 宽度设置
+        self.width_label = QLabel("宽度:")
+        settings_layout.addWidget(self.width_label, 3, 0, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         self.width_input = QSpinBox()
         self.width_input.setRange(1, 10000)
         self.width_input.setValue(800)
         self.width_input.setSuffix(" px")
         self.width_input.setStyleSheet(spin_style)
-        settings_layout.addWidget(self.width_input, 3, 0)
+        settings_layout.addWidget(self.width_input, 3, 1, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
+        # 高度设置
+        self.height_label = QLabel("高度:")
+        settings_layout.addWidget(self.height_label, 4, 0, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         self.height_input = QSpinBox()
         self.height_input.setRange(1, 10000)
         self.height_input.setValue(600)
         self.height_input.setSuffix(" px")
         self.height_input.setStyleSheet(spin_style)
-        settings_layout.addWidget(self.height_input, 3, 1)
+        settings_layout.addWidget(self.height_input, 4, 1, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
-        settings_layout.addWidget(QLabel("图片质量:"), 4, 0)
+        settings_layout.addWidget(QLabel("图片质量:"), 5, 0, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         self.quality_combo = QComboBox()
         self.quality_combo.addItems(["高质量 (95)", "标准 (85)", "较小文件 (75)", "最小文件 (50)"])
         self.quality_combo.setCurrentIndex(1)
         self.quality_combo.setStyleSheet(combo_style)
-        settings_layout.addWidget(self.quality_combo, 4, 1)
+        settings_layout.addWidget(self.quality_combo, 5, 1, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
         layout.addWidget(settings_card)
 
@@ -330,15 +337,19 @@ class ImageScalerWidget(QWidget):
     def on_scale_type_changed(self):
         scale_type = self.scale_type_combo.currentText()
 
-        # 显示/隐藏相应的输入框
+        # 显示/隐藏相应的输入框和标签
         if scale_type == "百分比缩放":
             self.scale_value_input.setVisible(True)
+            self.width_label.setVisible(False)
             self.width_input.setVisible(False)
+            self.height_label.setVisible(False)
             self.height_input.setVisible(False)
             self.maintain_aspect.setVisible(True)
         elif scale_type == "指定宽度":
             self.scale_value_input.setVisible(False)
+            self.width_label.setVisible(True)
             self.width_input.setVisible(True)
+            self.height_label.setVisible(True)
             self.height_input.setVisible(True)
             self.maintain_aspect.setVisible(True)
             if self.maintain_aspect.isChecked():
@@ -349,7 +360,9 @@ class ImageScalerWidget(QWidget):
                 self.height_input.setSuffix(" px")
         elif scale_type == "指定高度":
             self.scale_value_input.setVisible(False)
+            self.width_label.setVisible(True)
             self.width_input.setVisible(True)
+            self.height_label.setVisible(True)
             self.height_input.setVisible(True)
             self.maintain_aspect.setVisible(True)
             if self.maintain_aspect.isChecked():
