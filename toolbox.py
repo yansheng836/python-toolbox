@@ -1,3 +1,5 @@
+__version__ = "1.0.0"
+
 import sys
 import os
 import json
@@ -11,7 +13,7 @@ import io
 import base64
 
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QStackedWidget, QScrollArea, QFrame,
     QFileDialog, QMessageBox, QProgressBar, QSpinBox, QComboBox,
     QLineEdit, QTextEdit, QGridLayout, QSizePolicy, QGraphicsDropShadowEffect,
@@ -21,13 +23,13 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem, QHeaderView, QAbstractItemView
 )
 from PyQt6.QtCore import (
-    Qt, QSize, QTimer, QThread, pyqtSignal, QPropertyAnimation, 
+    Qt, QSize, QTimer, QThread, pyqtSignal, QPropertyAnimation,
     QEasingCurve, QPoint, QRect, QMargins, QSettings, QByteArray
 )
 from PyQt6.QtGui import (
     QIcon, QPixmap, QImage, QPainter, QColor, QFont, QFontDatabase,
     QLinearGradient, QBrush, QPalette, QCursor, QKeySequence, QShortcut,
-    QTransform, QMovie, QFontMetrics
+    QTransform, QMovie, QFontMetrics, QAction
 )
 
 # 尝试导入PIL用于图片处理
@@ -71,7 +73,7 @@ class Theme:
         'error': '#ef4444',
         'shadow': 'rgba(0, 0, 0, 0.3)'
     }
-    
+
     LIGHT = {
         'primary': '#4f46e5',
         'primary_hover': '#4338ca',
@@ -89,6 +91,11 @@ class Theme:
         'shadow': 'rgba(0, 0, 0, 0.1)'
     }
 
+    @staticmethod
+    def init_theme():
+        """初始化主题系统"""
+        pass
+
 
 # ==================== 动画组件 ====================
 class AnimatedButton(QPushButton):
@@ -97,15 +104,14 @@ class AnimatedButton(QPushButton):
         super().__init__(text, parent)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMinimumHeight(40)
-        
-        # 悬停动画
+
         self._animation = QPropertyAnimation(self, b"geometry")
         self._animation.setDuration(150)
         self._animation.setEasingCurve(QEasingCurve.Type.OutCubic)
-        
+
         self.base_style = ""
         self.update_style()
-        
+
     def update_style(self, theme=None):
         if theme is None:
             theme = Theme.DARK
@@ -131,14 +137,14 @@ class AnimatedButton(QPushButton):
             }}
         """
         self.setStyleSheet(self.base_style)
-    
+
     def enterEvent(self, event):
         self.setStyleSheet(self.base_style.replace(
             f"background-color: {Theme.DARK['primary']};",
             f"background-color: {Theme.DARK['primary_hover']};"
         ))
         super().enterEvent(event)
-    
+
     def leaveEvent(self, event):
         self.setStyleSheet(self.base_style)
         super().leaveEvent(event)
@@ -151,12 +157,12 @@ class Card(QFrame):
         self.title = title
         self.setObjectName("card")
         self.setup_ui()
-        
+
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(12)
-        
+
         if self.title:
             self.title_label = QLabel(self.title)
             self.title_label.setObjectName("cardTitle")
@@ -166,12 +172,12 @@ class Card(QFrame):
                 color: #f1f5f9;
             """)
             layout.addWidget(self.title_label)
-        
+
         self.content = QWidget()
         self.content_layout = QVBoxLayout(self.content)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.content)
-        
+
         self.setStyleSheet("""
             QFrame#card {
                 background-color: #1e293b;
@@ -179,7 +185,7 @@ class Card(QFrame):
                 border: 1px solid #334155;
             }
         """)
-        
+
         # 阴影效果
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(20)
@@ -226,15 +232,15 @@ class ToolPlugin:
     description = "Base tool description"
     icon = "🔧"
     version = "1.0.0"
-    
+
     def __init__(self, parent=None):
         self.parent = parent
         self.widget = None
-        
+
     def create_ui(self) -> QWidget:
         """创建工具UI，子类必须实现"""
         raise NotImplementedError
-        
+
     def get_widget(self) -> QWidget:
         if self.widget is None:
             self.widget = self.create_ui()
@@ -246,26 +252,26 @@ class ImageCompressor(ToolPlugin):
     name = "图片压缩"
     description = "批量压缩图片，支持JPG/PNG/WebP格式"
     icon = "🖼️"
-    
+
     def create_ui(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setSpacing(16)
-        
+
         # 标题
         title = QLabel("🖼️ 图片压缩工具")
         title.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
         layout.addWidget(title)
-        
+
         # 说明
         desc = QLabel("支持 JPG、PNG、WebP 格式，可批量处理并调整压缩质量")
         desc.setStyleSheet("color: #94a3b8; font-size: 13px;")
         layout.addWidget(desc)
-        
+
         # 文件选择区域
         file_card = Card(title="选择图片")
         file_layout = file_card.content_layout
-        
+
         self.file_list = QTextEdit()
         self.file_list.setPlaceholderText("拖拽图片到此处，或点击按钮选择...")
         self.file_list.setMaximumHeight(120)
@@ -279,7 +285,7 @@ class ImageCompressor(ToolPlugin):
             }
         """)
         file_layout.addWidget(self.file_list)
-        
+
         btn_layout = QHBoxLayout()
         self.add_btn = AnimatedButton("添加图片")
         self.add_btn.clicked.connect(self.add_images)
@@ -289,14 +295,14 @@ class ImageCompressor(ToolPlugin):
         btn_layout.addWidget(self.clear_btn)
         btn_layout.addStretch()
         file_layout.addLayout(btn_layout)
-        
+
         layout.addWidget(file_card)
-        
+
         # 设置区域
         settings_card = Card(title="压缩设置")
         settings_layout = QGridLayout()
         settings_card.content_layout.addLayout(settings_layout)
-        
+
         settings_layout.addWidget(QLabel("输出格式:"), 0, 0)
         self.format_combo = QComboBox()
         self.format_combo.addItems(["保持原格式", "JPG", "PNG", "WebP"])
@@ -310,7 +316,7 @@ class ImageCompressor(ToolPlugin):
             }
         """)
         settings_layout.addWidget(self.format_combo, 0, 1)
-        
+
         settings_layout.addWidget(QLabel("压缩质量:"), 1, 0)
         quality_layout = QHBoxLayout()
         self.quality_slider = QSlider(Qt.Orientation.Horizontal)
@@ -323,7 +329,7 @@ class ImageCompressor(ToolPlugin):
         quality_layout.addWidget(self.quality_slider)
         quality_layout.addWidget(self.quality_label)
         settings_layout.addLayout(quality_layout, 1, 1)
-        
+
         settings_layout.addWidget(QLabel("输出目录:"), 2, 0)
         output_layout = QHBoxLayout()
         self.output_path = QLineEdit()
@@ -343,13 +349,13 @@ class ImageCompressor(ToolPlugin):
         output_layout.addWidget(self.output_path)
         output_layout.addWidget(self.browse_btn)
         settings_layout.addLayout(output_layout, 2, 1)
-        
+
         layout.addWidget(settings_card)
-        
+
         # 进度和操作
         progress_card = Card()
         progress_layout = progress_card.content_layout
-        
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setStyleSheet("""
             QProgressBar {
@@ -365,7 +371,7 @@ class ImageCompressor(ToolPlugin):
         """)
         self.progress_bar.setVisible(False)
         progress_layout.addWidget(self.progress_bar)
-        
+
         self.start_btn = AnimatedButton("开始压缩")
         self.start_btn.setMinimumHeight(48)
         self.start_btn.setStyleSheet("""
@@ -384,18 +390,18 @@ class ImageCompressor(ToolPlugin):
         """)
         self.start_btn.clicked.connect(self.start_compression)
         progress_layout.addWidget(self.start_btn)
-        
+
         self.status_label = QLabel("")
         self.status_label.setStyleSheet("color: #94a3b8;")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         progress_layout.addWidget(self.status_label)
-        
+
         layout.addWidget(progress_card)
         layout.addStretch()
-        
+
         self.files = []
         return widget
-    
+
     def add_images(self):
         files, _ = QFileDialog.getOpenFileNames(
             self.parent, "选择图片", "",
@@ -404,33 +410,33 @@ class ImageCompressor(ToolPlugin):
         if files:
             self.files.extend(files)
             self.update_file_list()
-    
+
     def clear_images(self):
         self.files = []
         self.file_list.clear()
-    
+
     def update_file_list(self):
         self.file_list.setText("\n".join(self.files))
-    
+
     def browse_output(self):
         path = QFileDialog.getExistingDirectory(self.parent, "选择输出目录")
         if path:
             self.output_path.setText(path)
-    
+
     def start_compression(self):
         if not self.files:
             QMessageBox.warning(self.parent, "警告", "请先添加图片！")
             return
-            
+
         if not PIL_AVAILABLE:
             QMessageBox.critical(self.parent, "错误", "请先安装 Pillow: pip install Pillow")
             return
-        
+
         self.progress_bar.setVisible(True)
         self.progress_bar.setMaximum(len(self.files))
         self.progress_bar.setValue(0)
         self.start_btn.setEnabled(False)
-        
+
         # 使用线程处理
         self.worker = CompressionWorker(
             self.files,
@@ -442,7 +448,7 @@ class ImageCompressor(ToolPlugin):
         self.worker.status.connect(self.status_label.setText)
         self.worker.finished.connect(self.compression_finished)
         self.worker.start()
-    
+
     def compression_finished(self, success, message):
         self.start_btn.setEnabled(True)
         self.status_label.setText("")
@@ -458,28 +464,28 @@ class CompressionWorker(QThread):
     progress = pyqtSignal(int)
     status = pyqtSignal(str)
     finished = pyqtSignal(bool, str)
-    
+
     def __init__(self, files, output_dir, format_str, quality):
         super().__init__()
         self.files = files
         self.output_dir = output_dir
         self.format_str = format_str
         self.quality = quality
-        
+
     def run(self):
         try:
             processed = 0
             for i, file_path in enumerate(self.files):
                 self.status.emit(f"正在处理: {os.path.basename(file_path)}")
-                
+
                 img = Image.open(file_path)
-                
+
                 # 确定输出格式
                 if self.format_str == "保持原格式":
                     fmt = img.format or 'JPEG'
                 else:
                     fmt = {'JPG': 'JPEG', 'PNG': 'PNG', 'WebP': 'WEBP'}[self.format_str]
-                
+
                 # 确定输出路径
                 base_name = os.path.splitext(os.path.basename(file_path))[0]
                 if self.output_dir:
@@ -487,7 +493,7 @@ class CompressionWorker(QThread):
                 else:
                     dir_name = os.path.dirname(file_path)
                     output_path = os.path.join(dir_name, f"{base_name}_compressed.{fmt.lower()}")
-                
+
                 # 处理图片
                 if img.mode in ('RGBA', 'LA', 'P') and fmt == 'JPEG':
                     background = Image.new('RGB', img.size, (255, 255, 255))
@@ -500,7 +506,7 @@ class CompressionWorker(QThread):
                         img = img.convert('RGB')
                 elif img.mode != 'RGB' and fmt == 'JPEG':
                     img = img.convert('RGB')
-                
+
                 # 保存
                 save_kwargs = {}
                 if fmt in ('JPEG', 'WEBP'):
@@ -508,11 +514,11 @@ class CompressionWorker(QThread):
                     save_kwargs['optimize'] = True
                 elif fmt == 'PNG':
                     save_kwargs['optimize'] = True
-                
+
                 img.save(output_path, fmt, **save_kwargs)
                 processed += 1
                 self.progress.emit(i + 1)
-            
+
             self.finished.emit(True, f"成功压缩 {processed} 张图片！")
         except Exception as e:
             self.finished.emit(False, f"压缩失败: {str(e)}")
@@ -530,7 +536,7 @@ class FormatConvertWorker(QThread):
         "WebP": ("WEBP", "webp"),
         "BMP":  ("BMP",  "bmp"),
         "TIFF": ("TIFF", "tiff"),
-        "GIF":  ("GIF",  "gif"),
+        "GIF":  ("GIF", "gif"),
     }
 
     def __init__(self, files, output_dir, target_fmt):
@@ -964,7 +970,6 @@ class ImageStitcher(ToolPlugin):
             self._refresh_list()
 
     def move_up(self):
-        # 简单实现：无法选中单行，整体上移最后一张到第一张无意义，提示用户手动编辑
         if len(self.files) > 1:
             self.files.insert(0, self.files.pop())
             self._refresh_list()
@@ -1026,24 +1031,24 @@ class ImageToPDF(ToolPlugin):
     name = "图片转PDF"
     description = "将多张图片合并为一个PDF文件"
     icon = "📄"
-    
+
     def create_ui(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setSpacing(16)
-        
+
         title = QLabel("📄 图片转PDF工具")
         title.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
         layout.addWidget(title)
-        
+
         desc = QLabel("将多张图片合并为一个PDF文件，支持拖拽排序")
         desc.setStyleSheet("color: #94a3b8; font-size: 13px;")
         layout.addWidget(desc)
-        
+
         # 图片列表
         list_card = Card(title="图片列表")
         list_layout = list_card.content_layout
-        
+
         self.table = QTableWidget()
         self.table.setColumnCount(3)
         self.table.setHorizontalHeaderLabels(["文件名", "尺寸", "操作"])
@@ -1069,7 +1074,7 @@ class ImageToPDF(ToolPlugin):
         """)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         list_layout.addWidget(self.table)
-        
+
         btn_layout = QHBoxLayout()
         self.add_btn = AnimatedButton("添加图片")
         self.add_btn.clicked.connect(self.add_images)
@@ -1085,14 +1090,14 @@ class ImageToPDF(ToolPlugin):
         btn_layout.addWidget(self.down_btn)
         btn_layout.addStretch()
         list_layout.addLayout(btn_layout)
-        
+
         layout.addWidget(list_card)
-        
+
         # 设置
         settings_card = Card(title="PDF设置")
         settings_layout = QGridLayout()
         settings_card.content_layout.addLayout(settings_layout)
-        
+
         settings_layout.addWidget(QLabel("页面大小:"), 0, 0)
         self.size_combo = QComboBox()
         self.size_combo.addItems(["自动适应", "A4", "A3", "原图尺寸"])
@@ -1145,9 +1150,9 @@ class ImageToPDF(ToolPlugin):
         path_layout.addWidget(self.output_path)
         path_layout.addWidget(self.browse_btn)
         settings_layout.addLayout(path_layout, 3, 1)
-        
+
         layout.addWidget(settings_card)
-        
+
         # 操作按钮
         self.convert_btn = AnimatedButton("开始转换")
         self.convert_btn.setMinimumHeight(48)
@@ -1167,7 +1172,7 @@ class ImageToPDF(ToolPlugin):
         """)
         self.convert_btn.clicked.connect(self.start_conversion)
         layout.addWidget(self.convert_btn)
-        
+
         self.progress = QProgressBar()
         self.progress.setStyleSheet("""
             QProgressBar {
@@ -1183,12 +1188,12 @@ class ImageToPDF(ToolPlugin):
         """)
         self.progress.setVisible(False)
         layout.addWidget(self.progress)
-        
+
         layout.addStretch()
-        
+
         self.files = []
         return widget
-    
+
     def add_images(self):
         files, _ = QFileDialog.getOpenFileNames(
             self.parent, "选择图片", "",
@@ -1198,7 +1203,7 @@ class ImageToPDF(ToolPlugin):
             if f not in self.files:
                 self.files.append(f)
         self.update_table()
-    
+
     def remove_selected(self):
         # 使用 set 去重，避免同一行的多个单元格索引被重复处理
         indices = sorted(set([i.row() for i in self.table.selectedIndexes()]), reverse=True)
@@ -1206,21 +1211,21 @@ class ImageToPDF(ToolPlugin):
             if 0 <= i < len(self.files):
                 self.files.pop(i)
         self.update_table()
-    
+
     def move_up(self):
         row = self.table.currentRow()
         if row > 0:
             self.files[row], self.files[row-1] = self.files[row-1], self.files[row]
             self.update_table()
             self.table.selectRow(row-1)
-    
+
     def move_down(self):
         row = self.table.currentRow()
         if row < len(self.files) - 1:
             self.files[row], self.files[row+1] = self.files[row+1], self.files[row]
             self.update_table()
             self.table.selectRow(row+1)
-    
+
     def update_table(self):
         self.table.setRowCount(len(self.files))
         for i, f in enumerate(self.files):
@@ -1230,11 +1235,11 @@ class ImageToPDF(ToolPlugin):
                 size = f"{img.width} x {img.height}"
             except:
                 size = "未知"
-            
+
             self.table.setItem(i, 0, QTableWidgetItem(name))
             self.table.setItem(i, 1, QTableWidgetItem(size))
             self.table.setItem(i, 2, QTableWidgetItem("就绪"))
-    
+
     def browse_output(self):
         path, _ = QFileDialog.getSaveFileName(
             self.parent, "保存PDF", "", "PDF文件 (*.pdf)"
@@ -1243,29 +1248,29 @@ class ImageToPDF(ToolPlugin):
             if not path.endswith('.pdf'):
                 path += '.pdf'
             self.output_path.setText(path)
-    
+
     def start_conversion(self):
         if not self.files:
             QMessageBox.warning(self.parent, "警告", "请先添加图片！")
             return
-        
+
         output = self.output_path.text()
         if not output:
             QMessageBox.warning(self.parent, "警告", "请选择输出路径！")
             return
-        
+
         if not (IMG2PDF_AVAILABLE or FITZ_AVAILABLE or PIL_AVAILABLE):
             QMessageBox.critical(
-                self.parent, "错误", 
+                self.parent, "错误",
                 "请先安装依赖: pip install img2pdf 或 pip install PyMuPDF 或 pip install Pillow"
             )
             return
-        
+
         self.convert_btn.setEnabled(False)
         self.progress.setVisible(True)
         self.progress.setMaximum(len(self.files))
         self.progress.setValue(0)
-        
+
         self.worker = PDFWorker(
             self.files,
             output,
@@ -1276,7 +1281,7 @@ class ImageToPDF(ToolPlugin):
         self.worker.progress.connect(self.progress.setValue)
         self.worker.finished.connect(self.conversion_finished)
         self.worker.start()
-    
+
     def conversion_finished(self, success, message):
         self.convert_btn.setEnabled(True)
         self.progress.setVisible(False)
@@ -1290,7 +1295,7 @@ class PDFWorker(QThread):
     """PDF转换工作线程"""
     progress = pyqtSignal(int)
     finished = pyqtSignal(bool, str)
-    
+
     def __init__(self, files, output, page_size, compress=True, quality=85):
         super().__init__()
         self.files = files
@@ -1382,7 +1387,7 @@ class PDFWorker(QThread):
                         save_all=True,
                         append_images=images[1:]
                     )
-            
+
             self.finished.emit(True, f"PDF已保存至:\n{self.output}")
         except Exception as e:
             self.finished.emit(False, f"转换失败: {str(e)}")
@@ -1394,18 +1399,18 @@ class WelcomePage(QWidget):
         super().__init__(parent)
         self.plugins = plugins or {}
         self.setup_ui()
-    
+
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setSpacing(24)
-        
+
         # Logo/标题
         logo = QLabel("🧰")
         logo.setStyleSheet("font-size: 72px;")
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(logo)
-        
+
         title = QLabel("工具箱")
         title.setStyleSheet("""
             font-size: 36px;
@@ -1414,7 +1419,7 @@ class WelcomePage(QWidget):
         """)
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
-        
+
         subtitle = QLabel("高效、美观、可扩展的桌面工具集合")
         subtitle.setStyleSheet("""
             font-size: 16px;
@@ -1422,12 +1427,12 @@ class WelcomePage(QWidget):
         """)
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(subtitle)
-        
+
         # 特性卡片
         features = QWidget()
         features_layout = QHBoxLayout(features)
         features_layout.setSpacing(16)
-        
+
         for icon, text, desc in [
             ("🖼️", "图片压缩", "批量压缩，保持质量"),
             ("📄", "图片转PDF", "多图合并，一键转换"),
@@ -1445,29 +1450,24 @@ class WelcomePage(QWidget):
                 }
             """)
             card_layout = QVBoxLayout(card)
-            
+
             icon_label = QLabel(icon)
-            # 设置自适应大小策略
             icon_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-            # 创建字体，使用点大小而非像素
             font = icon_label.font()
-            font.setPointSize(24)  # 基础大小
+            font.setPointSize(24)
             font.setBold(True)
             icon_label.setFont(font)
 
-            # 设置固定宽高比，保持图标不变形
-            icon_label.setMinimumSize(48, 48)  # 设置最小尺寸
+            icon_label.setMinimumSize(48, 48)
 
-            # 添加拉伸因子，让图标能够随容器放大
-            card_layout.setStretch(0, 2)  # 图标占据更多空间
-            card_layout.setStretch(1, 1)  # 文字占据较少空间
+            card_layout.setStretch(0, 2)
+            card_layout.setStretch(1, 1)
 
             card_layout.addWidget(icon_label)
-            
+
             text_label = QLabel(text)
-            # 使用字体而不是像素大小，更容易缩放
             font = text_label.font()
             font.setPointSize(14)
             font.setBold(True)
@@ -1483,11 +1483,11 @@ class WelcomePage(QWidget):
             desc_label.setStyleSheet("color: #94a3b8;")
             desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             card_layout.addWidget(desc_label)
-            
+
             features_layout.addWidget(card)
-        
+
         layout.addWidget(features)
-        
+
         # 提示
         hint = QLabel("👈 从左侧菜单选择工具开始使用")
         hint.setStyleSheet("""
@@ -1497,8 +1497,155 @@ class WelcomePage(QWidget):
         """)
         hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(hint)
-        
+
         layout.addStretch()
+
+
+# ==================== 设置插件 ====================
+class SettingsPlugin(ToolPlugin):
+    """设置插件 - 包含通用设置和关于信息"""
+
+    name = "设置"
+    description = "应用程序设置和关于信息"
+    icon = "⚙️"
+    version = "1.0.0"
+
+    def create_ui(self) -> QWidget:
+        """创建设置页面UI"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setContentsMargins(40, 40, 40, 40)
+        layout.setSpacing(24)
+
+        # 标题
+        title = QLabel("⚙️ 设置")
+        title.setStyleSheet("""
+            font-size: 32px;
+            font-weight: 800;
+            color: #f1f5f9;
+        """)
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title)
+
+        # 分隔线
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setStyleSheet("background-color: #334155;")
+        line.setMaximumHeight(1)
+        layout.addWidget(line)
+
+        # 通用设置卡片
+        general_card = Card("通用设置")
+
+        # 主题设置
+        theme_label = QLabel("外观:")
+        theme_label.setStyleSheet("font-size: 14px; font-weight: 600; color: #f1f5f9;")
+        general_card.content_layout.addWidget(theme_label)
+
+        theme_btn_layout = QHBoxLayout()
+
+        light_theme_btn = QPushButton("☀️ 浅色主题")
+        light_theme_btn.setMinimumHeight(44)
+        light_theme_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f1f5f9;
+                color: #0f172a;
+                border: none;
+                border-radius: 8px;
+                padding: 10px 20px;
+                font-size: 14px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background-color: #e2e8f0;
+            }
+        """)
+        light_theme_btn.clicked.connect(lambda: self.set_theme("light"))
+
+        dark_theme_btn = QPushButton("🌙 深色主题")
+        dark_theme_btn.setMinimumHeight(44)
+        dark_theme_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #1e293b;
+                color: #f1f5f9;
+                border: 1px solid #334155;
+                border-radius: 8px;
+                padding: 10px 20px;
+                font-size: 14px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background-color: #334155;
+            }
+        """)
+        dark_theme_btn.clicked.connect(lambda: self.set_theme("dark"))
+
+        theme_btn_layout.addWidget(light_theme_btn)
+        theme_btn_layout.addWidget(dark_theme_btn)
+        theme_btn_layout.addStretch()
+
+        general_card.content_layout.addLayout(theme_btn_layout)
+        general_card.content_layout.addStretch()
+
+        # 关于卡片
+        about_card = Card("关于")
+
+        # 版本信息
+        version_label = QLabel(f"版本: v{self.version}")
+        version_label.setStyleSheet("font-size: 16px; font-weight: 600; color: #f1f5f9;")
+        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        about_card.content_layout.addWidget(version_label)
+
+        # 功能描述
+        desc_label = QLabel("批量处理工具，支持图片压缩、PDF转换、格式转换和拼接")
+        desc_label.setStyleSheet("color: #94a3b8; font-size: 14px;")
+        desc_label.setWordWrap(True)
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        about_card.content_layout.addWidget(desc_label)
+
+        # 官方网站
+        website_label = QLabel("<a href='https://www.example.com' style='color: #6366f1; text-decoration: none;'>🌐 访问官方网站</a>")
+        website_label.setOpenExternalLinks(True)
+        website_label.setStyleSheet("""
+            font-size: 15px;
+            font-weight: 500;
+            padding: 8px;
+        """)
+        website_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        about_card.content_layout.addWidget(website_label)
+
+        # 版权信息
+        copyright_label = QLabel("© 2023 工具箱开发团队")
+        copyright_label.setStyleSheet("color: #64748b; font-size: 12px;")
+        copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        about_card.content_layout.addWidget(copyright_label)
+
+        about_card.content_layout.addStretch()
+
+        # 将卡片添加到主布局
+        layout.addWidget(general_card)
+        layout.addWidget(about_card)
+        layout.addStretch()
+
+        return widget
+
+    def set_theme(self, theme_name):
+        """设置主题"""
+        if theme_name == "light":
+            theme = Theme.LIGHT
+        else:
+            theme = Theme.DARK
+
+        # 保存主题设置
+        self.save_theme_setting(theme_name)
+
+        # 发射信号或更新UI
+        print(f"主题已切换为: {theme_name}")
+
+    def save_theme_setting(self, theme_name):
+        """保存主题设置"""
+        settings = QSettings("Toolbox", "App")
+        settings.setValue("theme", theme_name)
 
 
 # ==================== 主窗口 ====================
@@ -1506,45 +1653,37 @@ class ToolboxWindow(QMainWindow):
     def __init__(self, app=None):
         super().__init__()
         self._app = app
-        self.setWindowTitle("工具箱")
+        self.setWindowTitle(f"工具箱 v{__version__}")
         self.setMinimumSize(1200, 800)
 
-        # 设置窗口图标
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        icon_path = os.path.join(current_dir, "icon.ico")
-        if os.path.exists(icon_path):
-            # 使用绝对路径
-            abs_icon_path = os.path.abspath(icon_path)
-            self.setWindowIcon(QIcon(abs_icon_path))
-            # 确保任务栏图标也设置
-            if hasattr(self, '_app') and self._app:
-                self._app.setWindowIcon(QIcon(abs_icon_path))
-        
         # 加载设置
         self.settings = QSettings("Toolbox", "App")
         self.load_geometry()
-        
+
         # 初始化插件系统
         self.plugins: Dict[str, ToolPlugin] = {}
         self.current_plugin = None
-        
+
         self.setup_ui()
         self.register_builtin_plugins()
         self.load_plugins()
-        
+
         # 系统托盘
         self.setup_tray()
-        
+
+        # 菜单栏
+        self.setup_menu()
+
     def setup_ui(self):
         # 中央部件
         central = QWidget()
         self.setCentralWidget(central)
-        
+
         # 主布局
         main_layout = QHBoxLayout(central)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
-        
+
         # 侧边栏
         self.sidebar = QFrame()
         self.sidebar.setObjectName("sidebar")
@@ -1556,11 +1695,11 @@ class ToolboxWindow(QMainWindow):
                 border-right: 1px solid #1e293b;
             }
         """)
-        
+
         sidebar_layout = QVBoxLayout(self.sidebar)
         sidebar_layout.setContentsMargins(16, 16, 16, 16)
         sidebar_layout.setSpacing(8)
-        
+
         # Logo
         logo_layout = QHBoxLayout()
         logo_icon = QLabel("🧰")
@@ -1575,31 +1714,31 @@ class ToolboxWindow(QMainWindow):
         logo_layout.addWidget(logo_text)
         logo_layout.addStretch()
         sidebar_layout.addLayout(logo_layout)
-        
+
         # 分隔线
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setStyleSheet("background-color: #334155;")
         line.setMaximumHeight(1)
         sidebar_layout.addWidget(line)
-        
+
         # 导航按钮容器
         self.nav_widget = QWidget()
         self.nav_layout = QVBoxLayout(self.nav_widget)
         self.nav_layout.setContentsMargins(0, 8, 0, 0)
         self.nav_layout.setSpacing(4)
         sidebar_layout.addWidget(self.nav_widget)
-        
+
         sidebar_layout.addStretch()
-        
+
         # 底部信息
-        version = QLabel("v1.0.0")
+        version = QLabel(f"v{__version__}")
         version.setStyleSheet("color: #475569; font-size: 12px;")
         version.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sidebar_layout.addWidget(version)
-        
+
         main_layout.addWidget(self.sidebar)
-        
+
         # 内容区域
         self.content = QStackedWidget()
         self.content.setStyleSheet("""
@@ -1607,13 +1746,13 @@ class ToolboxWindow(QMainWindow):
                 background-color: #0f172a;
             }
         """)
-        
+
         # 欢迎页
         self.welcome_page = WelcomePage(self.plugins)
         self.content.addWidget(self.welcome_page)
-        
+
         main_layout.addWidget(self.content, 1)
-        
+
         # 全局样式
         self.setStyleSheet("""
             QMainWindow {
@@ -1636,7 +1775,7 @@ class ToolboxWindow(QMainWindow):
                 background-color: #0f172a;
             }
         """)
-    
+
     def register_plugin(self, plugin_class):
         """注册插件"""
         try:
@@ -1654,14 +1793,16 @@ class ToolboxWindow(QMainWindow):
 
         except Exception as e:
             print(f"注册插件失败 {plugin_class.name}: {e}")
-    
+
     def register_builtin_plugins(self):
         """注册内置插件"""
         self.register_plugin(ImageCompressor)
         self.register_plugin(ImageToPDF)
         self.register_plugin(FormatConverter)
         self.register_plugin(ImageStitcher)
-    
+        # 注册设置插件
+        self.register_plugin(SettingsPlugin)
+
     def load_plugins(self):
         """从plugins目录加载外部插件"""
         plugins_dir = Path("plugins")
@@ -1682,7 +1823,7 @@ class ToolboxWindow(QMainWindow):
                         self.register_plugin(attr)
             except Exception as e:
                 print(f"加载插件失败 {file}: {e}")
-    
+
     def switch_plugin(self, name):
         """切换插件页面"""
         # 更新按钮状态
@@ -1698,13 +1839,13 @@ class ToolboxWindow(QMainWindow):
             if index >= 0:
                 self.content.setCurrentIndex(index)
                 self.current_plugin = name
-    
+
     def setup_tray(self):
         """设置系统托盘"""
         if QSystemTrayIcon.isSystemTrayAvailable():
             self.tray = QSystemTrayIcon(self)
             self.tray.setToolTip("工具箱")
-            
+
             # 设置图标
             current_dir = os.path.dirname(os.path.abspath(__file__))
             icon_path = os.path.join(current_dir, "icon.ico")
@@ -1715,31 +1856,53 @@ class ToolboxWindow(QMainWindow):
                 pixmap = QPixmap(32, 32)
                 pixmap.fill(QColor("#6366f1"))
                 self.tray.setIcon(QIcon(pixmap))
-            
+
             menu = QMenu()
             show_action = menu.addAction("显示")
             show_action.triggered.connect(self.show)
             quit_action = menu.addAction("退出")
             quit_action.triggered.connect(QApplication.quit)
-            
+
             self.tray.setContextMenu(menu)
             self.tray.activated.connect(self.tray_activated)
             self.tray.show()
-    
+
+    def setup_menu(self):
+        """设置顶部菜单栏"""
+        menubar = self.menuBar()
+
+        # 文件菜单
+        file_menu = menubar.addMenu('文件')
+        exit_action = QAction('退出', self)
+        exit_action.setShortcut('Ctrl+Q')
+        exit_action.triggered.connect(QApplication.quit)
+        file_menu.addAction(exit_action)
+
+        # 工具菜单
+        tools_menu = menubar.addMenu('工具')
+        settings_action = QAction('设置', self)
+        settings_action.setShortcut('Ctrl+S')
+        settings_action.triggered.connect(self.show_settings)
+        tools_menu.addAction(settings_action)
+
+    def show_settings(self):
+        """显示设置页面"""
+        self.switch_plugin("设置")
+
     def tray_activated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
             self.show()
             self.raise_()
             self.activateWindow()
-    
+
     def closeEvent(self, event):
         self.save_geometry()
         event.accept()
-    
+
     def save_geometry(self):
         self.settings.setValue("geometry", self.saveGeometry())
         self.settings.setValue("windowState", self.saveState())
-    
+
     def load_geometry(self):
         geometry = self.settings.value("geometry")
         if geometry:
@@ -1747,7 +1910,7 @@ class ToolboxWindow(QMainWindow):
         else:
             self.resize(1200, 800)
             self.move(
-                QApplication.primaryScreen().geometry().center() - 
+                QApplication.primaryScreen().geometry().center() -
                 self.rect().center()
             )
 
@@ -1758,7 +1921,7 @@ def main():
 
     # 设置应用属性
     app.setApplicationName("工具箱")
-    app.setApplicationVersion("1.0.0")
+    app.setApplicationVersion(__version__)
     app.setOrganizationName("Toolbox")
     app.setOrganizationDomain("toolbox.com")
 
@@ -1771,17 +1934,14 @@ def main():
     icon_path = os.path.join(current_dir, "icon.ico")
     if os.path.exists(icon_path):
         app_icon = QIcon(icon_path)
-        # 尝试多种方法设置任务栏图标
         app.setWindowIcon(app_icon)
-        # 设置应用 ID，这有助于 Windows 识别图标
         app.setDesktopFileName("toolbox.desktop")
-        # 再次设置确保生效
         app.setWindowIcon(app_icon)
-    
+
     # 创建并显示窗口
     window = ToolboxWindow(app)
     window.show()
-    
+
     sys.exit(app.exec())
 
 
