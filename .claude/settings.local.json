@@ -4,7 +4,11 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(python:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(tasklist)",
+      "Bash(findstr \"python\")",
+      "Bash(taskkill /f /im python.exe)",
+      "Bash(wmic process:*)"
     ]
   }
 }

@@ -12,7 +12,7 @@ except ImportError:
 # 导入主程序中的ToolPlugin基类
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin
+    from toolbox import ToolPlugin, Card, AnimatedButton
 except ImportError:
     # 如果导入失败，定义一个简化的基类
     class ToolPlugin:
@@ -23,10 +23,9 @@ except ImportError:
             raise NotImplementedError("Subclasses must implement create_ui()")
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog,
-    QSpinBox, QComboBox, QLineEdit, QProgressBar, QMessageBox, QGroupBox,
-    QRadioButton, QButtonGroup, QGridLayout, QCheckBox, QListWidget,
-    QScrollArea, QFrame
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
+    QSpinBox, QComboBox, QLineEdit, QProgressBar, QMessageBox,
+    QGridLayout, QCheckBox, QListWidget, QScrollArea, QFrame, QTextEdit
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
@@ -126,121 +125,182 @@ class ImageScalerWidget(QWidget):
             self.start_btn.setEnabled(False)
 
     def setup_ui(self):
+        widget = QWidget()
         layout = QVBoxLayout(self)
+        layout.setSpacing(16)
 
-        # 输入文件区域
-        input_group = QGroupBox("选择图片文件")
-        input_layout = QVBoxLayout()
+        # 标题
+        title = QLabel("📏 图片批量缩放")
+        title.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
+        layout.addWidget(title)
 
-        # 选择文件按钮
-        select_btn = QPushButton("选择图片")
-        select_btn.clicked.connect(self.select_files)
-        input_layout.addWidget(select_btn)
+        # 说明
+        desc = QLabel("支持按百分比或指定尺寸缩放图片，支持保持宽高比和质量设置")
+        desc.setStyleSheet("color: #94a3b8; font-size: 13px;")
+        layout.addWidget(desc)
 
-        # 文件列表
-        self.file_list = QListWidget()
-        self.file_list.setMaximumHeight(150)
-        input_layout.addWidget(self.file_list)
+        # 文件选择区域
+        file_card = Card(title="选择图片")
+        file_layout = file_card.content_layout
 
-        input_group.setLayout(input_layout)
-        layout.addWidget(input_group)
+        self.file_list = QTextEdit()
+        self.file_list.setPlaceholderText("点击按钮选择图片...")
+        self.file_list.setMaximumHeight(120)
+        self.file_list.setStyleSheet("""
+            QTextEdit {
+                background-color: #0f172a;
+                border: 2px dashed #334155;
+                border-radius: 8px;
+                color: #94a3b8;
+                padding: 8px;
+            }
+        """)
+        file_layout.addWidget(self.file_list)
+
+        btn_layout = QHBoxLayout()
+        self.add_btn = AnimatedButton("添加图片")
+        self.add_btn.clicked.connect(self.select_files)
+        self.clear_btn = AnimatedButton("清空列表")
+        self.clear_btn.clicked.connect(self.clear_images)
+        btn_layout.addWidget(self.add_btn)
+        btn_layout.addWidget(self.clear_btn)
+        btn_layout.addStretch()
+        file_layout.addLayout(btn_layout)
+
+        layout.addWidget(file_card)
 
         # 缩放设置区域
-        scale_group = QGroupBox("缩放设置")
-        scale_layout = QVBoxLayout()
+        settings_card = Card(title="缩放设置")
+        settings_layout = QGridLayout()
+        settings_card.content_layout.addLayout(settings_layout)
 
-        # 缩放方式
-        scale_method_layout = QHBoxLayout()
+        combo_style = """
+            QComboBox {
+                background-color: #0f172a;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 6px;
+                color: #f1f5f9;
+            }
+        """
+
+        spin_style = """
+            QSpinBox {
+                background-color: #0f172a;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 4px;
+                color: #f1f5f9;
+            }
+        """
+
+        settings_layout.addWidget(QLabel("缩放方式:"), 0, 0)
         self.scale_type_combo = QComboBox()
         self.scale_type_combo.addItems(["百分比缩放", "指定宽度", "指定高度"])
+        self.scale_type_combo.setStyleSheet(combo_style)
         self.scale_type_combo.currentTextChanged.connect(self.on_scale_type_changed)
-        scale_method_layout.addWidget(QLabel("缩放方式:"))
-        scale_method_layout.addWidget(self.scale_type_combo)
-        scale_method_layout.addStretch()
-        scale_layout.addLayout(scale_method_layout)
+        settings_layout.addWidget(self.scale_type_combo, 0, 1)
 
-        # 保持比例
         self.maintain_aspect = QCheckBox("保持宽高比")
         self.maintain_aspect.setChecked(True)
+        self.maintain_aspect.setStyleSheet("color: #f1f5f9;")
         self.maintain_aspect.stateChanged.connect(self.on_scale_type_changed)
-        scale_layout.addWidget(self.maintain_aspect)
+        settings_layout.addWidget(self.maintain_aspect, 1, 0, 1, 2)
 
-        # 缩放参数
-        param_layout = QGridLayout()
-        param_layout.addWidget(QLabel("缩放值:"), 0, 0)
-
+        settings_layout.addWidget(QLabel("缩放值:"), 2, 0)
         self.scale_value_input = QSpinBox()
         self.scale_value_input.setRange(1, 200)
         self.scale_value_input.setValue(50)
         self.scale_value_input.setSuffix(" %")
-        param_layout.addWidget(self.scale_value_input, 0, 1)
+        self.scale_value_input.setStyleSheet(spin_style)
+        settings_layout.addWidget(self.scale_value_input, 2, 1)
 
         self.width_input = QSpinBox()
         self.width_input.setRange(1, 10000)
         self.width_input.setValue(800)
         self.width_input.setSuffix(" px")
+        self.width_input.setStyleSheet(spin_style)
+        settings_layout.addWidget(self.width_input, 3, 0)
 
         self.height_input = QSpinBox()
         self.height_input.setRange(1, 10000)
         self.height_input.setValue(600)
         self.height_input.setSuffix(" px")
+        self.height_input.setStyleSheet(spin_style)
+        settings_layout.addWidget(self.height_input, 3, 1)
 
-        param_layout.addWidget(self.width_input, 1, 0)
-        param_layout.addWidget(self.height_input, 1, 1)
-
-        scale_layout.addLayout(param_layout)
-
-        # 图片质量
-        quality_layout = QHBoxLayout()
-        quality_layout.addWidget(QLabel("图片质量:"))
+        settings_layout.addWidget(QLabel("图片质量:"), 4, 0)
         self.quality_combo = QComboBox()
         self.quality_combo.addItems(["高质量 (95)", "标准 (85)", "较小文件 (75)", "最小文件 (50)"])
         self.quality_combo.setCurrentIndex(1)
-        quality_layout.addWidget(self.quality_combo)
-        quality_layout.addStretch()
-        scale_layout.addLayout(quality_layout)
+        self.quality_combo.setStyleSheet(combo_style)
+        settings_layout.addWidget(self.quality_combo, 4, 1)
 
-        scale_group.setLayout(scale_layout)
-        layout.addWidget(scale_group)
+        layout.addWidget(settings_card)
 
         # 输出设置
-        output_group = QGroupBox("输出设置")
-        output_layout = QVBoxLayout()
+        output_card = Card(title="输出设置")
+        output_layout = QHBoxLayout()
+        self.output_path = QLineEdit()
+        self.output_path.setPlaceholderText("选择输出目录...")
+        self.output_path.setStyleSheet("""
+            QLineEdit {
+                background-color: #0f172a;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 6px;
+                color: #f1f5f9;
+            }
+        """)
+        self.browse_btn = AnimatedButton("浏览")
+        self.browse_btn.setMaximumWidth(80)
+        self.browse_btn.clicked.connect(self.select_output_dir)
+        output_layout.addWidget(self.output_path)
+        output_layout.addWidget(self.browse_btn)
+        output_card.content_layout.addLayout(output_layout)
+        layout.addWidget(output_card)
 
-        # 选择输出目录
-        output_btn_layout = QHBoxLayout()
-        self.output_label = QLabel("未选择输出目录")
-        output_btn = QPushButton("选择输出目录")
-        output_btn.clicked.connect(self.select_output_dir)
-        output_btn_layout.addWidget(self.output_label)
-        output_btn_layout.addWidget(output_btn)
-        output_layout.addLayout(output_btn_layout)
-
-        output_group.setLayout(output_layout)
-        layout.addWidget(output_group)
-
-        # 操作按钮
-        button_layout = QHBoxLayout()
-        self.start_btn = QPushButton("开始缩放")
+        # 操作区
+        action_card = Card()
+        self.start_btn = AnimatedButton("开始缩放")
+        self.start_btn.setMinimumHeight(48)
+        self.start_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #10b981, stop:1 #059669);
+                color: white; border: none; border-radius: 8px;
+                font-size: 16px; font-weight: 600;
+            }
+            QPushButton:hover { background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 #34d399, stop:1 #10b981); }
+            QPushButton:disabled { background: #334155; color: #64748b; }
+        """)
         self.start_btn.clicked.connect(self.start_scaling)
         self.start_btn.setEnabled(False)
-        self.cancel_btn = QPushButton("取消")
-        self.cancel_btn.clicked.connect(self.cancel_scaling)
-        self.cancel_btn.setEnabled(False)
-        button_layout.addWidget(self.start_btn)
-        button_layout.addWidget(self.cancel_btn)
-        layout.addLayout(button_layout)
+        action_card.content_layout.addWidget(self.start_btn)
 
-        # 进度条
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
-        layout.addWidget(self.progress_bar)
+        self.progress_bar.setStyleSheet("""
+            QProgressBar {
+                background-color: #0f172a;
+                border-radius: 6px;
+                text-align: center;
+                color: white;
+            }
+            QProgressBar::chunk {
+                background-color: #10b981;
+                border-radius: 6px;
+            }
+        """)
+        action_card.content_layout.addWidget(self.progress_bar)
 
-        # 状态信息
         self.status_label = QLabel("就绪")
+        self.status_label.setStyleSheet("color: #94a3b8;")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.status_label)
+        action_card.content_layout.addWidget(self.status_label)
 
+        layout.addWidget(action_card)
         layout.addStretch()
 
         # 初始状态
@@ -278,6 +338,12 @@ class ImageScalerWidget(QWidget):
                 self.width_input.setEnabled(True)
                 self.width_input.setSuffix(" px")
 
+    def clear_images(self):
+        self.input_files = []
+        self.file_list.clear()
+        self.start_btn.setEnabled(False)
+        self.status_label.setText("就绪")
+
     def select_files(self):
         files, _ = QFileDialog.getOpenFileNames(
             self,
@@ -288,10 +354,11 @@ class ImageScalerWidget(QWidget):
 
         if files:
             self.input_files = files
-            self.file_list.clear()
-            for file in files:
-                self.file_list.addItem(os.path.basename(file))
-            self.start_btn.setEnabled(True)
+            self.file_list.setText("\n".join(
+                f"{i+1}. {os.path.basename(f)}" for i, f in enumerate(self.input_files)
+            ))
+            if self.input_files and self.output_path.text():
+                self.start_btn.setEnabled(True)
             self.status_label.setText(f"已选择 {len(files)} 个文件")
 
     def select_output_dir(self):
@@ -302,12 +369,12 @@ class ImageScalerWidget(QWidget):
         )
 
         if dir_path:
-            self.output_label.setText(dir_path)
+            self.output_path.setText(dir_path)
             if self.input_files:
                 self.start_btn.setEnabled(True)
 
     def start_scaling(self):
-        if not self.input_files or not self.output_label.text() or self.output_label.text() == "未选择输出目录":
+        if not self.input_files or not self.output_path.text():
             QMessageBox.warning(self, "警告", "请先选择图片文件和输出目录")
             return
 
@@ -318,7 +385,7 @@ class ImageScalerWidget(QWidget):
         # 准备工作线程
         self.worker = ScalingWorker(
             input_files=self.input_files,
-            output_dir=self.output_label.text(),
+            output_dir=self.output_path.text(),
             scale_type=scale_type,
             scale_value=self.scale_value_input.value() if scale_type == "百分比缩放" else 100,
             quality=quality,
