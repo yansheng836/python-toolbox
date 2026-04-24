@@ -1663,8 +1663,8 @@ class ToolboxWindow(QMainWindow):
                 for attr_name in dir(module):
                     attr = getattr(module, attr_name)
                     if (isinstance(attr, type) and
-                        issubclass(attr, ToolPlugin) and
-                        attr != ToolPlugin):
+                        attr.__name__ != 'ToolPlugin' and
+                        any(c.__name__ == 'ToolPlugin' for c in attr.__mro__)):
                         self.register_plugin(attr)
             except Exception as e:
                 print(f"加载插件失败 {file}: {e}")

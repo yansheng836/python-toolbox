@@ -61,25 +61,23 @@ class ScalingWorker(QThread):
                     # 打开图片
                     with Image.open(input_file) as img:
                         # 计算新尺寸
-                        if self.scale_type == "percentage":
-                            if self.maintain_aspect:
-                                new_width = int(img.width * self.scale_value / 100)
-                                new_height = int(img.height * self.scale_value / 100)
-                            else:
-                                new_width = int(img.width * self.scale_value / 100)
-                                new_height = int(img.height * self.scale_value / 100)
-                        elif self.scale_type == "width":
+                        if self.scale_type == "百分比缩放":
+                            new_width = int(img.width * self.scale_value / 100)
+                            new_height = int(img.height * self.scale_value / 100)
+                        elif self.scale_type == "指定宽度":
                             new_width = self.width
                             if self.maintain_aspect:
                                 new_height = int(img.height * new_width / img.width)
                             else:
                                 new_height = self.height
-                        elif self.scale_type == "height":
+                        elif self.scale_type == "指定高度":
                             new_height = self.height
                             if self.maintain_aspect:
                                 new_width = int(img.width * new_height / img.height)
                             else:
                                 new_width = self.width
+                        else:
+                            raise ValueError(f"未知缩放类型: {self.scale_type}")
 
                         # 缩放图片
                         scaled_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
