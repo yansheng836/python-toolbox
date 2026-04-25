@@ -945,12 +945,41 @@ class ImageStitcher(ToolPlugin):
     description = "多图横向/纵向合并为一张"
     icon = "📐"
 
+    class FileListWrapper:
+        """文件列表包装器"""
+        def __init__(self, text_edit, refresh_callback):
+            self.files = []
+            self._text_edit = text_edit
+            self._refresh_callback = refresh_callback
+
+        def append(self, file):
+            if file not in self.files:
+                self.files.append(file)
+                self._refresh_callback()
+
+        def extend(self, files):
+            for f in files:
+                if f not in self.files:
+                    self.files.append(f)
+            self._refresh_callback()
+
+        def clear(self):
+            self.files.clear()
+            self._text_edit.clear()
+
+        def pop(self, index=-1):
+            result = self.files.pop(index)
+            self._refresh_callback()
+            return result
+
+        def insert(self, index, item):
+            self.files.insert(index, item)
+            self._refresh_callback()
+
     def setup_drag_handler(self):
         """设置拖拽处理器"""
         if hasattr(self, 'file_list'):
             DragDropHandler.setup_drag_drop(self.file_list, self.files)
-            # 对于 ImageStitcher，需要特殊处理，因为它有 _refresh_list 方法
-            self.files._text_edit = self.file_list
 
     def update_theme(self, theme):
         """更新主题"""
@@ -1107,7 +1136,8 @@ class ImageStitcher(ToolPlugin):
         layout.addWidget(action_card)
         layout.addStretch()
 
-        self.files = []
+        # 使用文件列表包装器
+        self.files = self.FileListWrapper(self.file_list, self._refresh_list)
         return widget
 
     def add_images(self):
@@ -1117,26 +1147,24 @@ class ImageStitcher(ToolPlugin):
         )
         if files:
             self.files.extend(files)
-            self._refresh_list()
 
     def move_up(self):
-        if len(self.files) > 1:
+        if len(self.files.files) > 1:
             self.files.insert(0, self.files.pop())
             self._refresh_list()
 
     def move_down(self):
-        if len(self.files) > 1:
-            self.files.append(self.files.pop(0))
+        if len(self.files.files) > 1:
+            self.files.insert(0, self.files.pop())
             self._refresh_list()
 
     def clear_images(self):
-        self.files = []
-        self.file_list.clear()
+        self.files.clear()
 
     def _refresh_list(self):
         # 对于 ImageStitcher，需要显示序号，所以不使用通用方法
         self.file_list.setText("\n".join(
-            f"{i+1}. {os.path.basename(f)}" for i, f in enumerate(self.files)
+            f"{i+1}. {os.path.basename(f)}" for i, f in enumerate(self.files.files)
         ))
 
     def browse_output(self):
@@ -1148,7 +1176,7 @@ class ImageStitcher(ToolPlugin):
             self.output_path.setText(path)
 
     def start_stitch(self):
-        if len(self.files) < 2:
+        if len(self.files.files) < 2:
             QMessageBox.warning(None, "警告", "请至少添加 2 张图片！")
             return
         if not self.output_path.text():
@@ -1162,7 +1190,7 @@ class ImageStitcher(ToolPlugin):
 
         self.start_btn.setEnabled(False)
         self.worker = ImageStitchWorker(
-            self.files, self.output_path.text(), direction, align, bg
+            self.files.files, self.output_path.text(), direction, align, bg
         )
         self.worker.status.connect(self.status_label.setText)
         self.worker.finished.connect(self.stitch_finished)
