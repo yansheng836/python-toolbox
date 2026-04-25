@@ -1535,7 +1535,7 @@ class SettingsPlugin(ToolPlugin):
         layout.addWidget(line)
 
         # 通用设置卡片
-        general_card = Card("通用设置")
+        general_card = Card(title="通用设置")
 
         # 主题设置
         theme_label = QLabel("外观:")
@@ -1588,7 +1588,7 @@ class SettingsPlugin(ToolPlugin):
         general_card.content_layout.addStretch()
 
         # 关于卡片
-        about_card = Card("关于")
+        about_card = Card(title="关于")
 
         # 版本信息
         version_label = QLabel(f"版本: v{self.version}")
@@ -1784,7 +1784,8 @@ class ToolboxWindow(QMainWindow):
 
             # 创建导航按钮
             btn = SidebarButton(plugin.name, plugin.icon)
-            btn.clicked.connect(lambda checked, n=plugin.name: self.switch_plugin(n))
+            from functools import partial
+            btn.clicked.connect(partial(self.switch_plugin, plugin.name))
             self.nav_layout.addWidget(btn)
 
             # 添加页面
