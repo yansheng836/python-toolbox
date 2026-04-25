@@ -1639,8 +1639,93 @@ class SettingsPlugin(ToolPlugin):
         # 保存主题设置
         self.save_theme_setting(theme_name)
 
-        # 发射信号或更新UI
+        # 应用主题到整个应用
+        self.parent.apply_theme(theme)
+
+        # 发射信号通知主题变化
+        if hasattr(self.parent, 'theme_changed'):
+            self.parent.theme_changed.emit(theme_name)
+
         print(f"主题已切换为: {theme_name}")
+
+    def apply_theme(self, theme):
+        """应用主题到所有UI元素"""
+        # 应用主窗口样式
+        self.parent.setStyleSheet(f"""
+            QMainWindow {{
+                background-color: {theme['bg']};
+            }}
+            QScrollArea {{
+                border: none;
+                background-color: {theme['bg']};
+            }}
+            QFrame {{
+                background-color: {theme['bg_secondary']};
+                border: 1px solid {theme['surface']};
+            }}
+            QLabel {{
+                color: {theme['text']};
+            }}
+            QTextEdit {{
+                background-color: {theme['bg']};
+                border: 2px solid {theme['surface']};
+                border-radius: 8px;
+                color: {theme['text']};
+                padding: 8px;
+            }}
+            QLineEdit {{
+                background-color: {theme['bg']};
+                border: 1px solid {theme['surface']};
+                border-radius: 6px;
+                padding: 6px;
+                color: {theme['text']};
+            }}
+            QComboBox {{
+                background-color: {theme['bg']};
+                border: 1px solid {theme['surface']};
+                border-radius: 6px;
+                padding: 6px;
+                color: {theme['text']};
+            }}
+            QTableWidget {{
+                background-color: {theme['bg']};
+                border: 1px solid {theme['surface']};
+                border-radius: 8px;
+                color: {theme['text']};
+                gridline-color: {theme['surface']};
+            }}
+            QProgressBar {{
+                background-color: {theme['bg']};
+                border-radius: 6px;
+                text-align: center;
+                color: {theme['text']};
+            }}
+            QHeaderView::section {{
+                background-color: {theme['bg_secondary']};
+                color: {theme['text']};
+                padding: 4px;
+                border: 1px solid {theme['surface']};
+            }}
+        """)
+
+        # 更新侧边栏样式
+        sidebar = self.parent.findChild(QFrame, "sidebar")
+        if sidebar:
+            sidebar.setStyleSheet(f"""
+                QFrame#sidebar {{
+                    background-color: {theme['bg_secondary']};
+                    border-right: 1px solid {theme['surface']};
+                }}
+            """)
+
+        # 更新内容区域样式
+        content = self.parent.content
+        if content:
+            content.setStyleSheet(f"""
+                QStackedWidget {{
+                    background-color: {theme['bg']};
+                }}
+            """)
 
     def save_theme_setting(self, theme_name):
         """保存主题设置"""
@@ -1670,6 +1755,9 @@ class ToolboxWindow(QMainWindow):
 
         # 系统托盘
         self.setup_tray()
+
+        # 初始化主题
+        self.init_theme()
 
         # 菜单栏
         self.setup_menu()
@@ -1801,6 +1889,106 @@ class ToolboxWindow(QMainWindow):
         self.register_plugin(ImageToPDF)
         self.register_plugin(FormatConverter)
         self.register_plugin(ImageStitcher)
+
+    def init_theme(self):
+        """初始化主题"""
+        # 从设置中加载主题，如果没有设置则使用深色主题
+        theme_name = self.settings.value("theme", "dark")
+        theme = Theme.LIGHT if theme_name == "light" else Theme.DARK
+
+        # 应用主题到整个窗口
+        self.apply_theme(theme)
+
+    def apply_theme(self, theme):
+        """应用主题到整个应用程序"""
+        # 应用主窗口样式
+        self.setStyleSheet(f"""
+            QMainWindow {{
+                background-color: {theme['bg']};
+            }}
+            QScrollArea {{
+                border: none;
+                background-color: {theme['bg']};
+            }}
+            QFrame {{
+                background-color: {theme['bg_secondary']};
+                border: 1px solid {theme['surface']};
+            }}
+            QLabel {{
+                color: {theme['text']};
+            }}
+            QTextEdit {{
+                background-color: {theme['bg']};
+                border: 2px solid {theme['surface']};
+                border-radius: 8px;
+                color: {theme['text']};
+                padding: 8px;
+            }}
+            QLineEdit {{
+                background-color: {theme['bg']};
+                border: 1px solid {theme['surface']};
+                border-radius: 6px;
+                padding: 6px;
+                color: {theme['text']};
+            }}
+            QComboBox {{
+                background-color: {theme['bg']};
+                border: 1px solid {theme['surface']};
+                border-radius: 6px;
+                padding: 6px;
+                color: {theme['text']};
+            }}
+            QTableWidget {{
+                background-color: {theme['bg']};
+                border: 1px solid {theme['surface']};
+                border-radius: 8px;
+                color: {theme['text']};
+                gridline-color: {theme['surface']};
+            }}
+            QProgressBar {{
+                background-color: {theme['bg']};
+                border-radius: 6px;
+                text-align: center;
+                color: {theme['text']};
+            }}
+            QHeaderView::section {{
+                background-color: {theme['bg_secondary']};
+                color: {theme['text']};
+                padding: 4px;
+                border: 1px solid {theme['surface']};
+            }}
+            QPushButton {{
+                background-color: {theme['primary']};
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 10px 20px;
+                font-size: 14px;
+                font-weight: 600;
+            }}
+            QPushButton:hover {{
+                background-color: {theme['primary_hover']};
+            }}
+            QPushButton:disabled {{
+                background-color: {theme['surface']};
+                color: {theme['text_secondary']};
+            }}
+        """)
+
+        # 更新侧边栏样式
+        self.sidebar.setStyleSheet(f"""
+            QFrame#sidebar {{
+                background-color: {theme['bg_secondary']};
+                border-right: 1px solid {theme['surface']};
+            }}
+        """)
+
+        # 更新内容区域样式
+        self.content.setStyleSheet(f"""
+            QStackedWidget {{
+                background-color: {theme['bg']};
+            }}
+        """)
 
     def load_plugins(self):
         """从plugins目录加载外部插件"""
