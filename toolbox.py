@@ -10,17 +10,17 @@ from enum import Enum
 import io
 import base64
 
-# 从main.py导入全局配置
+# 从config.py导入全局配置
 try:
-    from main import (
+    from config import (
         APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_COPYRIGHT,
         APP_WEBSITE_URL, APP_WEBSITE_LINK_TEXT,
         FEATURE_MODULES, UI_CONFIG, THEME_CONFIG, WELCOME_CONFIG
     )
 except ImportError:
-    # 如果导入失败，使用默认值
+    # 如果config.py不存在或导入失败，使用默认值
+    __version__ = "1.0.0"
     APP_NAME = "工具箱"
-    APP_VERSION = "1.0.0"
     APP_DESCRIPTION = "批量处理工具，支持图片压缩、PDF转换、格式转换和拼接"
     APP_COPYRIGHT = "© 2023 工具箱开发团队"
     APP_WEBSITE_URL = "https://www.example.com"
