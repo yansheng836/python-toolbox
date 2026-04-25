@@ -2,12 +2,13 @@ import sys
 from PyQt6.QtWidgets import (QMainWindow, QMenuBar, QMenu, QAction)
 from PyQt6.QtCore import Qt
 
+
 class MenuSystem(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('工具箱 - 设置菜单示例')
         self.setMinimumSize(400, 300)
-        self.setStyleSheet("QMainWindow {
+        self.setStyleSheet('''QMainWindow {
             background-color: #0f1729;
         }
         QMenu {
@@ -19,7 +20,7 @@ class MenuSystem(QMainWindow):
         }
         QMenu::item:selected {
             background-color: #6366f1;
-        }")
+        }''')
 
         # 添加菜单栏
         self.create_menu()

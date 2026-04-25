@@ -53,6 +53,7 @@ from PyQt6.QtGui import (
 # 尝试导入PIL用于图片处理
 try:
     from PIL import Image, ImageFilter, ImageEnhance
+
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
@@ -60,6 +61,7 @@ except ImportError:
 # 尝试导入img2pdf用于PDF转换
 try:
     import img2pdf
+
     IMG2PDF_AVAILABLE = True
 except ImportError:
     IMG2PDF_AVAILABLE = False
@@ -67,6 +69,7 @@ except ImportError:
 # 尝试导入PyMuPDF (fitz) 作为PDF备选方案
 try:
     import fitz  # PyMuPDF
+
     FITZ_AVAILABLE = True
 except ImportError:
     FITZ_AVAILABLE = False
@@ -118,6 +121,7 @@ class Theme:
 # ==================== 动画组件 ====================
 class AnimatedButton(QPushButton):
     """带动画效果的按钮"""
+
     def __init__(self, text="", icon=None, parent=None):
         super().__init__(text, parent)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -170,6 +174,7 @@ class AnimatedButton(QPushButton):
 
 class Card(QFrame):
     """现代化卡片组件"""
+
     def __init__(self, parent=None, title=""):
         super().__init__(parent)
         self.title = title
@@ -214,6 +219,7 @@ class Card(QFrame):
 
 class SidebarButton(QPushButton):
     """侧边栏导航按钮"""
+
     def __init__(self, text, icon_text, parent=None):
         super().__init__(parent)
         self.setText(f"  {icon_text}  {text}")
@@ -564,11 +570,11 @@ class FormatConvertWorker(QThread):
 
     FORMAT_MAP = {
         "JPEG": ("JPEG", "jpg"),
-        "PNG":  ("PNG",  "png"),
+        "PNG": ("PNG", "png"),
         "WebP": ("WEBP", "webp"),
-        "BMP":  ("BMP",  "bmp"),
+        "BMP": ("BMP", "bmp"),
         "TIFF": ("TIFF", "tiff"),
-        "GIF":  ("GIF", "gif"),
+        "GIF": ("GIF", "gif"),
     }
 
     def __init__(self, files, output_dir, target_fmt):
@@ -801,8 +807,8 @@ class ImageStitchWorker(QThread):
         self.files = files
         self.output_path = output_path
         self.direction = direction  # "horizontal" | "vertical"
-        self.align = align          # "start" | "center" | "end"
-        self.bg_color = bg_color    # (R, G, B)
+        self.align = align  # "start" | "center" | "end"
+        self.bg_color = bg_color  # (R, G, B)
 
     def run(self):
         try:
@@ -875,7 +881,7 @@ class ImageStitcher(ToolPlugin):
         layout = QVBoxLayout(widget)
         layout.setSpacing(16)
 
-        self.title_label = QLabel("🪄 图片拼接")
+        self.title_label = QLabel(self.icon + self.name + "工具")
         self.title_label.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
         layout.addWidget(self.title_label)
 
@@ -943,9 +949,15 @@ class ImageStitcher(ToolPlugin):
 
         grid.addWidget(QLabel("背景颜色:"), 2, 0)
         bg_row = QHBoxLayout()
-        self.bg_r = QSpinBox(); self.bg_r.setRange(0, 255); self.bg_r.setValue(255)
-        self.bg_g = QSpinBox(); self.bg_g.setRange(0, 255); self.bg_g.setValue(255)
-        self.bg_b = QSpinBox(); self.bg_b.setRange(0, 255); self.bg_b.setValue(255)
+        self.bg_r = QSpinBox();
+        self.bg_r.setRange(0, 255);
+        self.bg_r.setValue(255)
+        self.bg_g = QSpinBox();
+        self.bg_g.setRange(0, 255);
+        self.bg_g.setValue(255)
+        self.bg_b = QSpinBox();
+        self.bg_b.setRange(0, 255);
+        self.bg_b.setValue(255)
         spin_style = """
             QSpinBox {
                 background-color: #0f172a;
@@ -1277,16 +1289,16 @@ class ImageToPDF(ToolPlugin):
     def move_up(self):
         row = self.table.currentRow()
         if row > 0:
-            self.files[row], self.files[row-1] = self.files[row-1], self.files[row]
+            self.files[row], self.files[row - 1] = self.files[row - 1], self.files[row]
             self.update_table()
-            self.table.selectRow(row-1)
+            self.table.selectRow(row - 1)
 
     def move_down(self):
         row = self.table.currentRow()
         if row < len(self.files) - 1:
-            self.files[row], self.files[row+1] = self.files[row+1], self.files[row]
+            self.files[row], self.files[row + 1] = self.files[row + 1], self.files[row]
             self.update_table()
-            self.table.selectRow(row+1)
+            self.table.selectRow(row + 1)
 
     def update_table(self):
         self.table.setRowCount(len(self.files))
@@ -1457,6 +1469,7 @@ class PDFWorker(QThread):
 
 class WelcomePage(QWidget):
     """欢迎页面"""
+
     def __init__(self, plugins=None, parent=None):
         super().__init__(parent)
         self.plugins = plugins or {}
@@ -1713,7 +1726,8 @@ class SettingsPlugin(ToolPlugin):
         about_card.content_layout.addWidget(self.desc_label)
 
         # 官方网站
-        self.website_label = QLabel(f"<a href='{APP_WEBSITE_URL}' style='color: #6366f1; text-decoration: none;'>{APP_WEBSITE_LINK_TEXT}</a>")
+        self.website_label = QLabel(
+            f"<a href='{APP_WEBSITE_URL}' style='color: #6366f1; text-decoration: none;'>{APP_WEBSITE_LINK_TEXT}</a>")
         self.website_label.setOpenExternalLinks(True)
         self.website_label.setStyleSheet("""
             font-size: 15px;
@@ -2180,8 +2194,8 @@ class ToolboxWindow(QMainWindow):
                 for attr_name in dir(module):
                     attr = getattr(module, attr_name)
                     if (isinstance(attr, type) and
-                        attr.__name__ != 'ToolPlugin' and
-                        any(c.__name__ == 'ToolPlugin' for c in attr.__mro__)):
+                            attr.__name__ != 'ToolPlugin' and
+                            any(c.__name__ == 'ToolPlugin' for c in attr.__mro__)):
                         self.register_plugin(attr)
             except Exception as e:
                 print(f"加载插件失败 {file}: {e}")

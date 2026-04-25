@@ -5,6 +5,7 @@ from typing import List, Optional, Tuple
 
 try:
     from PIL import Image
+
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
@@ -200,13 +201,15 @@ class ImageScalerWidget(QWidget):
         self.scale_type_combo.addItems(["百分比缩放", "指定宽度", "指定高度"])
         self.scale_type_combo.setStyleSheet(combo_style)
         self.scale_type_combo.currentTextChanged.connect(self.on_scale_type_changed)
-        settings_layout.addWidget(self.scale_type_combo, 0, 1, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        settings_layout.addWidget(self.scale_type_combo, 0, 1, 1, 1,
+                                  Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
         self.maintain_aspect = QCheckBox("保持宽高比")
         self.maintain_aspect.setChecked(True)
         self.maintain_aspect.setStyleSheet("color: #f1f5f9;")
         self.maintain_aspect.stateChanged.connect(self.on_scale_type_changed)
-        settings_layout.addWidget(self.maintain_aspect, 1, 0, 1, 2, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        settings_layout.addWidget(self.maintain_aspect, 1, 0, 1, 2,
+                                  Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
         settings_layout.addWidget(QLabel("缩放值:"), 2, 0, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         self.scale_value_input = QSpinBox()
@@ -214,7 +217,8 @@ class ImageScalerWidget(QWidget):
         self.scale_value_input.setValue(50)
         self.scale_value_input.setSuffix(" %")
         self.scale_value_input.setStyleSheet(spin_style)
-        settings_layout.addWidget(self.scale_value_input, 2, 1, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        settings_layout.addWidget(self.scale_value_input, 2, 1, 1, 1,
+                                  Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
         # 宽度设置
         self.width_label = QLabel("宽度:")
@@ -241,7 +245,8 @@ class ImageScalerWidget(QWidget):
         self.quality_combo.addItems(["高质量 (95)", "标准 (85)", "较小文件 (75)", "最小文件 (50)"])
         self.quality_combo.setCurrentIndex(1)
         self.quality_combo.setStyleSheet(combo_style)
-        settings_layout.addWidget(self.quality_combo, 5, 1, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        settings_layout.addWidget(self.quality_combo, 5, 1, 1, 1,
+                                  Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
         layout.addWidget(settings_card)
 

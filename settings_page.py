@@ -5,8 +5,10 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 
+
 class Card(QFrame):
     """现代化卡片组件"""
+
     def __init__(self, title="", parent=None):
         super().__init__(parent)
         self.setObjectName("card")
@@ -157,7 +159,8 @@ class SettingsPlugin:
         about_card.content_layout.addWidget(desc_label)
 
         # 官方网站
-        website_label = QLabel("<a href='https://www.example.com' style='color: #6366f1; text-decoration: none;'>🌐 访问官方网站</a>")
+        website_label = QLabel(
+            "<a href='https://www.example.com' style='color: #6366f1; text-decoration: none;'>🌐 访问官方网站</a>")
         website_label.setOpenExternalLinks(True)
         website_label.setStyleSheet("""
             font-size: 15px;
