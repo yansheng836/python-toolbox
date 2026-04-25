@@ -15,7 +15,8 @@ try:
     from config import (
         APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_COPYRIGHT,
         APP_WEBSITE_URL, APP_WEBSITE_LINK_TEXT,
-        FEATURE_MODULES, UI_CONFIG, THEME_CONFIG, WELCOME_CONFIG
+        FEATURE_MODULES, UI_CONFIG, THEME_CONFIG, WELCOME_CONFIG,
+        TITLE_STYLES
     )
 except ImportError:
     # 如果config.py不存在或导入失败，使用默认值
@@ -189,11 +190,8 @@ class Card(QFrame):
         if self.title:
             self.title_label = QLabel(self.title)
             self.title_label.setObjectName("cardTitle")
-            self.title_label.setStyleSheet("""
-                font-size: 18px;
-                font-weight: 700;
-                color: #f1f5f9;
-            """)
+            self.title_label.setStyleSheet(
+                f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']}; color: #f1f5f9;")
             layout.addWidget(self.title_label)
 
         self.content = QWidget()
@@ -285,7 +283,7 @@ class ImageCompressor(ToolPlugin):
         """更新主题"""
         # 更新标题颜色
         if hasattr(self, 'title_label'):
-            self.title_label.setStyleSheet(f"font-size: 24px; font-weight: 700; color: {theme['text']};")
+            self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']}; color: {theme['text']};")
 
         # 更新描述颜色
         if hasattr(self, 'desc_label'):
@@ -298,7 +296,7 @@ class ImageCompressor(ToolPlugin):
 
         # 标题
         self.title_label = QLabel("🖼️ 图片压缩工具")
-        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
+        self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};")
         layout.addWidget(self.title_label)
 
         # 说明
@@ -628,7 +626,7 @@ class FormatConverter(ToolPlugin):
         """更新主题"""
         # 更新标题颜色
         if hasattr(self, 'title_label'):
-            self.title_label.setStyleSheet(f"font-size: 24px; font-weight: 700; color: {theme['text']};")
+            self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']}; color: {theme['text']};")
 
         # 更新描述颜色
         if hasattr(self, 'desc_label'):
@@ -640,7 +638,7 @@ class FormatConverter(ToolPlugin):
         layout.setSpacing(16)
 
         self.title_label = QLabel("🔄 图片格式批量转换")
-        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
+        self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};")
         layout.addWidget(self.title_label)
 
         self.desc_label = QLabel("纯格式转换，保持原始质量，支持 JPEG / PNG / WebP / BMP / TIFF / GIF")
@@ -870,7 +868,7 @@ class ImageStitcher(ToolPlugin):
         """更新主题"""
         # 更新标题颜色
         if hasattr(self, 'title_label'):
-            self.title_label.setStyleSheet(f"font-size: 24px; font-weight: 700; color: {theme['text']};")
+            self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']}; color: {theme['text']};")
 
         # 更新描述颜色
         if hasattr(self, 'desc_label'):
@@ -882,7 +880,7 @@ class ImageStitcher(ToolPlugin):
         layout.setSpacing(16)
 
         self.title_label = QLabel(self.icon + self.name + "工具")
-        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
+        self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};")
         layout.addWidget(self.title_label)
 
         self.desc_label = QLabel("将多张图片横向或纵向合并为一张，支持对齐方式和背景色设置")
@@ -1100,7 +1098,7 @@ class ImageToPDF(ToolPlugin):
         """更新主题"""
         # 更新标题颜色
         if hasattr(self, 'title_label'):
-            self.title_label.setStyleSheet(f"font-size: 24px; font-weight: 700; color: {theme['text']};")
+            self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']}; color: {theme['text']};")
 
         # 更新描述颜色
         if hasattr(self, 'desc_label'):
@@ -1112,7 +1110,7 @@ class ImageToPDF(ToolPlugin):
         layout.setSpacing(16)
 
         self.title_label = QLabel("📄 图片转PDF工具")
-        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
+        self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};")
         layout.addWidget(self.title_label)
 
         self.desc_label = QLabel("将多张图片合并为一个PDF文件，支持拖拽排序")
@@ -1584,11 +1582,8 @@ class SettingsPlugin(ToolPlugin):
         """更新主题"""
         # 更新标题颜色
         if hasattr(self, 'title_label'):
-            self.title_label.setStyleSheet(f"""
-                font-size: 32px;
-                font-weight: 800;
-                color: {theme['text']};
-            """)
+            self.title_label.setStyleSheet(
+                f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']}; color: {theme['text']};")
 
         # 更新主题标签颜色
         if hasattr(self, 'theme_label'):
@@ -1624,10 +1619,9 @@ class SettingsPlugin(ToolPlugin):
 
         # 标题
         self.title_label = QLabel("⚙️ 设置")
-        self.title_label.setStyleSheet("""
-            font-size: 32px;
-            font-weight: 800;
-        """)
+        self.title_label.setStyleSheet(
+            f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};")
+
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.title_label)
 

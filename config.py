@@ -3,6 +3,12 @@
 集中管理应用的全局配置信息
 """
 
+# 全局标题样式配置
+TITLE_STYLES = {
+    "font_size": "24px",
+    "font_weight": "700"
+}
+
 # 应用基本信息
 APP_NAME = "工具箱"
 APP_VERSION = "1.0.1"
