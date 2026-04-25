@@ -311,6 +311,11 @@ class ImageCompressor(ToolPlugin):
         self.file_list = QTextEdit()
         self.file_list.setPlaceholderText("拖拽图片到此处，或点击按钮选择...")
         self.file_list.setMaximumHeight(120)
+        # 启用拖拽功能
+        self.file_list.setAcceptDrops(True)
+        # 设置拖拽事件处理
+        self.file_list.dragEnterEvent = self.drag_enter_event
+        self.file_list.dropEvent = self.drop_event
         self.file_list.setStyleSheet("""
             QTextEdit {
                 background-color: #0f172a;
@@ -452,7 +457,9 @@ class ImageCompressor(ToolPlugin):
         self.file_list.clear()
 
     def update_file_list(self):
-        self.file_list.setText("\n".join(self.files))
+        # 显示文件名而不是完整路径
+        file_names = [os.path.basename(f) for f in self.files]
+        self.file_list.setText("\n".join(file_names))
 
     def browse_output(self):
         path = QFileDialog.getExistingDirectory(self.parent, "选择输出目录")
@@ -493,6 +500,35 @@ class ImageCompressor(ToolPlugin):
         else:
             QMessageBox.critical(self.parent, "错误", message)
         self.progress_bar.setVisible(False)
+
+    def drag_enter_event(self, event):
+        """拖拽进入事件"""
+        if event.mimeData().hasUrls():
+            # 检查是否是图片文件
+            urls = event.mimeData().urls()
+            for url in urls:
+                if url.isLocalFile():
+                    file_path = url.toLocalFile()
+                    if file_path.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif')):
+                        event.acceptProposedAction()
+                        return
+        event.ignore()
+
+    def drop_event(self, event):
+        """拖放下事件"""
+        if event.mimeData().hasUrls():
+            urls = event.mimeData().urls()
+            for url in urls:
+                if url.isLocalFile():
+                    file_path = url.toLocalFile()
+                    # 检查是否是图片文件
+                    if file_path.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif')):
+                        if file_path not in self.files:
+                            self.files.append(file_path)
+            self.update_file_list()
+            event.acceptProposedAction()
+        else:
+            event.ignore()
 
 
 class CompressionWorker(QThread):
