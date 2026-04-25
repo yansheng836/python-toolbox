@@ -9,6 +9,7 @@
 特性:
     - 单文件可执行程序
     - 包含 plugins 目录和 config.py
+    - 包含版本信息和应用元数据
     - 排除不必要的模块以减小体积
     - 支持 Windows 和 macOS
     - UPX 压缩启用
@@ -35,6 +36,15 @@
 import sys
 import os
 
+# 从 config.py 导入应用信息
+try:
+    from config import APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_COPYRIGHT
+except ImportError:
+    APP_NAME = "工具箱"
+    APP_VERSION = "1.0.0"
+    APP_DESCRIPTION = "批量处理工具"
+    APP_COPYRIGHT = "© 2026 yansheng836"
+
 block_cipher = None
 
 a = Analysis(
@@ -56,11 +66,16 @@ a = Analysis(
         'menu_system',
         'settings_page',
 
+        # 插件模块（动态加载的插件必须明确指定）
+        'plugins.image_scaler',
+
         # PIL/Pillow 核心模块
         'PIL',
         'PIL.Image',
         'PIL.ImageFilter',
         'PIL.ImageEnhance',
+        'PIL.ImageDraw',
+        'PIL.ImageFont',
 
         # PyQt6 核心模块（确保包含）
         'PyQt6.sip',
@@ -176,7 +191,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='Toolbox',
+    name=APP_NAME,           # 使用 config.py 中的应用名称
     debug=False,
     bootloader_ignore_signals=False,
     strip=True,              # 启用 strip 以移除调试符号
@@ -195,20 +210,23 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon='favicon.ico',      # Windows 图标
-    version_file=None,       # 可选：添加版本信息文件
+    version='version_info.txt',  # 版本信息文件
 )
 
 # macOS 特定配置
 if sys.platform == 'darwin':
     app = BUNDLE(
         exe,
-        name='Toolbox.app',
+        name=f'{APP_NAME}.app',
         icon='icon.icns',
         bundle_identifier='com.yansheng836.toolbox',
         info_plist={
-            'CFBundleShortVersionString': '1.0.0',
-            'CFBundleDisplayName': '工具箱',
-            'CFBundleName': 'Toolbox',
+            'CFBundleShortVersionString': APP_VERSION,
+            'CFBundleVersion': APP_VERSION,
+            'CFBundleDisplayName': APP_NAME,
+            'CFBundleName': APP_NAME,
+            'CFBundleGetInfoString': APP_DESCRIPTION,
+            'NSHumanReadableCopyright': APP_COPYRIGHT,
             'LSMinimumSystemVersion': '10.14',
             'NSHighResolutionCapable': 'True',
         },

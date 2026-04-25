@@ -45,6 +45,12 @@ python main.py
 cd test/
 python -m unittest discover -v
 
+# Generate version info file (before building)
+python generate_version_info.py
+
+# Verify packaging dependencies (before building)
+python verify_packaging.py
+
 # Build executable (Windows, recommended)
 pyinstaller toolbox.spec
 
@@ -140,3 +146,17 @@ All test files are located in the `test/` directory. Test files use a `test_` pr
 - `test_sidebar.py` - Sidebar navigation tests
 
 When adding new features, create corresponding test files in the `test/` directory to maintain code quality and stability.
+
+## Packaging
+
+### Important: Dynamic Import Issue
+
+PyInstaller cannot automatically detect modules loaded via `importlib` (dynamic imports). All plugins in the `plugins/` directory must be explicitly listed in `toolbox.spec`'s `hiddenimports` section.
+
+**When adding a new plugin:**
+1. Create the plugin file in `plugins/` (e.g., `plugins/my_plugin.py`)
+2. Add `'plugins.my_plugin'` to `hiddenimports` in `toolbox.spec`
+3. Run `python verify_packaging.py` to verify
+4. Rebuild with `pyinstaller toolbox.spec`
+
+See `PACKAGING_GUIDE.md` for detailed troubleshooting and best practices.

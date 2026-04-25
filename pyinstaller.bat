@@ -1,1 +1,0 @@
-pyinstaller --name="π§æﬂœ‰" --windowed --onefile --icon=favicon.ico toolbox.py
