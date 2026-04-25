@@ -13,7 +13,7 @@ except ImportError:
 # 导入主程序中的ToolPlugin基类
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton
+    from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler
 except ImportError:
     # 如果导入失败，定义一个简化的基类
     class ToolPlugin:
@@ -145,7 +145,7 @@ class ImageScalerWidget(QWidget):
         file_layout = file_card.content_layout
 
         self.file_list = QTextEdit()
-        self.file_list.setPlaceholderText("点击按钮选择图片...")
+        self.file_list.setPlaceholderText("点击按钮选择图片，或拖拽图片文件到此区域...")
         self.file_list.setMaximumHeight(120)
         self.file_list.setStyleSheet("""
             QTextEdit {
@@ -155,8 +155,35 @@ class ImageScalerWidget(QWidget):
                 color: #94a3b8;
                 padding: 8px;
             }
+            QTextEdit:hover {
+                border-color: #475569;
+            }
         """)
         file_layout.addWidget(self.file_list)
+
+        # 创建文件列表包装器
+        class FileListWrapper:
+            def __init__(self, text_edit):
+                self.files = []
+                self._text_edit = text_edit
+
+            def append(self, file):
+                if file not in self.files:
+                    self.files.append(file)
+                    self._update_display()
+
+            def clear(self):
+                self.files.clear()
+                self._update_display()
+
+            def _update_display(self):
+                self._text_edit.setText("\n".join(
+                    f"{i+1}. {os.path.basename(f)}" for i, f in enumerate(self.files)
+                ))
+
+        # 创建包装器并设置拖拽功能
+        self.file_wrapper = FileListWrapper(self.file_list)
+        DragDropHandler.setup_drag_drop(self.file_list, self.file_wrapper)
 
         btn_layout = QHBoxLayout()
         self.add_btn = AnimatedButton("添加图片")
@@ -379,7 +406,7 @@ class ImageScalerWidget(QWidget):
 
     def clear_images(self):
         self.input_files = []
-        self.file_list.clear()
+        self.file_wrapper.clear()
         self.start_btn.setEnabled(False)
         self.status_label.setText("就绪")
 
@@ -392,13 +419,16 @@ class ImageScalerWidget(QWidget):
         )
 
         if files:
-            self.input_files = files
-            self.file_list.setText("\n".join(
-                f"{i+1}. {os.path.basename(f)}" for i, f in enumerate(self.input_files)
-            ))
+            # 避免重复添加文件
+            existing_files = set(self.input_files)
+            for file in files:
+                if file not in existing_files:
+                    self.input_files.append(file)
+                    self.file_wrapper.append(file)
+                    existing_files.add(file)
             if self.input_files and self.output_path.text():
                 self.start_btn.setEnabled(True)
-            self.status_label.setText(f"已选择 {len(files)} 个文件")
+            self.status_label.setText(f"已选择 {len(self.input_files)} 个文件")
 
     def select_output_dir(self):
         dir_path = QFileDialog.getExistingDirectory(

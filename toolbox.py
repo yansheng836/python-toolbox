@@ -545,13 +545,21 @@ class DragDropHandler:
                     file_path = url.toLocalFile()
                     # 检查是否是图片文件
                     if file_path.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif')):
-                        if file_path not in files_list:
-                            files_list.append(file_path)
+                        # 处理列表或包装器
+                        if hasattr(files_list, 'append'):  # FileListWrapper
+                            if file_path not in files_list.files:
+                                files_list.append(file_path)
+                        else:  # 普通列表
+                            if file_path not in files_list:
+                                files_list.append(file_path)
             # 更新显示
             if hasattr(files_list, '_parent') and hasattr(files_list._parent, 'update_file_list'):
                 files_list._parent.update_file_list()
             elif hasattr(files_list, '_text_edit'):
-                files_list._text_edit.setText("\n".join([os.path.basename(f) for f in files_list]))
+                if hasattr(files_list, 'files'):
+                    files_list._text_edit.setText("\n".join([os.path.basename(f) for f in files_list.files]))
+                else:
+                    files_list._text_edit.setText("\n".join([os.path.basename(f) for f in files_list]))
             event.acceptProposedAction()
         else:
             event.ignore()
