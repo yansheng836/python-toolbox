@@ -182,7 +182,7 @@ class Card(QFrame):
             QFrame#card {
                 background-color: #1e293b;
                 border-radius: 12px;
-                border: 1px solid #334155;
+                border: none;
             }
         """)
 
@@ -1691,14 +1691,14 @@ class SettingsPlugin(ToolPlugin):
             }}
             QFrame {{
                 background-color: {theme['bg_secondary']};
-                border: 1px solid {theme['surface']};
+                border: none;
             }}
             QLabel {{
                 color: {theme['text']};
             }}
             QTextEdit {{
                 background-color: {theme['bg']};
-                border: 2px solid {theme['surface']};
+                border: 1px solid {theme['surface']};
                 border-radius: 8px;
                 color: {theme['text']};
                 padding: 8px;
@@ -1706,27 +1706,28 @@ class SettingsPlugin(ToolPlugin):
             QLineEdit {{
                 background-color: {theme['bg']};
                 border: 1px solid {theme['surface']};
-                border-radius: 6px;
-                padding: 6px;
+                border-radius: 8px;
+                padding: 6px 12px;
                 color: {theme['text']};
             }}
             QComboBox {{
                 background-color: {theme['bg']};
                 border: 1px solid {theme['surface']};
-                border-radius: 6px;
-                padding: 6px;
+                border-radius: 8px;
+                padding: 6px 12px;
                 color: {theme['text']};
             }}
             QTableWidget {{
                 background-color: {theme['bg']};
-                border: 1px solid {theme['surface']};
+                border: none;
                 border-radius: 8px;
                 color: {theme['text']};
                 gridline-color: {theme['surface']};
             }}
             QProgressBar {{
                 background-color: {theme['bg']};
-                border-radius: 6px;
+                border: none;
+                border-radius: 8px;
                 text-align: center;
                 color: {theme['text']};
             }}
@@ -1734,7 +1735,24 @@ class SettingsPlugin(ToolPlugin):
                 background-color: {theme['bg_secondary']};
                 color: {theme['text']};
                 padding: 4px;
-                border: 1px solid {theme['surface']};
+                border: none;
+                border-radius: 0;
+            }}
+            QPushButton {{
+                background-color: {theme['primary']};
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 10px 20px;
+                font-size: 14px;
+                font-weight: 600;
+            }}
+            QPushButton:hover {{
+                background-color: {theme['primary_hover']};
+            }}
+            QPushButton:disabled {{
+                background-color: {theme['surface']};
+                color: {theme['text_secondary']};
             }}
         """)
 
@@ -1744,7 +1762,8 @@ class SettingsPlugin(ToolPlugin):
             sidebar.setStyleSheet(f"""
                 QFrame#sidebar {{
                     background-color: {theme['bg_secondary']};
-                    border-right: 1px solid {theme['surface']};
+                    border-right: none;
+                    border-radius: 0;
                 }}
             """)
 
