@@ -264,6 +264,10 @@ class ToolPlugin:
             self.widget = self.create_ui()
         return self.widget
 
+    def update_theme(self, theme):
+        """更新主题 - 由子类实现"""
+        pass
+
 
 class ImageCompressor(ToolPlugin):
     """图片压缩工具"""
@@ -271,20 +275,30 @@ class ImageCompressor(ToolPlugin):
     description = "批量压缩图片，支持JPG/PNG/WebP格式"
     icon = "🖼️"
 
+    def update_theme(self, theme):
+        """更新主题"""
+        # 更新标题颜色
+        if hasattr(self, 'title_label'):
+            self.title_label.setStyleSheet(f"font-size: 24px; font-weight: 700; color: {theme['text']};")
+
+        # 更新描述颜色
+        if hasattr(self, 'desc_label'):
+            self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 13px;")
+
     def create_ui(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setSpacing(16)
 
         # 标题
-        title = QLabel("🖼️ 图片压缩工具")
-        title.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
-        layout.addWidget(title)
+        self.title_label = QLabel("🖼️ 图片压缩工具")
+        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
+        layout.addWidget(self.title_label)
 
         # 说明
-        desc = QLabel("支持 JPG、PNG、WebP 格式，可批量处理并调整压缩质量")
-        desc.setStyleSheet("color: #94a3b8; font-size: 13px;")
-        layout.addWidget(desc)
+        self.desc_label = QLabel("支持 JPG、PNG、WebP 格式，可批量处理并调整压缩质量")
+        self.desc_label.setStyleSheet("color: #94a3b8; font-size: 13px;")
+        layout.addWidget(self.desc_label)
 
         # 文件选择区域
         file_card = Card(title="选择图片")
@@ -1693,6 +1707,8 @@ class SettingsPlugin(ToolPlugin):
 
     def apply_theme(self, theme):
         """应用主题到所有UI元素"""
+        # 保存当前主题
+        self.parent.current_theme = theme
         # 应用主窗口样式
         self.parent.setStyleSheet(f"""
             QMainWindow {{
@@ -1708,6 +1724,26 @@ class SettingsPlugin(ToolPlugin):
             }}
             QLabel {{
                 color: {theme['text']};
+            }}
+            /* 覆盖硬编码的颜色 */
+            *[style*="color: #f1f5f9"] {{
+                color: {theme['text']} !important;
+            }}
+            *[style*="color: white"] {{
+                color: {theme['text']} !important;
+            }}
+            *[style*="color: #94a3b8"] {{
+                color: {theme['text_secondary']} !important;
+            }}
+            *[style*="color: #64748b"] {{
+                color: {theme['text_secondary']} !important;
+            }}
+            /* 背景色覆盖 */
+            *[style*="background-color: #0f172a"] {{
+                background-color: {theme['bg']} !important;
+            }}
+            *[style*="background-color: #1e293b"] {{
+                background-color: {theme['bg_secondary']} !important;
             }}
             QTextEdit {{
                 background-color: {theme['bg']};
@@ -1788,6 +1824,11 @@ class SettingsPlugin(ToolPlugin):
                     background-color: {theme['bg']};
                 }}
             """)
+
+        # 更新所有插件的主题
+        for plugin_name, plugin in self.parent.plugins.items():
+            if hasattr(plugin, 'update_theme'):
+                plugin.update_theme(theme)
 
     def save_theme_setting(self, theme_name):
         """保存主题设置"""
