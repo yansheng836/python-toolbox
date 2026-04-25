@@ -1,5 +1,12 @@
-PyQt6
-Pillow
-img2pdf
-PyMuPDF
-pyinstaller
+# GUI Framework
+PyQt6>=6.4.0
+
+# Image Processing
+Pillow>=9.0.0
+
+# PDF Conversion (multiple backends for reliability)
+img2pdf>=0.4.4
+PyMuPDF>=1.21.0
+
+# Build Tool
+pyinstaller>=5.7.0

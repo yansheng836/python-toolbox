@@ -9,7 +9,7 @@ def test_icon():
     app = QApplication(sys.argv)
 
     # 检查图标文件
-    icon_path = "icon.ico"
+    icon_path = "favicon.ico"
     print(f"图标文件路径: {os.path.abspath(icon_path)}")
     print(f"图标文件存在: {QFileInfo(icon_path).exists()}")
 

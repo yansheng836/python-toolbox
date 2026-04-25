@@ -6,10 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```
 toolbox/
-├── toolbox.py              # Main application file
+├── main.py                 # Application entry point
+├── toolbox.py              # Main application file (ToolboxWindow class)
+├── config.py               # Global configuration (app info, UI, theme)
+├── menu_system.py          # Menu system (standalone, for reference)
+├── settings_page.py        # Settings page (standalone, for reference)
 ├── requirements.txt        # Python dependencies
-├── icon.ico               # Application icon
-└── test/                 # Test files directory
+├── favicon.ico             # Application icon
+├── plugins/                # Plugin directory
+│   └── image_scaler.py     # Image batch scaling plugin
+└── test/                   # Test files directory
     ├── test_button.py      # Button UI component tests
     ├── test_icon.py        # Icon and theme tests  
     ├── test_plugin.py      # Plugin system tests
@@ -33,7 +39,7 @@ toolbox/
 pip install -r requirements.txt
 
 # Run the application
-python toolbox.py
+python main.py
 
 # Run tests
 cd test/
@@ -42,8 +48,8 @@ python -m unittest discover -v
 # Build executable (Windows, recommended)
 pyinstaller toolbox.spec
 
-# Build single-file EXE (Windows, quick)
-pyinstaller --onefile --windowed toolbox.py
+# Build single-file EXE (Windows, quick - not recommended, use toolbox.spec instead)
+pyinstaller --onefile --windowed main.py
 
 # Build with UPX compression
 pyinstaller --upx-dir=/path/to/upx toolbox.spec
@@ -58,20 +64,60 @@ pyinstaller --upx-dir=/path/to/upx toolbox.spec
 - `ToolboxWindow` — main window; owns the sidebar (`QVBoxLayout`) and a `QStackedWidget` for tool pages
 - `Theme` — dark/light color palette constants; applied via Qt stylesheets
 - `ToolPlugin` (abstract base) — all tools inherit this; must implement `create_ui() -> QWidget`
-- Built-in tools: `ImageCompressor`, `ImageToPDF`
+- Built-in tools: `ImageCompressor`, `ImageToPDF`, `FormatConverter`, `ImageStitcher`
 - External plugins: auto-discovered from `plugins/` via `importlib`; added dynamically to sidebar and stack
+- `SettingsPlugin` — settings page with theme switching (dark/light) and about information
+- `WelcomePage` — landing page showing feature cards
+
+### Configuration System
+
+`config.py` centralizes all app configuration:
+- `APP_NAME`, `APP_VERSION`, `APP_DESCRIPTION`, `APP_COPYRIGHT` — basic app info
+- `APP_WEBSITE_URL`, `APP_WEBSITE_LINK_TEXT` — website link in settings
+- `FEATURE_MODULES` — list of feature cards shown on welcome page
+- `UI_CONFIG` — window size, sidebar width, corner radius settings
+- `THEME_CONFIG` — default theme and color settings
+- `WELCOME_CONFIG` — welcome page text content
 
 ### Adding a Tool / Plugin
 
-Inherit `ToolPlugin`, implement `create_ui()`, and drop the file in `plugins/`. See `plugins/my_tool.py` for a minimal example.
+Inherit `ToolPlugin`, implement `create_ui()`, and drop the file in `plugins/`. Example:
+
+```python
+from toolbox import ToolPlugin, Card, AnimatedButton
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
+
+class MyTool(ToolPlugin):
+    name = "我的工具"
+    description = "工具描述"
+    icon = "🔧"
+    
+    def create_ui(self) -> QWidget:
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.addWidget(QLabel("Hello, World!"))
+        return widget
+    
+    def update_theme(self, theme):
+        """Optional: update UI when theme changes"""
+        pass
+```
 
 ### Threading
 
-Long operations run in `QThread` workers (`CompressionWorker`, `PDFWorker`) that emit progress signals — never block the main thread.
+Long operations run in `QThread` workers (`CompressionWorker`, `PDFWorker`, `FormatConvertWorker`, `ImageStitchWorker`, `ScalingWorker`) that emit progress signals — never block the main thread.
+
+### Theme System
+
+- Two themes: `Theme.DARK` (default) and `Theme.LIGHT`
+- Theme switching via `SettingsPlugin` with persistent storage using `QSettings`
+- All plugins can implement `update_theme(theme)` to respond to theme changes
+- Global stylesheet applied to main window with theme-specific colors
 
 ### PDF Conversion
 
 `PDFWorker` tries libraries in order: `img2pdf` → `PyMuPDF` → `PIL`. All three are in `requirements.txt`.
+Supports compression with adjustable quality (1-100%) for all three backends.
 
 ### Key Dependencies
 

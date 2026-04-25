@@ -2245,7 +2245,7 @@ class ToolboxWindow(QMainWindow):
 
             # 设置图标
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            icon_path = os.path.join(current_dir, "icon.ico")
+            icon_path = os.path.join(current_dir, "favicon.ico")
             if os.path.exists(icon_path):
                 self.tray.setIcon(QIcon(icon_path))
             else:
@@ -2328,7 +2328,7 @@ def main():
 
     # 设置任务栏和窗口图标
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    icon_path = os.path.join(current_dir, "icon.ico")
+    icon_path = os.path.join(current_dir, "favicon.ico")
     if os.path.exists(icon_path):
         app_icon = QIcon(icon_path)
         app.setWindowIcon(app_icon)
