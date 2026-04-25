@@ -266,6 +266,9 @@ class ToolPlugin:
     def get_widget(self) -> QWidget:
         if self.widget is None:
             self.widget = self.create_ui()
+            # 如果有文件列表和需要，设置拖拽处理器
+            if hasattr(self, 'setup_drag_handler'):
+                self.setup_drag_handler()
         return self.widget
 
     def update_theme(self, theme):
@@ -278,6 +281,12 @@ class ImageCompressor(ToolPlugin):
     name = "图片压缩"
     description = "批量压缩图片，支持JPG/PNG/WebP格式"
     icon = "🖼️"
+
+    def setup_drag_handler(self):
+        """设置拖拽处理器"""
+        if hasattr(self, 'file_list'):
+            DragDropHandler.setup_drag_drop(self.file_list, self.files)
+            DragDropHandler.update_file_list_display(self.file_list, self.files)
 
     def update_theme(self, theme):
         """更新主题"""
@@ -320,10 +329,6 @@ class ImageCompressor(ToolPlugin):
                 padding: 8px;
             }
         """)
-        # 绑定文件列表到拖拽处理器
-        self.files._parent = self
-        self.files._text_edit = self.file_list
-        DragDropHandler.setup_drag_drop(self.file_list, self.files)
         file_layout.addWidget(self.file_list)
 
         btn_layout = QHBoxLayout()
@@ -684,6 +689,12 @@ class FormatConverter(ToolPlugin):
 
     FORMATS = ["JPEG", "PNG", "WebP", "BMP", "TIFF", "GIF"]
 
+    def setup_drag_handler(self):
+        """设置拖拽处理器"""
+        if hasattr(self, 'file_list'):
+            DragDropHandler.setup_drag_drop(self.file_list, self.files)
+            DragDropHandler.update_file_list_display(self.file_list, self.files)
+
     def update_theme(self, theme):
         """更新主题"""
         # 更新标题颜色
@@ -721,10 +732,6 @@ class FormatConverter(ToolPlugin):
                 padding: 8px;
             }
         """)
-        # 绑定文件列表到拖拽处理器
-        self.files._parent = self
-        self.files._text_edit = self.file_list
-        DragDropHandler.setup_drag_drop(self.file_list, self.files)
         file_card.content_layout.addWidget(self.file_list)
 
         btn_layout = QHBoxLayout()
@@ -930,6 +937,13 @@ class ImageStitcher(ToolPlugin):
     description = "多图横向/纵向合并为一张"
     icon = "📐"
 
+    def setup_drag_handler(self):
+        """设置拖拽处理器"""
+        if hasattr(self, 'file_list'):
+            DragDropHandler.setup_drag_drop(self.file_list, self.files)
+            # 对于 ImageStitcher，需要特殊处理，因为它有 _refresh_list 方法
+            self.files._text_edit = self.file_list
+
     def update_theme(self, theme):
         """更新主题"""
         # 更新标题颜色
@@ -967,10 +981,6 @@ class ImageStitcher(ToolPlugin):
                 padding: 8px;
             }
         """)
-        # 绑定文件列表到拖拽处理器
-        self.files._parent = self
-        self.files._text_edit = self.file_list
-        DragDropHandler.setup_drag_drop(self.file_list, self.files)
         file_card.content_layout.addWidget(self.file_list)
 
         btn_layout = QHBoxLayout()
