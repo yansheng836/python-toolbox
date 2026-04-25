@@ -618,18 +618,28 @@ class FormatConverter(ToolPlugin):
 
     FORMATS = ["JPEG", "PNG", "WebP", "BMP", "TIFF", "GIF"]
 
+    def update_theme(self, theme):
+        """更新主题"""
+        # 更新标题颜色
+        if hasattr(self, 'title_label'):
+            self.title_label.setStyleSheet(f"font-size: 24px; font-weight: 700; color: {theme['text']};")
+
+        # 更新描述颜色
+        if hasattr(self, 'desc_label'):
+            self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 13px;")
+
     def create_ui(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setSpacing(16)
 
-        title = QLabel("🔄 图片格式批量转换")
-        title.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
-        layout.addWidget(title)
+        self.title_label = QLabel("🔄 图片格式批量转换")
+        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
+        layout.addWidget(self.title_label)
 
-        desc = QLabel("纯格式转换，保持原始质量，支持 JPEG / PNG / WebP / BMP / TIFF / GIF")
-        desc.setStyleSheet("color: #94a3b8; font-size: 13px;")
-        layout.addWidget(desc)
+        self.desc_label = QLabel("纯格式转换，保持原始质量，支持 JPEG / PNG / WebP / BMP / TIFF / GIF")
+        self.desc_label.setStyleSheet("color: #94a3b8; font-size: 13px;")
+        layout.addWidget(self.desc_label)
 
         # 文件选择
         file_card = Card(title="选择图片")
@@ -850,18 +860,28 @@ class ImageStitcher(ToolPlugin):
     description = "多图横向/纵向合并为一张"
     icon = "📐"
 
+    def update_theme(self, theme):
+        """更新主题"""
+        # 更新标题颜色
+        if hasattr(self, 'title_label'):
+            self.title_label.setStyleSheet(f"font-size: 24px; font-weight: 700; color: {theme['text']};")
+
+        # 更新描述颜色
+        if hasattr(self, 'desc_label'):
+            self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 13px;")
+
     def create_ui(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setSpacing(16)
 
-        title = QLabel("🪄 图片拼接")
-        title.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
-        layout.addWidget(title)
+        self.title_label = QLabel("🪄 图片拼接")
+        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
+        layout.addWidget(self.title_label)
 
-        desc = QLabel("将多张图片横向或纵向合并为一张，支持对齐方式和背景色设置")
-        desc.setStyleSheet("color: #94a3b8; font-size: 13px;")
-        layout.addWidget(desc)
+        self.desc_label = QLabel("将多张图片横向或纵向合并为一张，支持对齐方式和背景色设置")
+        self.desc_label.setStyleSheet("color: #94a3b8; font-size: 13px;")
+        layout.addWidget(self.desc_label)
 
         # 文件列表
         file_card = Card(title="选择图片（顺序即拼接顺序）")
@@ -1064,18 +1084,28 @@ class ImageToPDF(ToolPlugin):
     description = "将多张图片合并为一个PDF文件"
     icon = "📄"
 
+    def update_theme(self, theme):
+        """更新主题"""
+        # 更新标题颜色
+        if hasattr(self, 'title_label'):
+            self.title_label.setStyleSheet(f"font-size: 24px; font-weight: 700; color: {theme['text']};")
+
+        # 更新描述颜色
+        if hasattr(self, 'desc_label'):
+            self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 13px;")
+
     def create_ui(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setSpacing(16)
 
-        title = QLabel("📄 图片转PDF工具")
-        title.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
-        layout.addWidget(title)
+        self.title_label = QLabel("📄 图片转PDF工具")
+        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
+        layout.addWidget(self.title_label)
 
-        desc = QLabel("将多张图片合并为一个PDF文件，支持拖拽排序")
-        desc.setStyleSheet("color: #94a3b8; font-size: 13px;")
-        layout.addWidget(desc)
+        self.desc_label = QLabel("将多张图片合并为一个PDF文件，支持拖拽排序")
+        self.desc_label.setStyleSheet("color: #94a3b8; font-size: 13px;")
+        layout.addWidget(self.desc_label)
 
         # 图片列表
         list_card = Card(title="图片列表")
@@ -1537,6 +1567,41 @@ class SettingsPlugin(ToolPlugin):
     icon = "⚙️"
     version = "1.0.0"
 
+    def update_theme(self, theme):
+        """更新主题"""
+        # 更新标题颜色
+        if hasattr(self, 'title_label'):
+            self.title_label.setStyleSheet(f"""
+                font-size: 32px;
+                font-weight: 800;
+                color: {theme['text']};
+            """)
+
+        # 更新主题标签颜色
+        if hasattr(self, 'theme_label'):
+            self.theme_label.setStyleSheet(f"font-size: 14px; font-weight: 600; color: {theme['text']};")
+
+        # 更新版本标签颜色
+        if hasattr(self, 'version_label'):
+            self.version_label.setStyleSheet(f"font-size: 16px; font-weight: 600; color: {theme['text']};")
+
+        # 更新描述标签颜色
+        if hasattr(self, 'desc_label'):
+            self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 14px;")
+
+        # 更新网站标签颜色
+        if hasattr(self, 'website_label'):
+            self.website_label.setStyleSheet(f"""
+                font-size: 15px;
+                font-weight: 500;
+                color: {theme['text']};
+                padding: 8px;
+            """)
+
+        # 更新版权标签颜色
+        if hasattr(self, 'copyright_label'):
+            self.copyright_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 12px;")
+
     def create_ui(self) -> QWidget:
         """创建设置页面UI"""
         widget = QWidget()
@@ -1545,14 +1610,14 @@ class SettingsPlugin(ToolPlugin):
         layout.setSpacing(24)
 
         # 标题
-        title = QLabel("⚙️ 设置")
-        title.setStyleSheet("""
+        self.title_label = QLabel("⚙️ 设置")
+        self.title_label.setStyleSheet("""
             font-size: 32px;
             font-weight: 800;
             color: #f1f5f9;
         """)
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(title)
+        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.title_label)
 
         # 分隔线
         line = QFrame()
@@ -1565,9 +1630,9 @@ class SettingsPlugin(ToolPlugin):
         general_card = Card(title="通用设置")
 
         # 主题设置
-        theme_label = QLabel("外观:")
-        theme_label.setStyleSheet("font-size: 14px; font-weight: 600; color: #f1f5f9;")
-        general_card.content_layout.addWidget(theme_label)
+        self.theme_label = QLabel("外观:")
+        self.theme_label.setStyleSheet("font-size: 14px; font-weight: 600; color: #f1f5f9;")
+        general_card.content_layout.addWidget(self.theme_label)
 
         theme_btn_layout = QHBoxLayout()
 
@@ -1635,34 +1700,34 @@ class SettingsPlugin(ToolPlugin):
         about_card = Card(title="关于")
 
         # 版本信息
-        version_label = QLabel(f"版本: v{APP_VERSION}")
-        version_label.setStyleSheet("font-size: 16px; font-weight: 600; color: #f1f5f9;")
-        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        about_card.content_layout.addWidget(version_label)
+        self.version_label = QLabel(f"版本: v{APP_VERSION}")
+        self.version_label.setStyleSheet("font-size: 16px; font-weight: 600; color: #f1f5f9;")
+        self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        about_card.content_layout.addWidget(self.version_label)
 
         # 功能描述
-        desc_label = QLabel(APP_DESCRIPTION)
-        desc_label.setStyleSheet("color: #94a3b8; font-size: 14px;")
-        desc_label.setWordWrap(True)
-        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        about_card.content_layout.addWidget(desc_label)
+        self.desc_label = QLabel(APP_DESCRIPTION)
+        self.desc_label.setStyleSheet("color: #94a3b8; font-size: 14px;")
+        self.desc_label.setWordWrap(True)
+        self.desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        about_card.content_layout.addWidget(self.desc_label)
 
         # 官方网站
-        website_label = QLabel(f"<a href='{APP_WEBSITE_URL}' style='color: #6366f1; text-decoration: none;'>{APP_WEBSITE_LINK_TEXT}</a>")
-        website_label.setOpenExternalLinks(True)
-        website_label.setStyleSheet("""
+        self.website_label = QLabel(f"<a href='{APP_WEBSITE_URL}' style='color: #6366f1; text-decoration: none;'>{APP_WEBSITE_LINK_TEXT}</a>")
+        self.website_label.setOpenExternalLinks(True)
+        self.website_label.setStyleSheet("""
             font-size: 15px;
             font-weight: 500;
             padding: 8px;
         """)
-        website_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        about_card.content_layout.addWidget(website_label)
+        self.website_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        about_card.content_layout.addWidget(self.website_label)
 
         # 版权信息
-        copyright_label = QLabel(APP_COPYRIGHT)
-        copyright_label.setStyleSheet("color: #64748b; font-size: 12px;")
-        copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        about_card.content_layout.addWidget(copyright_label)
+        self.copyright_label = QLabel(APP_COPYRIGHT)
+        self.copyright_label.setStyleSheet("color: #64748b; font-size: 12px;")
+        self.copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        about_card.content_layout.addWidget(self.copyright_label)
 
         about_card.content_layout.addStretch()
 
@@ -2006,10 +2071,8 @@ class ToolboxWindow(QMainWindow):
         # 保存默认主题设置
         self.settings.setValue("theme", theme_name)
 
-        # 设置默认选中深色主题按钮
-        settings_plugin = self.plugins.get("设置")
-        if settings_plugin and hasattr(settings_plugin, 'dark_theme_btn'):
-            settings_plugin.dark_theme_btn.setChecked(True)
+        # 设置默认选中深色主题按钮（在所有插件加载后）
+        # 暂时跳过，因为插件可能还没有完全初始化
 
     def apply_theme(self, theme):
         """应用主题到整个应用程序"""
