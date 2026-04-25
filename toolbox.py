@@ -1,5 +1,3 @@
-__version__ = "1.0.0"
-
 import sys
 import os
 import json
@@ -11,6 +9,26 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 import io
 import base64
+
+# 从main.py导入全局配置
+try:
+    from main import (
+        APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_COPYRIGHT,
+        APP_WEBSITE_URL, APP_WEBSITE_LINK_TEXT,
+        FEATURE_MODULES, UI_CONFIG, THEME_CONFIG, WELCOME_CONFIG
+    )
+except ImportError:
+    # 如果导入失败，使用默认值
+    APP_NAME = "工具箱"
+    APP_VERSION = "1.0.0"
+    APP_DESCRIPTION = "批量处理工具，支持图片压缩、PDF转换、格式转换和拼接"
+    APP_COPYRIGHT = "© 2023 工具箱开发团队"
+    APP_WEBSITE_URL = "https://www.example.com"
+    APP_WEBSITE_LINK_TEXT = "🌐 访问官方网站"
+    FEATURE_MODULES = []
+    UI_CONFIG = {}
+    THEME_CONFIG = {}
+    WELCOME_CONFIG = {}
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -1411,7 +1429,7 @@ class WelcomePage(QWidget):
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(logo)
 
-        title = QLabel("工具箱")
+        title = QLabel(APP_NAME)
         title.setStyleSheet("""
             font-size: 36px;
             font-weight: 800;
@@ -1420,7 +1438,7 @@ class WelcomePage(QWidget):
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
 
-        subtitle = QLabel("高效、美观、可扩展的桌面工具集合")
+        subtitle = QLabel(WELCOME_CONFIG.get("subtitle", ""))
         subtitle.setStyleSheet("""
             font-size: 16px;
             color: #94a3b8;
@@ -1433,13 +1451,8 @@ class WelcomePage(QWidget):
         features_layout = QHBoxLayout(features)
         features_layout.setSpacing(16)
 
-        for icon, text, desc in [
-            ("🖼️", "图片压缩", "批量压缩，保持质量"),
-            ("📄", "图片转PDF", "多图合并，一键转换"),
-            ("🔄", "图片格式转换", "格式转换，保持质量"),
-            ("📐", "图片拼接", "多图合并，自由拼接"),
-            ("📏", "图片批量缩放", "批量缩放，精确控制"),
-        ]:
+        # 遍历 FEATURE_MODULES 显示功能卡片
+        for icon, text, desc in FEATURE_MODULES:
             card = QFrame()
             card.setStyleSheet("""
                 QFrame {
@@ -1489,7 +1502,7 @@ class WelcomePage(QWidget):
         layout.addWidget(features)
 
         # 提示
-        hint = QLabel("👈 从左侧菜单选择工具开始使用")
+        hint = QLabel(WELCOME_CONFIG.get("hint", ""))
         hint.setStyleSheet("""
             font-size: 14px;
             color: #6366f1;
@@ -1608,20 +1621,20 @@ class SettingsPlugin(ToolPlugin):
         about_card = Card(title="关于")
 
         # 版本信息
-        version_label = QLabel(f"版本: v{self.version}")
+        version_label = QLabel(f"版本: v{APP_VERSION}")
         version_label.setStyleSheet("font-size: 16px; font-weight: 600; color: #f1f5f9;")
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(version_label)
 
         # 功能描述
-        desc_label = QLabel("批量处理工具，支持图片压缩、PDF转换、格式转换和拼接")
+        desc_label = QLabel(APP_DESCRIPTION)
         desc_label.setStyleSheet("color: #94a3b8; font-size: 14px;")
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(desc_label)
 
         # 官方网站
-        website_label = QLabel("<a href='6/10' style='color: #6366f1; text-decoration: none;'>🌐 访问官方网站</a>")
+        website_label = QLabel(f"<a href='{APP_WEBSITE_URL}' style='color: #6366f1; text-decoration: none;'>{APP_WEBSITE_LINK_TEXT}</a>")
         website_label.setOpenExternalLinks(True)
         website_label.setStyleSheet("""
             font-size: 15px;
@@ -1632,7 +1645,7 @@ class SettingsPlugin(ToolPlugin):
         about_card.content_layout.addWidget(website_label)
 
         # 版权信息
-        copyright_label = QLabel("© 2023 工具箱开发团队")
+        copyright_label = QLabel(APP_COPYRIGHT)
         copyright_label.setStyleSheet("color: #64748b; font-size: 12px;")
         copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(copyright_label)
@@ -1787,8 +1800,9 @@ class ToolboxWindow(QMainWindow):
     def __init__(self, app=None):
         super().__init__()
         self._app = app
-        self.setWindowTitle(f"工具箱 v{__version__}")
-        self.setMinimumSize(1200, 800)
+        self.setWindowTitle(UI_CONFIG.get("window_title", f"{APP_NAME} v{APP_VERSION}"))
+        min_size = UI_CONFIG.get("window_min_size", (1200, 800))
+        self.setMinimumSize(min_size[0], min_size[1])
 
         # 加载设置
         self.settings = QSettings("Toolbox", "App")
@@ -1869,7 +1883,7 @@ class ToolboxWindow(QMainWindow):
         sidebar_layout.addStretch()
 
         # 底部信息
-        version = QLabel(f"v{__version__}")
+        version = QLabel(f"v{APP_VERSION}")
         version.setStyleSheet("color: #475569; font-size: 12px;")
         version.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sidebar_layout.addWidget(version)
@@ -2168,7 +2182,7 @@ def main():
 
     # 设置应用属性
     app.setApplicationName("工具箱")
-    app.setApplicationVersion(__version__)
+    app.setApplicationVersion(APP_VERSION)
     app.setOrganizationName("Toolbox")
     app.setOrganizationDomain("toolbox.com")
 
