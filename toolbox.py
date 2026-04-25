@@ -311,11 +311,6 @@ class ImageCompressor(ToolPlugin):
         self.file_list = QTextEdit()
         self.file_list.setPlaceholderText("拖拽图片到此处，或点击按钮选择...")
         self.file_list.setMaximumHeight(120)
-        # 启用拖拽功能
-        self.file_list.setAcceptDrops(True)
-        # 设置拖拽事件处理
-        self.file_list.dragEnterEvent = self.drag_enter_event
-        self.file_list.dropEvent = self.drop_event
         self.file_list.setStyleSheet("""
             QTextEdit {
                 background-color: #0f172a;
@@ -325,6 +320,10 @@ class ImageCompressor(ToolPlugin):
                 padding: 8px;
             }
         """)
+        # 绑定文件列表到拖拽处理器
+        self.files._parent = self
+        self.files._text_edit = self.file_list
+        DragDropHandler.setup_drag_drop(self.file_list, self.files)
         file_layout.addWidget(self.file_list)
 
         btn_layout = QHBoxLayout()
@@ -457,9 +456,8 @@ class ImageCompressor(ToolPlugin):
         self.file_list.clear()
 
     def update_file_list(self):
-        # 显示文件名而不是完整路径
-        file_names = [os.path.basename(f) for f in self.files]
-        self.file_list.setText("\n".join(file_names))
+        # 使用工具类更新显示
+        DragDropHandler.update_file_list_display(self.file_list, self.files)
 
     def browse_output(self):
         path = QFileDialog.getExistingDirectory(self.parent, "选择输出目录")
@@ -501,8 +499,26 @@ class ImageCompressor(ToolPlugin):
             QMessageBox.critical(self.parent, "错误", message)
         self.progress_bar.setVisible(False)
 
-    def drag_enter_event(self, event):
-        """拖拽进入事件"""
+
+# ==================== 拖拽处理工具类 ====================
+class DragDropHandler:
+    """通用的拖拽处理工具类"""
+
+    @staticmethod
+    def setup_drag_drop(text_edit, files_list):
+        """为 QTextEdit 设置拖拽功能
+
+        Args:
+            text_edit: QTextEdit 控件实例
+            files_list: 文件列表（可变对象，如 list）
+        """
+        text_edit.setAcceptDrops(True)
+        text_edit.dragEnterEvent = lambda e: DragDropHandler.drag_enter_event(e, files_list)
+        text_edit.dropEvent = lambda e: DragDropHandler.drop_event(e, files_list)
+
+    @staticmethod
+    def drag_enter_event(event, files_list):
+        """拖拽进入事件处理"""
         if event.mimeData().hasUrls():
             # 检查是否是图片文件
             urls = event.mimeData().urls()
@@ -514,8 +530,9 @@ class ImageCompressor(ToolPlugin):
                         return
         event.ignore()
 
-    def drop_event(self, event):
-        """拖放下事件"""
+    @staticmethod
+    def drop_event(event, files_list):
+        """拖放下事件处理"""
         if event.mimeData().hasUrls():
             urls = event.mimeData().urls()
             for url in urls:
@@ -523,12 +540,21 @@ class ImageCompressor(ToolPlugin):
                     file_path = url.toLocalFile()
                     # 检查是否是图片文件
                     if file_path.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif')):
-                        if file_path not in self.files:
-                            self.files.append(file_path)
-            self.update_file_list()
+                        if file_path not in files_list:
+                            files_list.append(file_path)
+            # 更新显示
+            if hasattr(files_list, '_parent') and hasattr(files_list._parent, 'update_file_list'):
+                files_list._parent.update_file_list()
+            elif hasattr(files_list, '_text_edit'):
+                files_list._text_edit.setText("\n".join([os.path.basename(f) for f in files_list]))
             event.acceptProposedAction()
         else:
             event.ignore()
+
+    @staticmethod
+    def update_file_list_display(text_edit, files_list):
+        """更新文件列表显示"""
+        text_edit.setText("\n".join([os.path.basename(f) for f in files_list]))
 
 
 class CompressionWorker(QThread):
@@ -684,7 +710,7 @@ class FormatConverter(ToolPlugin):
         # 文件选择
         file_card = Card(title="选择图片")
         self.file_list = QTextEdit()
-        self.file_list.setPlaceholderText("点击按钮选择图片...")
+        self.file_list.setPlaceholderText("拖拽图片到此处，或点击按钮选择...")
         self.file_list.setMaximumHeight(120)
         self.file_list.setStyleSheet("""
             QTextEdit {
@@ -695,6 +721,10 @@ class FormatConverter(ToolPlugin):
                 padding: 8px;
             }
         """)
+        # 绑定文件列表到拖拽处理器
+        self.files._parent = self
+        self.files._text_edit = self.file_list
+        DragDropHandler.setup_drag_drop(self.file_list, self.files)
         file_card.content_layout.addWidget(self.file_list)
 
         btn_layout = QHBoxLayout()
@@ -790,7 +820,7 @@ class FormatConverter(ToolPlugin):
         )
         if files:
             self.files.extend(files)
-            self.file_list.setText("\n".join(self.files))
+            DragDropHandler.update_file_list_display(self.file_list, self.files)
 
     def clear_images(self):
         self.files = []
@@ -926,7 +956,7 @@ class ImageStitcher(ToolPlugin):
         # 文件列表
         file_card = Card(title="选择图片（顺序即拼接顺序）")
         self.file_list = QTextEdit()
-        self.file_list.setPlaceholderText("点击按钮选择图片...")
+        self.file_list.setPlaceholderText("拖拽图片到此处，或点击按钮选择...")
         self.file_list.setMaximumHeight(120)
         self.file_list.setStyleSheet("""
             QTextEdit {
@@ -937,6 +967,10 @@ class ImageStitcher(ToolPlugin):
                 padding: 8px;
             }
         """)
+        # 绑定文件列表到拖拽处理器
+        self.files._parent = self
+        self.files._text_edit = self.file_list
+        DragDropHandler.setup_drag_drop(self.file_list, self.files)
         file_card.content_layout.addWidget(self.file_list)
 
         btn_layout = QHBoxLayout()
@@ -1082,6 +1116,7 @@ class ImageStitcher(ToolPlugin):
         self.file_list.clear()
 
     def _refresh_list(self):
+        # 对于 ImageStitcher，需要显示序号，所以不使用通用方法
         self.file_list.setText("\n".join(
             f"{i+1}. {os.path.basename(f)}" for i, f in enumerate(self.files)
         ))
