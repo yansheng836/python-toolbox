@@ -2199,24 +2199,32 @@ class ToolboxWindow(QMainWindow):
 
     def load_plugins(self):
         """从plugins目录加载外部插件"""
-        plugins_dir = Path("plugins")
-        if not plugins_dir.exists():
-            return
+        # 获取程序所在目录（支持打包后的环境）
+        if getattr(sys, 'frozen', False):
+            # 打包后的环境
+            base_path = Path(sys._MEIPASS)
+        else:
+            # 开发环境
+            base_path = Path(__file__).parent
 
-        for file in plugins_dir.glob("*.py"):
-            try:
-                spec = importlib.util.spec_from_file_location(file.stem, file)
-                module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(module)
+        plugins_dir = base_path / "plugins"
 
-                for attr_name in dir(module):
-                    attr = getattr(module, attr_name)
-                    if (isinstance(attr, type) and
-                            attr.__name__ != 'ToolPlugin' and
-                            any(c.__name__ == 'ToolPlugin' for c in attr.__mro__)):
-                        self.register_plugin(attr)
-            except Exception as e:
-                print(f"加载插件失败 {file}: {e}")
+        # 加载外部插件
+        if plugins_dir.exists():
+            for file in plugins_dir.glob("*.py"):
+                try:
+                    spec = importlib.util.spec_from_file_location(file.stem, file)
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+
+                    for attr_name in dir(module):
+                        attr = getattr(module, attr_name)
+                        if (isinstance(attr, type) and
+                                attr.__name__ != 'ToolPlugin' and
+                                any(c.__name__ == 'ToolPlugin' for c in attr.__mro__)):
+                            self.register_plugin(attr)
+                except Exception as e:
+                    print(f"加载插件失败 {file}: {e}")
 
         # 注册设置插件（放在最后）
         self.register_plugin(SettingsPlugin)

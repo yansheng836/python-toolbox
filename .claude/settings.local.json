@@ -22,7 +22,8 @@
       "Bash(ec46a3fc)",
       "Bash(ex56f4a5e ex78d2cb:*)",
       "Bash(ex9012345)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(findstr -i \"error\")"
     ]
   }
 }
