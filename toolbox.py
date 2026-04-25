@@ -1801,8 +1801,6 @@ class ToolboxWindow(QMainWindow):
         self.register_plugin(ImageToPDF)
         self.register_plugin(FormatConverter)
         self.register_plugin(ImageStitcher)
-        # 注册设置插件
-        self.register_plugin(SettingsPlugin)
 
     def load_plugins(self):
         """从plugins目录加载外部插件"""
@@ -1824,6 +1822,9 @@ class ToolboxWindow(QMainWindow):
                         self.register_plugin(attr)
             except Exception as e:
                 print(f"加载插件失败 {file}: {e}")
+
+        # 注册设置插件（放在最后）
+        self.register_plugin(SettingsPlugin)
 
     def switch_plugin(self, name):
         """切换插件页面"""
