@@ -1559,8 +1559,12 @@ class SettingsPlugin(ToolPlugin):
             QPushButton:hover {
                 background-color: #e2e8f0;
             }
+            QPushButton:checked {
+                background-color: #fbbf24;
+                color: #0f172a;
+                font-weight: 700;
+            }
         """)
-        light_theme_btn.clicked.connect(lambda: self.set_theme("light"))
 
         dark_theme_btn = QPushButton("🌙 深色主题")
         dark_theme_btn.setMinimumHeight(44)
@@ -1577,8 +1581,21 @@ class SettingsPlugin(ToolPlugin):
             QPushButton:hover {
                 background-color: #334155;
             }
+            QPushButton:checked {
+                background-color: #6366f1;
+                color: white;
+                font-weight: 700;
+                border: none;
+            }
         """)
-        dark_theme_btn.clicked.connect(lambda: self.set_theme("dark"))
+
+        # 保存按钮引用
+        self.light_theme_btn = light_theme_btn
+        self.dark_theme_btn = dark_theme_btn
+
+        # 连接按钮点击事件
+        light_theme_btn.clicked.connect(lambda: self.switch_theme("light"))
+        dark_theme_btn.clicked.connect(lambda: self.switch_theme("dark"))
 
         theme_btn_layout.addWidget(light_theme_btn)
         theme_btn_layout.addWidget(dark_theme_btn)
@@ -1604,7 +1621,7 @@ class SettingsPlugin(ToolPlugin):
         about_card.content_layout.addWidget(desc_label)
 
         # 官方网站
-        website_label = QLabel("<a href='https://www.example.com' style='color: #6366f1; text-decoration: none;'>🌐 访问官方网站</a>")
+        website_label = QLabel("<a href='6/10' style='color: #6366f1; text-decoration: none;'>🌐 访问官方网站</a>")
         website_label.setOpenExternalLinks(True)
         website_label.setStyleSheet("""
             font-size: 15px;
@@ -1628,6 +1645,19 @@ class SettingsPlugin(ToolPlugin):
         layout.addStretch()
 
         return widget
+
+    def switch_theme(self, theme_name):
+        """切换主题并更新按钮状态"""
+        # 更新按钮状态
+        if theme_name == "light":
+            self.light_theme_btn.setChecked(True)
+            self.dark_theme_btn.setChecked(False)
+        else:
+            self.dark_theme_btn.setChecked(True)
+            self.light_theme_btn.setChecked(False)
+
+        # 调用设置主题方法
+        self.set_theme(theme_name)
 
     def set_theme(self, theme_name):
         """设置主题"""
@@ -1756,7 +1786,7 @@ class ToolboxWindow(QMainWindow):
         # 系统托盘
         self.setup_tray()
 
-        # 初始化主题
+        # 初始化主题（在所有插件加载后）
         self.init_theme()
 
         # 菜单栏
@@ -1892,12 +1922,20 @@ class ToolboxWindow(QMainWindow):
 
     def init_theme(self):
         """初始化主题"""
-        # 从设置中加载主题，如果没有设置则使用深色主题
-        theme_name = self.settings.value("theme", "dark")
-        theme = Theme.LIGHT if theme_name == "light" else Theme.DARK
+        # 强制使用深色主题作为默认
+        theme_name = "dark"
+        theme = Theme.DARK
 
         # 应用主题到整个窗口
         self.apply_theme(theme)
+
+        # 保存默认主题设置
+        self.settings.setValue("theme", theme_name)
+
+        # 设置默认选中深色主题按钮
+        settings_plugin = self.plugins.get("设置")
+        if settings_plugin and hasattr(settings_plugin, 'dark_theme_btn'):
+            settings_plugin.dark_theme_btn.setChecked(True)
 
     def apply_theme(self, theme):
         """应用主题到整个应用程序"""
