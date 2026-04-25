@@ -8,7 +8,20 @@
       "Bash(tasklist)",
       "Bash(findstr \"python\")",
       "Bash(taskkill /f /im python.exe)",
-      "Bash(wmic process:*)"
+      "Bash(wmic process:*)",
+      "Bash(ls:*)",
+      "Bash([[ ! -d test ]])",
+      "Bash(mkdir test:*)",
+      "Bash(mv test_button.py test/test_button.py)",
+      "Bash(mv test_icon.py test/test_icon.py)",
+      "Bash(mv test_plugin.py test/test_plugin.py)",
+      "Bash(mv test_app.py test/)",
+      "Bash(mv test_plugins.py test/)",
+      "Bash(mkdir -p test)",
+      "Bash(cp test_test_plugins.py test/test_button.py)",
+      "Bash(ec46a3fc)",
+      "Bash(ex56f4a5e ex78d2cb:*)",
+      "Bash(ex9012345)"
     ]
   }
 }
