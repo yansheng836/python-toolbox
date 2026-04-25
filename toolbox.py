@@ -298,12 +298,12 @@ class ImageCompressor(ToolPlugin):
 
         # 标题
         self.title_label = QLabel("🖼️ 图片压缩工具")
-        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
+        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
         layout.addWidget(self.title_label)
 
         # 说明
         self.desc_label = QLabel("支持 JPG、PNG、WebP 格式，可批量处理并调整压缩质量")
-        self.desc_label.setStyleSheet("color: #94a3b8; font-size: 13px;")
+        self.desc_label.setStyleSheet("font-size: 13px;")
         layout.addWidget(self.desc_label)
 
         # 文件选择区域
@@ -640,11 +640,11 @@ class FormatConverter(ToolPlugin):
         layout.setSpacing(16)
 
         self.title_label = QLabel("🔄 图片格式批量转换")
-        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
+        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
         layout.addWidget(self.title_label)
 
         self.desc_label = QLabel("纯格式转换，保持原始质量，支持 JPEG / PNG / WebP / BMP / TIFF / GIF")
-        self.desc_label.setStyleSheet("color: #94a3b8; font-size: 13px;")
+        self.desc_label.setStyleSheet("font-size: 13px;")
         layout.addWidget(self.desc_label)
 
         # 文件选择
@@ -882,11 +882,11 @@ class ImageStitcher(ToolPlugin):
         layout.setSpacing(16)
 
         self.title_label = QLabel(self.icon + self.name + "工具")
-        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
+        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
         layout.addWidget(self.title_label)
 
         self.desc_label = QLabel("将多张图片横向或纵向合并为一张，支持对齐方式和背景色设置")
-        self.desc_label.setStyleSheet("color: #94a3b8; font-size: 13px;")
+        self.desc_label.setStyleSheet("font-size: 13px;")
         layout.addWidget(self.desc_label)
 
         # 文件列表
@@ -1112,11 +1112,11 @@ class ImageToPDF(ToolPlugin):
         layout.setSpacing(16)
 
         self.title_label = QLabel("📄 图片转PDF工具")
-        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
+        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
         layout.addWidget(self.title_label)
 
         self.desc_label = QLabel("将多张图片合并为一个PDF文件，支持拖拽排序")
-        self.desc_label.setStyleSheet("color: #94a3b8; font-size: 13px;")
+        self.desc_label.setStyleSheet("font-size: 13px;")
         layout.addWidget(self.desc_label)
 
         # 图片列表
@@ -1627,7 +1627,6 @@ class SettingsPlugin(ToolPlugin):
         self.title_label.setStyleSheet("""
             font-size: 32px;
             font-weight: 800;
-            color: #f1f5f9;
         """)
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.title_label)
@@ -1644,7 +1643,7 @@ class SettingsPlugin(ToolPlugin):
 
         # 主题设置
         self.theme_label = QLabel("外观:")
-        self.theme_label.setStyleSheet("font-size: 14px; font-weight: 600; color: #f1f5f9;")
+        self.theme_label.setStyleSheet("font-size: 14px; font-weight: 600;")
         general_card.content_layout.addWidget(self.theme_label)
 
         theme_btn_layout = QHBoxLayout()
@@ -1714,13 +1713,13 @@ class SettingsPlugin(ToolPlugin):
 
         # 版本信息
         self.version_label = QLabel(f"版本: v{APP_VERSION}")
-        self.version_label.setStyleSheet("font-size: 16px; font-weight: 600; color: #f1f5f9;")
+        self.version_label.setStyleSheet("font-size: 16px; font-weight: 600;")
         self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.version_label)
 
         # 功能描述
         self.desc_label = QLabel(APP_DESCRIPTION)
-        self.desc_label.setStyleSheet("color: #94a3b8; font-size: 14px;")
+        self.desc_label.setStyleSheet("font-size: 14px;")
         self.desc_label.setWordWrap(True)
         self.desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.desc_label)
@@ -1979,7 +1978,6 @@ class ToolboxWindow(QMainWindow):
         logo_text.setStyleSheet("""
             font-size: 20px;
             font-weight: 700;
-            color: #f1f5f9;
         """)
         logo_layout.addWidget(logo_icon)
         logo_layout.addWidget(logo_text)
@@ -2105,6 +2103,26 @@ class ToolboxWindow(QMainWindow):
             }}
             QLabel {{
                 color: {theme['text']};
+            }}
+            /* 覆盖硬编码的颜色 */
+            *[style*="color: #f1f5f9"] {{
+                color: {theme['text']} !important;
+            }}
+            *[style*="color: white"] {{
+                color: {theme['text']} !important;
+            }}
+            *[style*="color: #94a3b8"] {{
+                color: {theme['text_secondary']} !important;
+            }}
+            *[style*="color: #64748b"] {{
+                color: {theme['text_secondary']} !important;
+            }}
+            /* 背景色覆盖 */
+            *[style*="background-color: #0f172a"] {{
+                background-color: {theme['bg']} !important;
+            }}
+            *[style*="background-color: #1e293b"] {{
+                background-color: {theme['bg_secondary']} !important;
             }}
             QTextEdit {{
                 background-color: {theme['bg']};

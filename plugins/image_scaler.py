@@ -131,14 +131,14 @@ class ImageScalerWidget(QWidget):
         layout.setSpacing(16)
 
         # 标题
-        title = QLabel("📏 图片批量缩放")
-        title.setStyleSheet("font-size: 24px; font-weight: 700; color: #f1f5f9;")
-        layout.addWidget(title)
+        self.title_label = QLabel("📏 图片批量缩放")
+        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
+        layout.addWidget(self.title_label)
 
         # 说明
-        desc = QLabel("支持按百分比或指定尺寸缩放图片，支持保持宽高比和质量设置")
-        desc.setStyleSheet("color: #94a3b8; font-size: 13px;")
-        layout.addWidget(desc)
+        self.desc_label = QLabel("支持按百分比或指定尺寸缩放图片，支持保持宽高比和质量设置")
+        self.desc_label.setStyleSheet("font-size: 13px;")
+        layout.addWidget(self.desc_label)
 
         # 文件选择区域
         file_card = Card(title="选择图片")
@@ -479,6 +479,16 @@ class ImageScalerWidget(QWidget):
 class ImageScaler(ToolPlugin):
     icon = "📏"
     name = "图片批量缩放"
+
+    def update_theme(self, theme):
+        """更新主题"""
+        # 更新标题颜色
+        if hasattr(self, 'widget') and hasattr(self.widget, 'title_label'):
+            self.widget.title_label.setStyleSheet(f"font-size: 24px; font-weight: 700; color: {theme['text']};")
+
+        # 更新描述颜色
+        if hasattr(self, 'widget') and hasattr(self.widget, 'desc_label'):
+            self.widget.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 13px;")
 
     def create_ui(self):
         return ImageScalerWidget()
