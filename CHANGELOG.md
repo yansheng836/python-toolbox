@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 
 ## [Unreleased]
 
+## [v1.0.1] - 2026-04-26
+
 ### Added
 - 完善打包配置，添加版本信息和自动化脚本
   - 创建 `generate_version_info.py` 自动从 config.py 生成版本信息文件
@@ -20,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 - 修改 `toolbox.spec` 从 config.py 读取应用信息（名称、版本、描述、版权）
 - 在 hiddenimports 中添加 `plugins.image_scaler` 解决动态加载插件打包缺失问题
 - 更新 `CLAUDE.md` 添加打包相关命令和注意事项
+- 根据 git tags 更新 CHANGELOG.md，采用 Keep a Changelog 标准格式
 
 ### Fixed
 - 修复打包后缺少"图片批量缩放"和"设置"模块的问题（动态导入问题）
@@ -94,6 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 - 修复 register_plugin 中 lambda 闭包捕获错误的插件名称
 - 修复点击侧边栏按钮崩溃和设置布局父级问题
 
-[Unreleased]: https://github.com/yansheng836/python-toolbox/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/yansheng836/python-toolbox/compare/v1.0.1...HEAD
+[v1.0.1]: https://github.com/yansheng836/python-toolbox/compare/v1.0.0...v1.0.1
 [v1.0.0]: https://github.com/yansheng836/python-toolbox/compare/v0.0.1...v1.0.0
 [v0.0.1]: https://github.com/yansheng836/python-toolbox/releases/tag/v0.0.1

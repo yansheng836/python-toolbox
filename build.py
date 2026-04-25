@@ -59,7 +59,8 @@ def main():
 
     # 步骤 3: 清理旧文件
     print_step(3, "清理旧的打包文件")
-    dirs_to_clean = ['build', 'dist']
+    # dirs_to_clean = ['build', 'dist']
+    dirs_to_clean = ['build']
     for dir_name in dirs_to_clean:
         if os.path.exists(dir_name):
             print(f"删除目录: {dir_name}")
