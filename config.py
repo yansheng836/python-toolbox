@@ -12,7 +12,7 @@ TITLE_STYLES = {
 # 应用基本信息
 APP_NAME = "工具箱"
 APP_VERSION = "1.0.1"
-APP_DESCRIPTION = "批量处理工具，支持图片压缩、PDF转换、格式转换和拼接"
+APP_DESCRIPTION = "批量处理工具，支持图片压缩、PDF转换、格式转换、拼接和PDF合并"
 APP_COPYRIGHT = "© 2026 yansheng836"
 APP_WEBSITE_URL = "https://github.com/yansheng836/python-toolbox"  # 官方网站URL
 APP_WEBSITE_LINK_TEXT = "🌐 访问官方网站"
@@ -24,6 +24,7 @@ FEATURE_MODULES = [
     ("🔄", "图片格式转换", "纯格式转换，保持原始质量，支持 JPEG / PNG / WebP / BMP / TIFF / GIF"),
     ("🪄", "图片拼接", "多图合并，自由拼接，支持横向和纵向合并"),
     ("📏", "图片批量缩放", "批量缩放，精确控制，支持多种缩放模式"),
+    ("📑", "PDF合并", "将多个PDF文件合并为一个，支持拖拽和顺序调整"),
 ]
 
 # UI配置

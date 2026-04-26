@@ -21,6 +21,7 @@ def test_imports():
 
         # 插件模块
         ('plugins.image_scaler', '图片批量缩放插件'),
+        ('plugins.pdf_merger', 'PDF合并插件'),
 
         # 依赖库
         ('PIL', 'Pillow 图像处理库'),

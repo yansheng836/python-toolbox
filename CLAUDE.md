@@ -14,7 +14,8 @@ toolbox/
 ├── requirements.txt        # Python dependencies
 ├── favicon.ico             # Application icon
 ├── plugins/                # Plugin directory
-│   └── image_scaler.py     # Image batch scaling plugin
+│   ├── image_scaler.py     # Image batch scaling plugin
+│   └── pdf_merger.py      # PDF merge plugin
 └── test/                   # Test files directory
     ├── test_button.py      # Button UI component tests
     ├── test_icon.py        # Icon and theme tests  
@@ -70,7 +71,7 @@ pyinstaller --upx-dir=/path/to/upx toolbox.spec
 - `ToolboxWindow` — main window; owns the sidebar (`QVBoxLayout`) and a `QStackedWidget` for tool pages
 - `Theme` — dark/light color palette constants; applied via Qt stylesheets
 - `ToolPlugin` (abstract base) — all tools inherit this; must implement `create_ui() -> QWidget`
-- Built-in tools: `ImageCompressor`, `ImageToPDF`, `FormatConverter`, `ImageStitcher`
+- Built-in tools: `ImageCompressor`, `ImageToPDF`, `FormatConverter`, `ImageStitcher`, `PDFMerger`
 - External plugins: auto-discovered from `plugins/` via `importlib`; added dynamically to sidebar and stack
 - `SettingsPlugin` — settings page with theme switching (dark/light) and about information
 - `WelcomePage` — landing page showing feature cards
@@ -111,7 +112,7 @@ class MyTool(ToolPlugin):
 
 ### Threading
 
-Long operations run in `QThread` workers (`CompressionWorker`, `PDFWorker`, `FormatConvertWorker`, `ImageStitchWorker`, `ScalingWorker`) that emit progress signals — never block the main thread.
+Long operations run in `QThread` workers (`CompressionWorker`, `PDFWorker`, `PDFMergeWorker`, `FormatConvertWorker`, `ImageStitchWorker`, `ScalingWorker`) that emit progress signals — never block the main thread.
 
 ### Theme System
 
