@@ -69,6 +69,7 @@ a = Analysis(
         # 插件模块（动态加载的插件必须明确指定）
         'plugins.image_scaler',
         'plugins.pdf_merger',
+        'plugins.pdf_splitter',
 
         # PIL/Pillow 核心模块
         'PIL',

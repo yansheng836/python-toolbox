@@ -24,7 +24,8 @@
       "Bash(ex9012345)",
       "Bash(pip install:*)",
       "Bash(findstr -i \"error\")",
-      "Bash(iconv -f gbk -t utf-8)"
+      "Bash(iconv -f gbk -t utf-8)",
+      "Bash(pip list:*)"
     ]
   }
 }
