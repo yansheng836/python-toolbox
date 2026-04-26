@@ -71,6 +71,10 @@ a = Analysis(
         'plugins.pdf_merger',
         'plugins.pdf_splitter',
         'plugins.file_deduplicator',
+        'plugins.image_compressor',
+        'plugins.image_to_pdf',
+        'plugins.format_converter',
+        'plugins.image_stitcher',
 
         # PIL/Pillow 核心模块
         'PIL',
