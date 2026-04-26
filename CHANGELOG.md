@@ -5,7 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/).
 
+[Unreleased]: https://github.com/yansheng836/python-toolbox/compare/v1.0.2...HEAD
+[v1.0.2]: https://github.com/yansheng836/python-toolbox/compare/v1.0.1...v1.0.2
+[v1.0.1]: https://github.com/yansheng836/python-toolbox/compare/v1.0.0...v1.0.1
+[v1.0.0]: https://github.com/yansheng836/python-toolbox/compare/v0.0.1...v1.0.0
+[v0.0.1]: https://github.com/yansheng836/python-toolbox/releases/tag/v0.0.1
+
 ## [Unreleased]
+
+## [v1.0.2] - 2026-04-26
+
+### Added
+- 新增文件去重工具插件 (`plugins/file_deduplicator.py`)
+  - 选择文件夹递归扫描所有文件
+  - 使用 SHA-256 计算文件内容哈希
+  - 按内容哈希找出重复文件并分组显示
+  - 支持三种删除规则：按文件名排序、按修改时间升序/降序排序
+  - 删除前显示确认对话框，列出待删除文件
+  - 使用后台线程避免界面卡顿
+  - 支持深色/浅色主题切换
+- 新增 PDF 合并工具插件 (`plugins/pdf_merger.py`)
+  - 将多个 PDF 文件合并为一个
+  - 支持拖拽调整文件顺序
+- 新增 PDF 拆分工具插件 (`plugins/pdf_splitter.py`)
+  - 将 PDF 拆分为图片或单页 PDF
+  - 支持设置拆分页数
+  - 支持多种图片格式输出（PNG/JPEG/WebP）
+- 新增 PDF 合并测试文件 (`test/test_pdf_merger.py`)
+- 将标题字体样式全局化，统一管理字体大小和字重 (`config.py` 中 `TITLE_STYLES`)
+- 更新 `README.md` 添加新功能描述
+- 更新 `FEATURE_MODULES` 添加新的功能卡片
+
+### Changed
+- 更新 `toolbox.spec` 添加新插件到 hiddenimports
+- 更新 `CLAUDE.md` 插件目录结构
+- 更新 `verify_packaging.py` 添加新插件验证项
+- 优化图片批量缩放插件 UI (`plugins/image_scaler.py`)
+- 更新 `config.py` 中 APP_VERSION 至 1.0.2
+- 更新 `version_info.txt` 版本信息
+
+### Fixed
+- 修复图片压缩功能中拖拽图片无法识别的问题
+- 修复拖拽功能初始化顺序问题
+- 修复图片批量缩放功能的拖拽支持
+- 修复图片拼接工具的拖拽支持
+
+### Refactored
+- 提取拖拽功能为共用工具类，统一处理所有图片输入框 (`toolbox.py`)
+- 统一标题样式使用 `TITLE_STYLES` 配置
 
 ## [v1.0.1] - 2026-04-26
 
@@ -96,8 +143,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 - 修复卡片内容布局冲突导致按钮无响应
 - 修复 register_plugin 中 lambda 闭包捕获错误的插件名称
 - 修复点击侧边栏按钮崩溃和设置布局父级问题
-
-[Unreleased]: https://github.com/yansheng836/python-toolbox/compare/v1.0.1...HEAD
-[v1.0.1]: https://github.com/yansheng836/python-toolbox/compare/v1.0.0...v1.0.1
-[v1.0.0]: https://github.com/yansheng836/python-toolbox/compare/v0.0.1...v1.0.0
-[v0.0.1]: https://github.com/yansheng836/python-toolbox/releases/tag/v0.0.1
