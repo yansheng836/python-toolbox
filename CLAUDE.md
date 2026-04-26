@@ -16,7 +16,8 @@ toolbox/
 ├── plugins/                # Plugin directory
 │   ├── image_scaler.py     # Image batch scaling plugin
 │   ├── pdf_merger.py      # PDF merge plugin
-│   └── pdf_splitter.py    # PDF split plugin
+│   ├── pdf_splitter.py    # PDF split plugin
+│   └── file_deduplicator.py # File deduplication plugin (by content hash)
 └── test/                   # Test files directory
     ├── test_button.py      # Button UI component tests
     ├── test_icon.py        # Icon and theme tests  
