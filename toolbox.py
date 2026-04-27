@@ -293,15 +293,36 @@ class WelcomePage(QWidget):
     def __init__(self, plugins=None, parent=None):
         super().__init__(parent)
         self.plugins = plugins or {}
+        self.favicon_path = self._get_favicon_path()
         self.setup_ui()
+
+    @staticmethod
+    def _get_favicon_path():
+        """获取 favicon.ico 的路径，支持开发模式和打包模式"""
+        if getattr(sys, 'frozen', False):
+            base_path = Path(sys._MEIPASS)
+        else:
+            base_path = Path(__file__).parent
+        return str(base_path / "favicon.ico")
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setSpacing(24)
 
-        logo = QLabel("🧰")
-        logo.setStyleSheet("font-size: 72px;")
+        logo = QLabel()
+        if self.favicon_path and os.path.exists(self.favicon_path):
+            pixmap = QPixmap(self.favicon_path)
+            if not pixmap.isNull():
+                scaled_pixmap = pixmap.scaled(128, 128, Qt.AspectRatioMode.KeepAspectRatio,
+                                                Qt.TransformationMode.SmoothTransformation)
+                logo.setPixmap(scaled_pixmap)
+            else:
+                logo.setText("🧰")
+                logo.setStyleSheet("font-size: 72px;")
+        else:
+            logo.setText("🧰")
+            logo.setStyleSheet("font-size: 72px;")
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(logo)
 
@@ -654,8 +675,20 @@ class ToolboxWindow(QMainWindow):
         sidebar_layout.setSpacing(8)
 
         logo_layout = QHBoxLayout()
-        logo_icon = QLabel("🧰")
-        logo_icon.setStyleSheet("font-size: 28px;")
+        logo_icon = QLabel()
+        # 加载 favicon.ico 作为 logo
+        favicon_path = self._get_favicon_path()
+        if favicon_path and os.path.exists(favicon_path):
+            pixmap = QPixmap(favicon_path)
+            if not pixmap.isNull():
+                scaled_pixmap = pixmap.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                logo_icon.setPixmap(scaled_pixmap)
+            else:
+                logo_icon.setText("🧰")
+                logo_icon.setStyleSheet("font-size: 28px;")
+        else:
+            logo_icon.setText("🧰")
+            logo_icon.setStyleSheet("font-size: 28px;")
         logo_text = QLabel("工具箱")
         logo_text.setStyleSheet(f"font-size: {FONT_SIZE_20}; font-weight: {FONT_WEIGHT_700};")
         logo_layout.addWidget(logo_icon)
@@ -820,18 +853,21 @@ class ToolboxWindow(QMainWindow):
                     self.content.setCurrentIndex(index)
                     self.current_plugin = name
 
-    def _set_window_icon(self):
-        """设置窗口图标，支持开发模式和打包模式"""
+    def _get_favicon_path(self):
+        """获取 favicon.ico 的路径，支持开发模式和打包模式"""
         if getattr(sys, 'frozen', False):
             # 打包模式：使用 PyInstaller 的 _MEIPASS 路径
             base_path = Path(sys._MEIPASS)
         else:
             # 开发模式：使用当前文件所在目录
             base_path = Path(__file__).parent
+        return str(base_path / "favicon.ico")
 
-        icon_path = base_path / "favicon.ico"
-        if icon_path.exists():
-            icon = QIcon(str(icon_path))
+    def _set_window_icon(self):
+        """设置窗口图标，支持开发模式和打包模式"""
+        icon_path = self._get_favicon_path()
+        if os.path.exists(icon_path):
+            icon = QIcon(icon_path)
             self.setWindowIcon(icon)
             # 同时设置应用程序图标
             if self._app:
