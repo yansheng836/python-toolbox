@@ -32,6 +32,10 @@ except ImportError:
         name = "Base Tool"
         icon = "🔧"
 
+        def __init__(self, parent=None):
+            self.parent = parent
+            self.widget = None
+
         def create_ui(self):
             raise NotImplementedError("Subclasses must implement create_ui()")
 
