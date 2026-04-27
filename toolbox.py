@@ -29,7 +29,7 @@ except ImportError:
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QStackedWidget, QFrame, QSizePolicy,
-    QGraphicsDropShadowEffect, QSystemTrayIcon, QMenu
+    QGraphicsDropShadowEffect, QSystemTrayIcon, QMenu, QScrollArea
 )
 from PyQt6.QtCore import (
     Qt, QPropertyAnimation, QEasingCurve, QSettings
@@ -322,9 +322,39 @@ class WelcomePage(QWidget):
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(subtitle)
 
+        # 功能卡片区域 - 使用横向滚动
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+            QScrollBar:horizontal {
+                background: #1e293b;
+                height: 8px;
+                margin: 0;
+            }
+            QScrollBar::handle:horizontal {
+                background: #475569;
+                min-width: 20px;
+                border-radius: 4px;
+            }
+            QScrollBar::handle:horizontal:hover {
+                background: #64748b;
+            }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+                width: 0;
+            }
+        """)
+        scroll_area.viewport().setStyleSheet("background-color: transparent;")
+
         features = QWidget()
         features_layout = QHBoxLayout(features)
         features_layout.setSpacing(16)
+        features_layout.setContentsMargins(20, 10, 20, 10)
 
         for icon, text, desc in FEATURE_MODULES:
             card = QFrame()
@@ -336,6 +366,7 @@ class WelcomePage(QWidget):
                     padding: 20px;
                 }
             """)
+            card.setMinimumWidth(180)
             card_layout = QVBoxLayout(card)
 
             icon_label = QLabel(icon)
@@ -370,7 +401,8 @@ class WelcomePage(QWidget):
 
             features_layout.addWidget(card)
 
-        layout.addWidget(features)
+        scroll_area.setWidget(features)
+        layout.addWidget(scroll_area)
 
         hint = QLabel(WELCOME_CONFIG.get("hint", ""))
         hint.setStyleSheet(f"""
@@ -660,7 +692,26 @@ class ToolboxWindow(QMainWindow):
         """)
 
         self.welcome_page = WelcomePage(self.plugins)
-        self.content.addWidget(self.welcome_page)
+        welcome_scroll = QScrollArea()
+        welcome_scroll.setWidgetResizable(True)
+        welcome_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        welcome_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        welcome_scroll.setWidget(self.welcome_page)
+        # 设置视口背景色为透明，避免白色背景
+        welcome_scroll.viewport().setStyleSheet("background-color: transparent;")
+        welcome_scroll.setStyleSheet("""
+            QScrollArea { border: none; background-color: transparent; }
+            QScrollBar:vertical {
+                background: #1e293b; width: 8px; margin: 0;
+            }
+            QScrollBar::handle:vertical {
+                background: #475569; min-height: 20px; border-radius: 4px;
+            }
+            QScrollBar::handle:vertical:hover { background: #64748b; }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+        """)
+        self.welcome_scroll = welcome_scroll
+        self.content.addWidget(welcome_scroll)
 
         main_layout.addWidget(self.content, 1)
 
@@ -684,7 +735,26 @@ class ToolboxWindow(QMainWindow):
             self.nav_layout.addWidget(btn)
 
             widget = plugin.get_widget()
-            self.content.addWidget(widget)
+            scroll_area = QScrollArea()
+            scroll_area.setWidgetResizable(True)
+            scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+            scroll_area.setWidget(widget)
+            # 设置视口背景色为透明，避免白色背景
+            scroll_area.viewport().setStyleSheet("background-color: transparent;")
+            scroll_area.setStyleSheet("""
+                QScrollArea { border: none; background-color: transparent; }
+                QScrollBar:vertical {
+                    background: #1e293b; width: 8px; margin: 0;
+                }
+                QScrollBar::handle:vertical {
+                    background: #475569; min-height: 20px; border-radius: 4px;
+                }
+                QScrollBar::handle:vertical:hover { background: #64748b; }
+                QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+            """)
+            plugin.scroll_area = scroll_area
+            self.content.addWidget(scroll_area)
         except Exception as e:
             print(f"注册插件失败 {plugin_class.name}: {e}")
 
@@ -743,11 +813,12 @@ class ToolboxWindow(QMainWindow):
                 widget.setChecked(name in widget.text())
 
         if name in self.plugins:
-            widget = self.plugins[name].get_widget()
-            index = self.content.indexOf(widget)
-            if index >= 0:
-                self.content.setCurrentIndex(index)
-                self.current_plugin = name
+            plugin = self.plugins[name]
+            if hasattr(plugin, 'scroll_area'):
+                index = self.content.indexOf(plugin.scroll_area)
+                if index >= 0:
+                    self.content.setCurrentIndex(index)
+                    self.current_plugin = name
 
     def _set_window_icon(self):
         """设置窗口图标，支持开发模式和打包模式"""
@@ -848,7 +919,34 @@ class ToolboxWindow(QMainWindow):
             QStackedWidget {{ background-color: {theme['bg']}; }}
         """)
 
+        # 更新所有滚动区域的样式
+        scrollbar_bg = theme['bg_secondary']
+        scrollbar_handle = theme['surface']
+        scrollbar_handle_hover = theme['text_secondary']
+        viewport_bg = theme['bg']
+
+        scroll_style = f"""
+            QScrollArea {{ border: none; background-color: transparent; }}
+            QScrollBar:vertical {{
+                background: {scrollbar_bg}; width: 8px; margin: 0;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {scrollbar_handle}; min-height: 20px; border-radius: 4px;
+            }}
+            QScrollBar::handle:vertical:hover {{ background: {scrollbar_handle_hover}; }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
+        """
+
+        viewport_style = f"background-color: {viewport_bg};"
+
+        if hasattr(self, 'welcome_scroll'):
+            self.welcome_scroll.setStyleSheet(scroll_style)
+            self.welcome_scroll.viewport().setStyleSheet(viewport_style)
+
         for plugin_name, plugin in self.plugins.items():
+            if hasattr(plugin, 'scroll_area'):
+                plugin.scroll_area.setStyleSheet(scroll_style)
+                plugin.scroll_area.viewport().setStyleSheet(viewport_style)
             if hasattr(plugin, 'update_theme'):
                 plugin.update_theme(theme)
 
