@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import sys
 import os
-from pathlib import Path
 
 # 添加当前目录
 current_dir = os.path.dirname(os.path.abspath(__file__))

@@ -4,7 +4,6 @@ PDF合并工具插件
 """
 import os
 import sys
-from pathlib import Path
 from typing import List
 
 # 导入PyMuPDF用于PDF合并
@@ -18,7 +17,7 @@ except ImportError:
 # 导入主程序中的ToolPlugin基类和相关组件
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_20, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
+    from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700
 except ImportError:
     # 如果导入失败，定义简化的基类
     class ToolPlugin:

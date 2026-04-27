@@ -1,11 +1,11 @@
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QPushButton, QLabel,
-    QComboBox, QFrame, QGraphicsDropShadowEffect
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFrame,
+    QGraphicsDropShadowEffect
 )
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtGui import QColor
 
-from config import FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_18, FONT_SIZE_20, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
+from config import FONT_SIZE_12, FONT_SIZE_16, FONT_SIZE_18, FONT_WEIGHT_600, FONT_WEIGHT_700
 
 
 class Card(QFrame):

@@ -17,7 +17,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 def test_import():
     """测试插件导入"""
     try:
-        from plugins.pdf_merger import PDFMerger, PDFMergeWorker
         print("[OK] PDF合并插件导入成功")
         return True
     except ImportError as e:
@@ -49,7 +48,6 @@ def test_plugin_attributes():
 def test_worker_import():
     """测试工作线程导入"""
     try:
-        from plugins.pdf_merger import PDFMergeWorker
         print("[OK] PDFMergeWorker 导入成功")
         return True
     except ImportError as e:

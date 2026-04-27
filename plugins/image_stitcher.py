@@ -6,9 +6,8 @@ import os
 import sys
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QTextEdit, QProgressBar, QComboBox, QSpinBox, QGridLayout,
-    QLineEdit
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit,
+    QComboBox, QSpinBox, QGridLayout, QLineEdit
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
@@ -21,7 +20,7 @@ except ImportError:
 # 导入主程序中的基类和组件
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_20, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
+    from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600
 except ImportError:
     ToolPlugin = object
     Card = None

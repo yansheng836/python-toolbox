@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from PyQt6.QtWidgets import QApplication, QVBoxLayout, QWidget, QPushButton
+from PyQt6.QtWidgets import QApplication, QVBoxLayout, QWidget
 from toolbox import SidebarButton
 
 class TestWindow(QWidget):

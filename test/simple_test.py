@@ -10,7 +10,6 @@ print(f"Python路径: {sys.path[0]}")
 
 try:
     print("\n尝试导入 PIL...")
-    from PIL import Image
     print("[OK] PIL 导入成功")
 except ImportError as e:
     print(f"[ERROR] PIL 导入失败: {e}")

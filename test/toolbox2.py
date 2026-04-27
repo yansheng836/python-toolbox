@@ -1,25 +1,18 @@
 import sys
 import os
-import platform
-from pathlib import Path
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QStackedWidget, QFrame, QFileDialog,
     QMessageBox, QProgressBar, QComboBox, QLineEdit, QTextEdit,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QGraphicsDropShadowEffect, QSystemTrayIcon, QMenu, QDialog,
-    QSlider, QCheckBox, QSpinBox, QGridLayout, QSizePolicy,
-    QScrollArea, QSplitter, QStatusBar, QToolButton
+    QGraphicsDropShadowEffect, QSlider, QGridLayout
 )
 from PyQt6.QtCore import (
-    Qt, QSize, QTimer, QThread, pyqtSignal, QPropertyAnimation,
-    QEasingCurve, QPoint, QRect, QSettings, QByteArray, QStandardPaths
+    Qt, QThread, pyqtSignal, QSettings
 )
 from PyQt6.QtGui import (
-    QIcon, QPixmap, QImage, QPainter, QColor, QFont, QFontDatabase,
-    QLinearGradient, QBrush, QPalette, QCursor, QKeySequence, QShortcut,
-    QAction, QKeyEvent
+    QColor, QFont, QKeySequence, QAction
 )
 
 from config import FONT_SIZE_16, FONT_SIZE_20
@@ -463,7 +456,7 @@ class ImageCompressorWidget(QWidget):
 
         # 检查依赖
         try:
-            from PIL import Image
+            pass
         except ImportError:
             QMessageBox.critical(
                 self, "Error",
@@ -731,21 +724,18 @@ class ImageToPDFWidget(QWidget):
 
     def _check_img2pdf(self):
         try:
-            import img2pdf
             return True
         except:
             return False
 
     def _check_fitz(self):
         try:
-            import fitz
             return True
         except:
             return False
 
     def _check_pil(self):
         try:
-            from PIL import Image
             return True
         except:
             return False

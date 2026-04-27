@@ -1,6 +1,4 @@
-import sys
-from PyQt6.QtWidgets import (QMainWindow, QMenuBar, QMenu, QAction, QApplication)
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (QMainWindow, QMenu, QAction, QApplication)
 
 
 class MenuSystem(QMainWindow):

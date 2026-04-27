@@ -1,12 +1,9 @@
 import sys
 import os
-import json
 import importlib
 import importlib.util
 from pathlib import Path
-from typing import Dict, List, Optional, Callable, Any
-from dataclasses import dataclass, asdict
-from enum import Enum
+from typing import Dict
 
 # 从config.py导入全局配置
 try:
@@ -14,8 +11,8 @@ try:
         APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_COPYRIGHT,
         APP_WEBSITE_URL, APP_WEBSITE_LINK_TEXT,
         FEATURE_MODULES, UI_CONFIG, THEME_CONFIG, WELCOME_CONFIG,
-        TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_20,
-        FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
+        TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_16, FONT_SIZE_20, FONT_WEIGHT_600,
+        FONT_WEIGHT_700, FONT_WEIGHT_800
     )
 except ImportError:
     __version__ = "1.0.0"
@@ -31,22 +28,14 @@ except ImportError:
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QStackedWidget, QScrollArea, QFrame,
-    QFileDialog, QMessageBox, QProgressBar, QSpinBox, QComboBox,
-    QLineEdit, QTextEdit, QGridLayout, QSizePolicy, QGraphicsDropShadowEffect,
-    QGraphicsOpacityEffect, QToolTip, QSystemTrayIcon, QMenu, QDialog,
-    QDialogButtonBox, QCheckBox, QSlider, QSplitter, QStatusBar,
-    QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QTableWidget,
-    QTableWidgetItem, QHeaderView, QAbstractItemView
+    QLabel, QPushButton, QStackedWidget, QFrame, QSizePolicy,
+    QGraphicsDropShadowEffect, QSystemTrayIcon, QMenu
 )
 from PyQt6.QtCore import (
-    Qt, QSize, QTimer, QThread, pyqtSignal, QPropertyAnimation,
-    QEasingCurve, QPoint, QRect, QMargins, QSettings, QByteArray
+    Qt, QPropertyAnimation, QEasingCurve, QSettings
 )
 from PyQt6.QtGui import (
-    QIcon, QPixmap, QImage, QPainter, QColor, QFont, QFontDatabase,
-    QLinearGradient, QBrush, QPalette, QCursor, QKeySequence, QShortcut,
-    QTransform, QMovie, QFontMetrics, QAction
+    QIcon, QPixmap, QColor, QFont, QAction
 )
 
 
@@ -90,7 +79,6 @@ class Theme:
     @staticmethod
     def init_theme():
         """初始化主题系统"""
-        pass
 
 
 # ==================== 动画组件 ====================
@@ -246,7 +234,6 @@ class ToolPlugin:
 
     def update_theme(self, theme):
         """更新主题 - 由子类实现"""
-        pass
 
 
 # ==================== 拖拽处理工具类 ====================
