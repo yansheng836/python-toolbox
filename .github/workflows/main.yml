@@ -54,16 +54,7 @@ jobs:
         sudo apt-get install -y xvfb
         # Run with virtual display, timeout after 10 seconds (GUI won't exit by itself)
         # Exit code 124 means timeout (expected), other non-zero codes indicate errors
-        timeout 10 xvfb-run --auto-servernum python3 main.py || {
-          exit_code=$?
-          if [ $exit_code -eq 124 ]; then
-            echo "main.py ran successfully (timeout after 10s as expected for GUI)"
-            exit 0
-          else
-            echo "main.py failed with exit code $exit_code"
-            exit $exit_code
-          fi
-        }
+        timeout 10 xvfb-run --auto-servernum python3 main.py || [ $? -eq 124 ]
 
     # Generate all statistics images
     - name: Spider data and dealwith
