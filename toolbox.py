@@ -567,6 +567,9 @@ class ToolboxWindow(QMainWindow):
         super().__init__()
         self._app = app
         self.setWindowTitle(UI_CONFIG.get("window_title", f"{APP_NAME} v{APP_VERSION}"))
+
+        # 设置窗口图标
+        self._set_window_icon()
         min_size = UI_CONFIG.get("window_min_size", (1200, 800))
         self.setMinimumSize(min_size[0], min_size[1])
 
@@ -722,6 +725,23 @@ class ToolboxWindow(QMainWindow):
             if index >= 0:
                 self.content.setCurrentIndex(index)
                 self.current_plugin = name
+
+    def _set_window_icon(self):
+        """设置窗口图标，支持开发模式和打包模式"""
+        if getattr(sys, 'frozen', False):
+            # 打包模式：使用 PyInstaller 的 _MEIPASS 路径
+            base_path = Path(sys._MEIPASS)
+        else:
+            # 开发模式：使用当前文件所在目录
+            base_path = Path(__file__).parent
+
+        icon_path = base_path / "favicon.ico"
+        if icon_path.exists():
+            icon = QIcon(str(icon_path))
+            self.setWindowIcon(icon)
+            # 同时设置应用程序图标
+            if self._app:
+                self._app.setWindowIcon(icon)
 
     def init_theme(self):
         theme_name = "dark"
@@ -885,13 +905,15 @@ def main():
     font = QFont("Microsoft YaHei UI", 10)
     app.setFont(font)
 
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    icon_path = os.path.join(current_dir, "favicon.ico")
-    if os.path.exists(icon_path):
-        app_icon = QIcon(icon_path)
-        app.setWindowIcon(app_icon)
-        app.setDesktopFileName("toolbox.desktop")
-        app.setWindowIcon(app_icon)
+    # 设置应用程序图标（支持开发模式和打包模式）
+    if getattr(sys, 'frozen', False):
+        base_path = Path(sys._MEIPASS)
+    else:
+        base_path = Path(__file__).parent
+
+    icon_path = base_path / "favicon.ico"
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
 
     window = ToolboxWindow(app)
     window.show()
