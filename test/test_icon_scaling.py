@@ -10,6 +10,8 @@ import toolbox
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QSizePolicy
 from PyQt6.QtCore import Qt
 
+from config import FONT_SIZE_16
+
 class IconTestWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -24,7 +26,7 @@ class IconTestWidget(QWidget):
         small_layout = QVBoxLayout(self.small_container)
         small_label = QLabel("小容器 (300x200)")
         small_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        small_label.setStyleSheet("font-size: 14px; color: #94a3b8;")
+        small_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; color: #94a3b8;")
         small_layout.addWidget(small_label)
         self.small_container.setFixedSize(300, 200)
         self.small_container.setStyleSheet("background-color: #1e293b; border-radius: 8px;")
@@ -33,7 +35,7 @@ class IconTestWidget(QWidget):
         medium_layout = QVBoxLayout(self.medium_container)
         medium_label = QLabel("中容器 (400x300)")
         medium_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        medium_label.setStyleSheet("font-size: 16px; color: #94a3b8;")
+        medium_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; color: #94a3b8;")
         medium_layout.addWidget(medium_label)
         self.medium_container.setFixedSize(400, 300)
         self.medium_container.setStyleSheet("background-color: #1e293b; border-radius: 8px;")

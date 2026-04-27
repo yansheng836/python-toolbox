@@ -25,7 +25,7 @@ except ImportError:
 # 导入主程序中的ToolPlugin基类和相关组件
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton
+    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_16, FONT_SIZE_20, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
 except ImportError:
     # 如果导入失败，定义简化的基类
     class ToolPlugin:
@@ -165,7 +165,7 @@ class PDFSplitterWidget(QWidget):
         layout.setSpacing(16)
 
         self.title_label = QLabel("📐 PDF拆分工具")
-        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
+        self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700};")
         layout.addWidget(self.title_label)
 
         self.desc_label = QLabel("将PDF拆分为图片或单页PDF，支持设置拆分页数")
@@ -195,7 +195,7 @@ class PDFSplitterWidget(QWidget):
         file_layout.addWidget(self.file_display)
 
         self.file_info_label = QLabel("未选择文件")
-        self.file_info_label.setStyleSheet("color: #64748b; font-size: 12px;")
+        self.file_info_label.setStyleSheet(f"color: #64748b; font-size: {FONT_SIZE_12};")
         file_layout.addWidget(self.file_info_label)
 
         btn_layout = QHBoxLayout()
@@ -302,16 +302,16 @@ class PDFSplitterWidget(QWidget):
 
         self.split_btn = AnimatedButton("开始拆分")
         self.split_btn.setMinimumHeight(48)
-        self.split_btn.setStyleSheet("""
-            QPushButton {
+        self.split_btn.setStyleSheet(f"""
+            QPushButton {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #10b981, stop:1 #059669);
                 color: white; border: none; border-radius: 8px;
-                font-size: 16px; font-weight: 600;
-            }
-            QPushButton:hover { background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #34d399, stop:1 #10b981); }
-            QPushButton:disabled { background: #334155; color: #64748b; }
+                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
+            }}
+            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 #34d399, stop:1 #10b981); }}
+            QPushButton:disabled {{ background: #334155; color: #64748b; }}
         """)
         self.split_btn.clicked.connect(self.start_split)
         self.split_btn.setEnabled(False)
@@ -319,16 +319,16 @@ class PDFSplitterWidget(QWidget):
 
         self.cancel_btn = AnimatedButton("取消")
         self.cancel_btn.setMinimumHeight(48)
-        self.cancel_btn.setStyleSheet("""
-            QPushButton {
+        self.cancel_btn.setStyleSheet(f"""
+            QPushButton {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #ef4444, stop:1 #dc2626);
                 color: white; border: none; border-radius: 8px;
-                font-size: 16px; font-weight: 600;
-            }
-            QPushButton:hover { background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #f87171, stop:1 #ef4444); }
-            QPushButton:disabled { background: #334155; color: #64748b; }
+                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
+            }}
+            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 #f87171, stop:1 #ef4444); }}
+            QPushButton:disabled {{ background: #334155; color: #64748b; }}
         """)
         self.cancel_btn.clicked.connect(self.cancel_split)
         self.cancel_btn.setEnabled(False)
@@ -544,7 +544,7 @@ class PDFSplitter(ToolPlugin):
         """更新主题"""
         if hasattr(self, 'widget') and hasattr(self.widget, 'title_label'):
             self.widget.title_label.setStyleSheet(
-                f"font-size: 24px; font-weight: 700; color: {theme['text']};"
+                f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700}; color: {theme['text']};"
             )
 
         if hasattr(self, 'widget') and hasattr(self.widget, 'desc_label'):

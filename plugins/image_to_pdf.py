@@ -35,12 +35,11 @@ except ImportError:
 # 导入主程序中的基类和组件
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES
+    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_16, FONT_SIZE_20, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
 except ImportError:
     ToolPlugin = object
     Card = None
     AnimatedButton = None
-    TITLE_STYLES = {"font_size": "24px", "font_weight": "700"}
 
 
 class PDFWorker(QThread):
@@ -190,7 +189,7 @@ class ImageToPDF(ToolPlugin):
                 color: #94a3b8;
                 padding: 8px;
                 border: none;
-                font-weight: 600;
+                font-weight: {FONT_WEIGHT_600};
             }
             QTableWidget::item {
                 padding: 8px;
@@ -279,19 +278,19 @@ class ImageToPDF(ToolPlugin):
         # 操作按钮
         self.convert_btn = AnimatedButton("开始转换")
         self.convert_btn.setMinimumHeight(48)
-        self.convert_btn.setStyleSheet("""
-            QPushButton {
+        self.convert_btn.setStyleSheet(f"""
+            QPushButton {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #10b981, stop:1 #059669);
                 color: white;
                 border: none;
                 border-radius: 8px;
-                font-size: 16px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
+                font-size: {FONT_SIZE_16};
+                font-weight: {FONT_WEIGHT_600};
+            }}
+            QPushButton:hover {{
                 background-color: #7c3aed;
-            }
+            }}
         """)
         self.convert_btn.clicked.connect(self.start_conversion)
         layout.addWidget(self.convert_btn)

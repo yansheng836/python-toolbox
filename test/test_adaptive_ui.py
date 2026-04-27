@@ -10,6 +10,8 @@ import toolbox
 from PyQt6.QtWidgets import QApplication, QMainWindow, QSplitter, QWidget, QVBoxLayout, QLabel
 from PyQt6.QtCore import Qt
 
+from config import FONT_SIZE_16
+
 class TestWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -27,7 +29,7 @@ class TestWindow(QMainWindow):
         left_widget = QWidget()
         left_layout = QVBoxLayout(left_widget)
         left_label = QLabel("左侧小窗口\n(模拟小屏幕)")
-        left_label.setStyleSheet("font-size: 14px;")
+        left_label.setStyleSheet(f"font-size: {FONT_SIZE_16};")
         left_layout.addWidget(left_label)
         left_widget.setMinimumWidth(300)
         splitter.addWidget(left_widget)
@@ -36,7 +38,7 @@ class TestWindow(QMainWindow):
         right_widget = QWidget()
         right_layout = QVBoxLayout(right_widget)
         right_label = QLabel("右侧大窗口\n(模拟大屏幕)")
-        right_label.setStyleSheet("font-size: 14px;")
+        right_label.setStyleSheet(f"font-size: {FONT_SIZE_16};")
         right_layout.addWidget(right_label)
         right_widget.setMinimumWidth(600)
         splitter.addWidget(right_widget)
@@ -49,7 +51,7 @@ class TestWindow(QMainWindow):
 
         # 说明标签
         info = QLabel("拖动分割线测试自适应效果")
-        info.setStyleSheet("color: #6366f1; font-size: 16px; margin: 20px;")
+        info.setStyleSheet(f"color: #6366f1; font-size: {FONT_SIZE_16}; margin: 20px;")
         self.main_layout.addWidget(info)
 
 def test_adaptive_ui():

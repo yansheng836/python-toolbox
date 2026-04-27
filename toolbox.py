@@ -14,7 +14,8 @@ try:
         APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_COPYRIGHT,
         APP_WEBSITE_URL, APP_WEBSITE_LINK_TEXT,
         FEATURE_MODULES, UI_CONFIG, THEME_CONFIG, WELCOME_CONFIG,
-        TITLE_STYLES
+        TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_16, FONT_SIZE_20,
+        FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
     )
 except ImportError:
     __version__ = "1.0.0"
@@ -118,8 +119,8 @@ class AnimatedButton(QPushButton):
                 border: none;
                 border-radius: 8px;
                 padding: 8px 16px;
-                font-weight: 600;
-                font-size: 14px;
+                font-weight: {FONT_WEIGHT_600};
+                font-size: {FONT_SIZE_16};
             }}
             QPushButton:hover {{
                 background-color: {theme['primary_hover']};
@@ -204,8 +205,8 @@ class SidebarButton(QPushButton):
                 border-radius: 8px;
                 padding: 0 16px;
                 text-align: left;
-                font-size: 14px;
-                font-weight: 500;
+                font-size: {FONT_SIZE_16};
+                font-weight: {FONT_WEIGHT_600};
             }
             QPushButton:hover {
                 background-color: rgba(99, 102, 241, 0.1);
@@ -214,7 +215,7 @@ class SidebarButton(QPushButton):
             QPushButton:checked {
                 background-color: rgba(99, 102, 241, 0.2);
                 color: #6366f1;
-                font-weight: 600;
+                font-weight: {FONT_WEIGHT_600};
             }
         """)
 
@@ -317,17 +318,17 @@ class WelcomePage(QWidget):
         layout.addWidget(logo)
 
         title = QLabel(APP_NAME)
-        title.setStyleSheet("""
+        title.setStyleSheet(f"""
             font-size: 36px;
-            font-weight: 800;
+            font-weight: {FONT_WEIGHT_800};
             color: #f1f5f9;
         """)
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
 
         subtitle = QLabel(WELCOME_CONFIG.get("subtitle", ""))
-        subtitle.setStyleSheet("""
-            font-size: 16px;
+        subtitle.setStyleSheet(f"""
+            font-size: {FONT_SIZE_16};
             color: #94a3b8;
         """)
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -384,8 +385,8 @@ class WelcomePage(QWidget):
         layout.addWidget(features)
 
         hint = QLabel(WELCOME_CONFIG.get("hint", ""))
-        hint.setStyleSheet("""
-            font-size: 14px;
+        hint.setStyleSheet(f"""
+            font-size: {FONT_SIZE_16};
             color: #6366f1;
             margin-top: 20px;
         """)
@@ -408,24 +409,24 @@ class SettingsPlugin(ToolPlugin):
                 f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']}; color: {theme['text']};")
 
         if hasattr(self, 'theme_label'):
-            self.theme_label.setStyleSheet(f"font-size: 14px; font-weight: 600; color: {theme['text']};")
+            self.theme_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600}; color: {theme['text']};")
 
         if hasattr(self, 'version_label'):
-            self.version_label.setStyleSheet(f"font-size: 16px; font-weight: 600; color: {theme['text']};")
+            self.version_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600}; color: {theme['text']};")
 
         if hasattr(self, 'desc_label'):
-            self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 14px;")
+            self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_16};")
 
         if hasattr(self, 'website_label'):
             self.website_label.setStyleSheet(f"""
-                font-size: 15px;
-                font-weight: 500;
+                font-size: {FONT_SIZE_16};
+                font-weight: {FONT_WEIGHT_600};
                 color: {theme['text']};
                 padding: 8px;
             """)
 
         if hasattr(self, 'copyright_label'):
-            self.copyright_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 12px;")
+            self.copyright_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_12};")
 
     def create_ui(self) -> QWidget:
         widget = QWidget()
@@ -448,7 +449,7 @@ class SettingsPlugin(ToolPlugin):
         general_card = Card(title="通用设置")
 
         self.theme_label = QLabel("外观:")
-        self.theme_label.setStyleSheet("font-size: 14px; font-weight: 600;")
+        self.theme_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};")
         general_card.content_layout.addWidget(self.theme_label)
 
         theme_btn_layout = QHBoxLayout()
@@ -462,14 +463,14 @@ class SettingsPlugin(ToolPlugin):
                 border: none;
                 border-radius: 8px;
                 padding: 10px 20px;
-                font-size: 14px;
-                font-weight: 600;
+                font-size: {FONT_SIZE_16};
+                font-weight: {FONT_WEIGHT_600};
             }
             QPushButton:hover { background-color: #e2e8f0; }
             QPushButton:checked {
                 background-color: #fbbf24;
                 color: #0f172a;
-                font-weight: 700;
+                font-weight: {FONT_WEIGHT_700};
             }
         """)
 
@@ -482,14 +483,14 @@ class SettingsPlugin(ToolPlugin):
                 border: 1px solid #334155;
                 border-radius: 8px;
                 padding: 10px 20px;
-                font-size: 14px;
-                font-weight: 600;
+                font-size: {FONT_SIZE_16};
+                font-weight: {FONT_WEIGHT_600};
             }
             QPushButton:hover { background-color: #334155; }
             QPushButton:checked {
                 background-color: #6366f1;
                 color: white;
-                font-weight: 700;
+                font-weight: {FONT_WEIGHT_700};
                 border: none;
             }
         """)
@@ -510,12 +511,12 @@ class SettingsPlugin(ToolPlugin):
         about_card = Card(title="关于")
 
         self.version_label = QLabel(f"版本: v{APP_VERSION}")
-        self.version_label.setStyleSheet("font-size: 16px; font-weight: 600;")
+        self.version_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};")
         self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.version_label)
 
         self.desc_label = QLabel(APP_DESCRIPTION)
-        self.desc_label.setStyleSheet("font-size: 14px;")
+        self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_16};")
         self.desc_label.setWordWrap(True)
         self.desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.desc_label)
@@ -523,16 +524,16 @@ class SettingsPlugin(ToolPlugin):
         self.website_label = QLabel(
             f"<a href='{APP_WEBSITE_URL}' style='color: #6366f1; text-decoration: none;'>{APP_WEBSITE_LINK_TEXT}</a>")
         self.website_label.setOpenExternalLinks(True)
-        self.website_label.setStyleSheet("""
-            font-size: 15px;
-            font-weight: 500;
+        self.website_label.setStyleSheet(f"""
+            font-size: {FONT_SIZE_16};
+            font-weight: {FONT_WEIGHT_600};
             padding: 8px;
         """)
         self.website_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.website_label)
 
         self.copyright_label = QLabel(APP_COPYRIGHT)
-        self.copyright_label.setStyleSheet("color: #64748b; font-size: 12px;")
+        self.copyright_label.setStyleSheet(f"color: #64748b; font-size: {FONT_SIZE_12};")
         self.copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.copyright_label)
         about_card.content_layout.addStretch()
@@ -620,7 +621,7 @@ class ToolboxWindow(QMainWindow):
         logo_icon = QLabel("🧰")
         logo_icon.setStyleSheet("font-size: 28px;")
         logo_text = QLabel("工具箱")
-        logo_text.setStyleSheet("font-size: 20px; font-weight: 700;")
+        logo_text.setStyleSheet(f"font-size: {FONT_SIZE_20}; font-weight: {FONT_WEIGHT_700};")
         logo_layout.addWidget(logo_icon)
         logo_layout.addWidget(logo_text)
         logo_layout.addStretch()
@@ -641,7 +642,7 @@ class ToolboxWindow(QMainWindow):
         sidebar_layout.addStretch()
 
         version = QLabel(f"v{APP_VERSION}")
-        version.setStyleSheet("color: #475569; font-size: 12px;")
+        version.setStyleSheet(f"color: #475569; font-size: {FONT_SIZE_12};")
         version.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sidebar_layout.addWidget(version)
 
@@ -788,8 +789,8 @@ class ToolboxWindow(QMainWindow):
                 border: none;
                 border-radius: 8px;
                 padding: 10px 20px;
-                font-size: 14px;
-                font-weight: 600;
+                font-size: {FONT_SIZE_16};
+                font-weight: {FONT_WEIGHT_600};
             }}
             QPushButton:hover {{ background-color: {theme['primary_hover']}; }}
             QPushButton:disabled {{ background-color: {theme['surface']}; color: {theme['text_secondary']}; }}

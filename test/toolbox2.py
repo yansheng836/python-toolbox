@@ -22,6 +22,8 @@ from PyQt6.QtGui import (
     QAction, QKeyEvent
 )
 
+from config import FONT_SIZE_16, FONT_SIZE_20
+
 # 平台检测
 IS_WINDOWS = sys.platform == 'win32'
 IS_MACOS = sys.platform == 'darwin'
@@ -94,7 +96,7 @@ def get_stylesheet(theme):
 
     # macOS 需要更小的控件尺寸
     btn_height = "32px" if IS_MACOS else "40px"
-    font_size = "13px" if IS_MACOS else "14px"
+    font_size = FONT_SIZE_16
 
     return f"""
     QMainWindow {{
@@ -120,7 +122,7 @@ def get_stylesheet(theme):
         border-radius: 8px;
         padding: 8px 16px;
         min-height: {btn_height};
-        font-weight: 600;
+        font-weight: {FONT_WEIGHT_600};
         font-size: {font_size};
     }}
 
@@ -188,7 +190,7 @@ def get_stylesheet(theme):
         color: {t['text_secondary']};
         padding: 8px;
         border: none;
-        font-weight: 600;
+        font-weight: {FONT_WEIGHT_600};
     }}
 
     /* 进度条 */
@@ -237,12 +239,12 @@ def get_stylesheet(theme):
     }}
 
     QLabel#title {{
-        font-size: 24px;
-        font-weight: 700;
+        font-size: {FONT_SIZE_20};
+        font-weight: {FONT_WEIGHT_700};
     }}
 
     QLabel#subtitle {{
-        font-size: 14px;
+        font-size: {FONT_SIZE_16};
         color: {t['text_secondary']};
     }}
     """
@@ -304,7 +306,7 @@ class ModernButton(QPushButton):
                     border: none;
                     border-radius: 8px;
                     padding: 8px 16px;
-                    font-weight: 600;
+                    font-weight: {FONT_WEIGHT_600};
                 }}
                 QPushButton:hover {{
                     background-color: {color};
@@ -336,7 +338,7 @@ class ToolCard(QFrame):
         if title:
             title_label = QLabel(title)
             title_label.setObjectName("title")
-            title_label.setStyleSheet("font-size: 18px; font-weight: 700;")
+            title_label.setStyleSheet(f"font-size: 18px; font-weight: {FONT_WEIGHT_700};")
             layout.addWidget(title_label)
 
         self.content = QWidget()
@@ -858,7 +860,7 @@ class MainWindow(QMainWindow):
 
         # Logo
         logo = QLabel("🧰 Toolbox")
-        logo.setStyleSheet("font-size: 20px; font-weight: 700;")
+        logo.setStyleSheet(f"font-size: {FONT_SIZE_20}; font-weight: {FONT_WEIGHT_700};")
         sidebar_layout.addWidget(logo)
 
         # 分隔线
@@ -910,7 +912,7 @@ class MainWindow(QMainWindow):
                 QPushButton:checked {
                     background-color: rgba(99, 102, 241, 0.2);
                     color: #6366f1;
-                    font-weight: 600;
+                    font-weight: {FONT_WEIGHT_600};
                 }
             """)
 

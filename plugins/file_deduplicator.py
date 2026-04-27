@@ -19,7 +19,7 @@ from PyQt6.QtGui import QFont
 # 导入主程序中的ToolPlugin基类和相关组件
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton
+    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_16, FONT_SIZE_20, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
 except ImportError:
     # 如果导入失败，定义简化的基类
     class ToolPlugin:
@@ -122,7 +122,7 @@ class FileDeduplicatorWidget(QWidget):
 
         # 标题
         self.title_label = QLabel("🗑️ 文件去重工具")
-        self.title_label.setStyleSheet("font-size: 24px; font-weight: 700;")
+        self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700};")
         layout.addWidget(self.title_label)
 
         # 描述
@@ -154,16 +154,18 @@ class FileDeduplicatorWidget(QWidget):
         # 扫描按钮
         self.scan_btn = AnimatedButton("开始扫描")
         self.scan_btn.setMinimumHeight(48)
-        self.scan_btn.setStyleSheet("""
-            QPushButton {
+        self.scan_btn.setStyleSheet(f"""
+            QPushButton {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #3b82f6, stop:1 #2563eb);
                 color: white; border: none; border-radius: 8px;
-                font-size: 16px; font-weight: 600;
-            }
-            QPushButton:hover { background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #60a5fa, stop:1 #3b82f6); }
-            QPushButton:disabled { background: #334155; color: #64748b; }
+                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
+            }}
+            QPushButton:hover {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #60a5fa, stop:1 #3b82f6);
+            }}
+            QPushButton:disabled {{ background: #334155; color: #64748b; }}
         """)
         self.scan_btn.clicked.connect(self.start_scan)
         self.scan_btn.setEnabled(False)
@@ -195,14 +197,14 @@ class FileDeduplicatorWidget(QWidget):
 
         self.cancel_btn = AnimatedButton("取消扫描")
         self.cancel_btn.setMinimumHeight(36)
-        self.cancel_btn.setStyleSheet("""
-            QPushButton {
+        self.cancel_btn.setStyleSheet(f"""
+            QPushButton {{
                 background: #ef4444;
                 color: white; border: none; border-radius: 8px;
-                font-size: 14px; font-weight: 600;
-            }
-            QPushButton:hover { background: #f87171; }
-            QPushButton:disabled { background: #334155; color: #64748b; }
+                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
+            }}
+            QPushButton:hover {{ background: #f87171; }}
+            QPushButton:disabled {{ background: #334155; color: #64748b; }}
         """)
         self.cancel_btn.clicked.connect(self.cancel_scan)
         self.cancel_btn.setVisible(False)
@@ -235,7 +237,7 @@ class FileDeduplicatorWidget(QWidget):
 
         # 统计标签
         self.stats_label = QLabel("未扫描")
-        self.stats_label.setStyleSheet("color: #94a3b8; font-size: 12px;")
+        self.stats_label.setStyleSheet(f"color: #94a3b8; font-size: {FONT_SIZE_12};")
         results_card.content_layout.addWidget(self.stats_label)
         layout.addWidget(results_card)
 
@@ -265,16 +267,18 @@ class FileDeduplicatorWidget(QWidget):
         # 删除按钮
         self.delete_btn = AnimatedButton("删除重复文件")
         self.delete_btn.setMinimumHeight(48)
-        self.delete_btn.setStyleSheet("""
-            QPushButton {
+        self.delete_btn.setStyleSheet(f"""
+            QPushButton {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #ef4444, stop:1 #dc2626);
                 color: white; border: none; border-radius: 8px;
-                font-size: 16px; font-weight: 600;
-            }
-            QPushButton:hover { background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #f87171, stop:1 #ef4444); }
-            QPushButton:disabled { background: #334155; color: #64748b; }
+                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
+            }}
+            QPushButton:hover {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #f87171, stop:1 #ef4444);
+            }}
+            QPushButton:disabled {{ background: #334155; color: #64748b; }}
         """)
         self.delete_btn.clicked.connect(self.delete_duplicates)
         self.delete_btn.setEnabled(False)
@@ -495,7 +499,7 @@ class FileDeduplicator(ToolPlugin):
         # 标题和描述
         if hasattr(w, 'title_label'):
             w.title_label.setStyleSheet(
-                f"font-size: 24px; font-weight: 700; color: {theme['text']};"
+                f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700}; color: {theme['text']};"
             )
         if hasattr(w, 'desc_label'):
             w.desc_label.setStyleSheet(
@@ -524,7 +528,7 @@ class FileDeduplicator(ToolPlugin):
                     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                         stop:0 {theme['primary']}, stop:1 {theme['primary_hover']});
                     color: white; border: none; border-radius: 8px;
-                    font-size: 16px; font-weight: 600;
+                    font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
                 }}
                 QPushButton:hover {{
                     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -559,7 +563,7 @@ class FileDeduplicator(ToolPlugin):
                 QPushButton {{
                     background: {theme['error']};
                     color: white; border: none; border-radius: 8px;
-                    font-size: 14px; font-weight: 600;
+                    font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
                 }}
                 QPushButton:hover {{ background: {theme['error']}cc; }}
                 QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
@@ -588,7 +592,7 @@ class FileDeduplicator(ToolPlugin):
 
         # 统计标签
         if hasattr(w, 'stats_label'):
-            w.stats_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 12px;")
+            w.stats_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_12};")
 
         # 下拉框
         if hasattr(w, 'rule_combo'):
@@ -617,7 +621,7 @@ class FileDeduplicator(ToolPlugin):
                     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                         stop:0 {theme['error']}, stop:1 {theme['error']}cc);
                     color: white; border: none; border-radius: 8px;
-                    font-size: 16px; font-weight: 600;
+                    font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
                 }}
                 QPushButton:hover {{
                     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,

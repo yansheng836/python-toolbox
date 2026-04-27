@@ -21,13 +21,12 @@ except ImportError:
 # 导入主程序中的基类和组件
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler, TITLE_STYLES
+    from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler, TITLE_STYLES, FONT_SIZE_16, FONT_SIZE_20, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
 except ImportError:
     ToolPlugin = object
     Card = None
     AnimatedButton = None
     DragDropHandler = None
-    TITLE_STYLES = {"font_size": "24px", "font_weight": "700"}
 
 
 class ImageStitchWorker(QThread):
@@ -275,16 +274,16 @@ class ImageStitcher(ToolPlugin):
         action_card = Card()
         self.start_btn = AnimatedButton("开始拼接")
         self.start_btn.setMinimumHeight(48)
-        self.start_btn.setStyleSheet("""
-            QPushButton {
+        self.start_btn.setStyleSheet(f"""
+            QPushButton {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #10b981, stop:1 #059669);
                 color: white; border: none; border-radius: 8px;
-                font-size: 16px; font-weight: 600;
-            }
-            QPushButton:hover { background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #34d399, stop:1 #10b981); }
-            QPushButton:disabled { background: #334155; color: #64748b; }
+                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
+            }}
+            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 #34d399, stop:1 #10b981); }}
+            QPushButton:disabled {{ background: #334155; color: #64748b; }}
         """)
         self.start_btn.clicked.connect(self.start_stitch)
         action_card.content_layout.addWidget(self.start_btn)

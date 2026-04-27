@@ -5,6 +5,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QColor
 
+from config import FONT_SIZE_12, FONT_SIZE_16, FONT_SIZE_20, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
+
 
 class Card(QFrame):
     """现代化卡片组件"""
@@ -25,7 +27,7 @@ class Card(QFrame):
             title_label.setObjectName("cardTitle")
             title_label.setStyleSheet("""
                 font-size: 18px;
-                font-weight: 700;
+                font-weight: {FONT_WEIGHT_700};
                 color: #f1f5f9;
             """)
             layout.addWidget(title_label)
@@ -76,7 +78,7 @@ class SettingsPlugin:
         title = QLabel("⚙️ 设置")
         title.setStyleSheet("""
             font-size: 32px;
-            font-weight: 800;
+            font-weight: {FONT_WEIGHT_800};
             color: #f1f5f9;
         """)
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -94,7 +96,7 @@ class SettingsPlugin:
 
         # 主题设置
         theme_label = QLabel("外观:")
-        theme_label.setStyleSheet("font-size: 14px; font-weight: 600; color: #f1f5f9;")
+        theme_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600}; color: #f1f5f9;")
         general_card.content_layout.addWidget(theme_label)
 
         theme_btn_layout = QHBoxLayout()
@@ -108,8 +110,8 @@ class SettingsPlugin:
                 border: none;
                 border-radius: 8px;
                 padding: 10px 20px;
-                font-size: 14px;
-                font-weight: 600;
+                font-size: {FONT_SIZE_16};
+                font-weight: {FONT_WEIGHT_600};
             }
             QPushButton:hover {
                 background-color: #e2e8f0;
@@ -126,8 +128,8 @@ class SettingsPlugin:
                 border: 1px solid #334155;
                 border-radius: 8px;
                 padding: 10px 20px;
-                font-size: 14px;
-                font-weight: 600;
+                font-size: {FONT_SIZE_16};
+                font-weight: {FONT_WEIGHT_600};
             }
             QPushButton:hover {
                 background-color: #334155;
@@ -147,13 +149,13 @@ class SettingsPlugin:
 
         # 版本信息
         version_label = QLabel(f"版本: v{self.version}")
-        version_label.setStyleSheet("font-size: 16px; font-weight: 600; color: #f1f5f9;")
+        version_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600}; color: #f1f5f9;")
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(version_label)
 
         # 功能描述
         desc_label = QLabel("批量处理工具，支持图片压缩、PDF转换、格式转换和拼接")
-        desc_label.setStyleSheet("color: #94a3b8; font-size: 14px;")
+        desc_label.setStyleSheet(f"color: #94a3b8; font-size: {FONT_SIZE_16};")
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(desc_label)
@@ -162,9 +164,9 @@ class SettingsPlugin:
         website_label = QLabel(
             "<a href='https://www.example.com' style='color: #6366f1; text-decoration: none;'>🌐 访问官方网站</a>")
         website_label.setOpenExternalLinks(True)
-        website_label.setStyleSheet("""
-            font-size: 15px;
-            font-weight: 500;
+        website_label.setStyleSheet(f"""
+            font-size: {FONT_SIZE_16};
+            font-weight: {FONT_WEIGHT_600};
             padding: 8px;
         """)
         website_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -172,7 +174,7 @@ class SettingsPlugin:
 
         # 版权信息
         copyright_label = QLabel("© 2023 工具箱开发团队")
-        copyright_label.setStyleSheet("color: #64748b; font-size: 12px;")
+        copyright_label.setStyleSheet(f"color: #64748b; font-size: {FONT_SIZE_12};")
         copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(copyright_label)
 

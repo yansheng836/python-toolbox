@@ -38,6 +38,16 @@ UI_CONFIG = {
     "button_corner_radius": 8,
 }
 
+# 字体大小配置
+FONT_SIZE_12 = "12px"
+FONT_SIZE_16 = "16px"
+FONT_SIZE_20 = "20px"
+
+# 字体粗细配置
+FONT_WEIGHT_600 = "600"
+FONT_WEIGHT_700 = "700"
+FONT_WEIGHT_800 = "800"
+
 # 主题配置（可以在运行时修改）
 THEME_CONFIG = {
     "default_theme": "dark",  # 默认主题
