@@ -40,7 +40,9 @@ UI_CONFIG = {
 
 # 字体大小配置
 FONT_SIZE_12 = "12px"
+FONT_SIZE_14 = "14px"
 FONT_SIZE_16 = "16px"
+FONT_SIZE_18 = "18px"
 FONT_SIZE_20 = "20px"
 
 # 字体粗细配置

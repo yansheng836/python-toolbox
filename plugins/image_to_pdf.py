@@ -35,7 +35,7 @@ except ImportError:
 # 导入主程序中的基类和组件
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_16, FONT_SIZE_20, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
+    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_20, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
 except ImportError:
     ToolPlugin = object
     Card = None
@@ -149,7 +149,7 @@ class ImageToPDF(ToolPlugin):
                     f"color: {theme['text']};"
                 )
             if hasattr(self, 'desc_label'):
-                self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 13px;")
+                self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};")
         except RuntimeError:
             pass  # C++ object already deleted
 
@@ -165,7 +165,7 @@ class ImageToPDF(ToolPlugin):
         layout.addWidget(self.title_label)
 
         self.desc_label = QLabel("将多张图片合并为一个PDF文件，支持拖拽排序")
-        self.desc_label.setStyleSheet("font-size: 13px;")
+        self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
         # 图片列表

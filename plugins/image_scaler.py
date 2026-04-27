@@ -13,7 +13,7 @@ except ImportError:
 # 导入主程序中的ToolPlugin基类
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler, TITLE_STYLES, FONT_SIZE_16, FONT_SIZE_20, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
+    from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_20, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
 except ImportError:
     # 如果导入失败，定义一个简化的基类
     class ToolPlugin:
@@ -137,7 +137,7 @@ class ImageScalerWidget(QWidget):
 
         # 说明
         self.desc_label = QLabel("支持按百分比或指定尺寸缩放图片，支持保持宽高比和质量设置")
-        self.desc_label.setStyleSheet("font-size: 13px;")
+        self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
         # 文件选择区域
@@ -518,7 +518,7 @@ class ImageScaler(ToolPlugin):
 
         # 更新描述颜色
         if hasattr(self, 'widget') and hasattr(self.widget, 'desc_label'):
-            self.widget.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 13px;")
+            self.widget.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};")
 
     def create_ui(self):
         return ImageScalerWidget()

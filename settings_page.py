@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QColor
 
-from config import FONT_SIZE_12, FONT_SIZE_16, FONT_SIZE_20, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
+from config import FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_18, FONT_SIZE_20, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
 
 
 class Card(QFrame):
@@ -25,8 +25,8 @@ class Card(QFrame):
         if self.title:
             title_label = QLabel(self.title)
             title_label.setObjectName("cardTitle")
-            title_label.setStyleSheet("""
-                font-size: 18px;
+            title_label.setStyleSheet(f"""
+                font-size: {FONT_SIZE_18};
                 font-weight: {FONT_WEIGHT_700};
                 color: #f1f5f9;
             """)
