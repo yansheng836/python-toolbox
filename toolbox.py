@@ -570,8 +570,18 @@ class ToolboxWindow(QMainWindow):
 
         # 设置窗口图标
         self._set_window_icon()
+
+        # 设置窗口最小尺寸
         min_size = UI_CONFIG.get("window_min_size", (1200, 800))
         self.setMinimumSize(min_size[0], min_size[1])
+
+        # 设置窗口最大尺寸（可选）
+        max_size = UI_CONFIG.get("window_max_size", None)
+        if max_size:
+            self.setMaximumSize(max_size[0], max_size[1])
+        else:
+            # 明确不限制最大尺寸，确保可以调整大小
+            self.setMaximumSize(16777215, 16777215)  # QWIDGETSIZE_MAX
 
         self.settings = QSettings("Toolbox", "App")
         self.load_geometry()
