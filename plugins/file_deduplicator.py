@@ -33,6 +33,11 @@ except ImportError:
         def create_ui(self):
             raise NotImplementedError("Subclasses must implement create_ui()")
 
+        def get_widget(self):
+            if self.widget is None:
+                self.widget = self.create_ui()
+            return self.widget
+
     class Card:
         def __init__(self, parent=None, title=""):
             self.content_layout = QVBoxLayout()
