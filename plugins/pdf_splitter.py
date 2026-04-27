@@ -539,6 +539,7 @@ class PDFSplitter(ToolPlugin):
     """PDF拆分插件"""
     icon = "📐"
     name = "PDF拆分"
+    order = 11
 
     def update_theme(self, theme):
         """更新主题"""

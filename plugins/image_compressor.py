@@ -99,6 +99,7 @@ class ImageCompressor(ToolPlugin):
     name = "图片压缩"
     description = "批量压缩图片，支持JPG/PNG/WebP格式"
     icon = "🖼️"
+    order = 1
 
     def setup_drag_handler(self):
         """设置拖拽处理器"""

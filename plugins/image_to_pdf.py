@@ -138,6 +138,7 @@ class ImageToPDF(ToolPlugin):
     name = "图片转PDF"
     description = "将多张图片合并为一个PDF文件"
     icon = "📄"
+    order = 5
 
     def update_theme(self, theme):
         """更新主题"""

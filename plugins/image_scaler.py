@@ -509,6 +509,7 @@ class ImageScalerWidget(QWidget):
 class ImageScaler(ToolPlugin):
     icon = "📏"
     name = "图片批量缩放"
+    order = 2
 
     def update_theme(self, theme):
         """更新主题"""

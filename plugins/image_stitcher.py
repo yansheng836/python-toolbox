@@ -97,6 +97,7 @@ class ImageStitcher(ToolPlugin):
     name = "图片拼接"
     description = "多图横向/纵向合并为一张"
     icon = "📐"
+    order = 4
 
     class FileListWrapper:
         """文件列表包装器"""

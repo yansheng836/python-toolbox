@@ -227,6 +227,7 @@ class ToolPlugin:
     description = "Base tool description"
     icon = "🔧"
     version = "1.0.0"
+    order = 999  # 插件排序权重，数值越小排在越前面
 
     def __init__(self, parent=None):
         self.parent = parent
@@ -402,6 +403,7 @@ class SettingsPlugin(ToolPlugin):
     description = "应用程序设置和关于信息"
     icon = "⚙️"
     version = "1.0.0"
+    order = 999  # 设置始终放在最后
 
     def update_theme(self, theme):
         if hasattr(self, 'title_label'):
@@ -685,14 +687,16 @@ class ToolboxWindow(QMainWindow):
             print(f"注册插件失败 {plugin_class.name}: {e}")
 
     def load_plugins(self):
-        """从plugins目录加载外部插件"""
+        """从plugins目录加载外部插件，按order排序后注册"""
         if getattr(sys, 'frozen', False):
             base_path = Path(sys._MEIPASS)
         else:
             base_path = Path(__file__).parent
 
         plugins_dir = base_path / "plugins"
+        plugin_classes = []
 
+        # 收集外部插件类
         if plugins_dir.exists():
             for file in plugins_dir.glob("*.py"):
                 try:
@@ -705,12 +709,19 @@ class ToolboxWindow(QMainWindow):
                         if (isinstance(attr, type) and
                                 attr.__name__ != 'ToolPlugin' and
                                 any(c.__name__ == 'ToolPlugin' for c in attr.__mro__)):
-                            self.register_plugin(attr)
+                            plugin_classes.append(attr)
                 except Exception as e:
                     print(f"加载插件失败 {file}: {e}")
 
-        # 注册设置插件（放在最后）
-        self.register_plugin(SettingsPlugin)
+        # 添加设置插件
+        plugin_classes.append(SettingsPlugin)
+
+        # 按 order 排序（数值越小排在越前面）
+        plugin_classes.sort(key=lambda x: getattr(x, 'order', 999))
+
+        # 按顺序注册插件
+        for plugin_class in plugin_classes:
+            self.register_plugin(plugin_class)
 
     def switch_plugin(self, name):
         for i in range(self.nav_layout.count()):
