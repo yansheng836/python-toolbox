@@ -571,14 +571,16 @@ class ToolboxWindow(QMainWindow):
         # 设置窗口图标
         self._set_window_icon()
 
-        # 设置窗口最小尺寸
-        min_size = UI_CONFIG.get("window_min_size", (1200, 800))
-        self.setMinimumSize(min_size[0], min_size[1])
+        # 设置窗口最小尺寸（支持像素值或百分比）
+        min_size = UI_CONFIG.get("window_min_size", (0.7, 0.8))
+        min_w, min_h = self._resolve_size(min_size)
+        self.setMinimumSize(min_w, min_h)
 
-        # 设置窗口最大尺寸（可选）
+        # 设置窗口最大尺寸（可选，支持像素值或百分比）
         max_size = UI_CONFIG.get("window_max_size", None)
         if max_size:
-            self.setMaximumSize(max_size[0], max_size[1])
+            max_w, max_h = self._resolve_size(max_size)
+            self.setMaximumSize(max_w, max_h)
         else:
             # 明确不限制最大尺寸，确保可以调整大小
             self.setMaximumSize(16777215, 16777215)  # QWIDGETSIZE_MAX
@@ -722,6 +724,17 @@ class ToolboxWindow(QMainWindow):
         # 按顺序注册插件
         for plugin_class in plugin_classes:
             self.register_plugin(plugin_class)
+
+    def _resolve_size(self, size):
+        """解析尺寸配置，支持像素值或百分比（如(0.7, 0.8)表示70%宽、80%高）"""
+        w, h = size
+        screen = QApplication.primaryScreen().geometry()
+        if isinstance(w, float) and isinstance(h, float):
+            # 百分比：计算实际像素值
+            return int(screen.width() * w), int(screen.height() * h)
+        else:
+            # 像素值：直接使用
+            return w, h
 
     def switch_plugin(self, name):
         for i in range(self.nav_layout.count()):

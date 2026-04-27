@@ -31,8 +31,9 @@ FEATURE_MODULES = [
 # UI配置
 UI_CONFIG = {
     "window_title": f"工具箱 v{APP_VERSION}",
-    "window_min_size": (1200, 800),
-    "window_max_size": None,  # None表示不限制，可设置为(1920, 1080)等
+    # 窗口最小尺寸：像素值如 (1200, 800) 或百分比如 (0.7, 0.8) 表示70%宽、80%高
+    "window_min_size": (0.7, 0.8),
+    "window_max_size": None,  # None表示不限制，像素值如(1920, 1080)，百分比如(0.9, 0.9)
     "sidebar_width": 260,
     "card_corner_radius": 12,
     "input_corner_radius": 8,
