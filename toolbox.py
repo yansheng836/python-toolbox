@@ -306,46 +306,55 @@ class WelcomePage(QWidget):
         return str(base_path / "favicon.ico")
 
     def setup_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.setSpacing(24)
+        main_layout = QVBoxLayout(self)
+        main_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        main_layout.setSpacing(0)
+
+        # 内容容器：限制最大宽度，使内容居中紧凑
+        content_container = QWidget()
+        content_container.setMaximumWidth(900)
+        content_layout = QVBoxLayout(content_container)
+        content_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        content_layout.setSpacing(6)
+        content_layout.setContentsMargins(20, 10, 20, 10)
 
         logo = QLabel()
         if self.favicon_path and os.path.exists(self.favicon_path):
             pixmap = QPixmap(self.favicon_path)
             if not pixmap.isNull():
-                scaled_pixmap = pixmap.scaled(128, 128, Qt.AspectRatioMode.KeepAspectRatio,
+                scaled_pixmap = pixmap.scaled(64, 64, Qt.AspectRatioMode.KeepAspectRatio,
                                                 Qt.TransformationMode.SmoothTransformation)
                 logo.setPixmap(scaled_pixmap)
             else:
                 logo.setText("🧰")
-                logo.setStyleSheet("font-size: 72px;")
+                logo.setStyleSheet("font-size: 36px;")
         else:
             logo.setText("🧰")
-            logo.setStyleSheet("font-size: 72px;")
+            logo.setStyleSheet("font-size: 36px;")
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(logo)
+        content_layout.addWidget(logo)
 
         title = QLabel(APP_NAME)
         title.setStyleSheet(f"""
-            font-size: 36px;
+            font-size: 24px;
             font-weight: {FONT_WEIGHT_800};
             color: #f1f5f9;
         """)
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(title)
+        content_layout.addWidget(title)
 
         subtitle = QLabel(WELCOME_CONFIG.get("subtitle", ""))
         subtitle.setStyleSheet(f"""
-            font-size: {FONT_SIZE_16};
+            font-size: {FONT_SIZE_12};
             color: #94a3b8;
         """)
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(subtitle)
+        content_layout.addWidget(subtitle)
 
         # 功能卡片区域 - 使用横向滚动
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
+        scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setStyleSheet("""
@@ -373,9 +382,10 @@ class WelcomePage(QWidget):
         scroll_area.viewport().setStyleSheet("background-color: transparent;")
 
         features = QWidget()
+        features.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
         features_layout = QHBoxLayout(features)
-        features_layout.setSpacing(16)
-        features_layout.setContentsMargins(20, 10, 20, 10)
+        features_layout.setSpacing(10)
+        features_layout.setContentsMargins(20, 5, 20, 5)
 
         for icon, text, desc in FEATURE_MODULES:
             card = QFrame()
@@ -384,28 +394,28 @@ class WelcomePage(QWidget):
                     background-color: #1e293b;
                     border-radius: 12px;
                     border: 1px solid #334155;
-                    padding: 20px;
+                    padding: 6px;
                 }
             """)
-            card.setMinimumWidth(180)
+            card.setMinimumWidth(260)
+            card.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             card_layout = QVBoxLayout(card)
+            card_layout.setSpacing(4)
+            card_layout.setContentsMargins(6, 6, 6, 6)
 
             icon_label = QLabel(icon)
-            icon_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
             font = icon_label.font()
-            font.setPointSize(24)
+            font.setPointSize(18)
             font.setBold(True)
             icon_label.setFont(font)
-            icon_label.setMinimumSize(48, 48)
-            card_layout.setStretch(0, 2)
-            card_layout.setStretch(1, 1)
+            icon_label.setMinimumSize(28, 28)
             card_layout.addWidget(icon_label)
 
             text_label = QLabel(text)
             font = text_label.font()
-            font.setPointSize(14)
+            font.setPointSize(12)
             font.setBold(True)
             text_label.setFont(font)
             text_label.setStyleSheet("color: #f1f5f9;")
@@ -414,8 +424,9 @@ class WelcomePage(QWidget):
 
             desc_label = QLabel(desc)
             desc_font = desc_label.font()
-            desc_font.setPointSize(11)
+            desc_font.setPointSize(9)
             desc_label.setFont(desc_font)
+            desc_label.setWordWrap(True)
             desc_label.setStyleSheet("color: #94a3b8;")
             desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             card_layout.addWidget(desc_label)
@@ -423,18 +434,18 @@ class WelcomePage(QWidget):
             features_layout.addWidget(card)
 
         scroll_area.setWidget(features)
-        layout.addWidget(scroll_area)
+        content_layout.addWidget(scroll_area)
 
         hint = QLabel(WELCOME_CONFIG.get("hint", ""))
         hint.setStyleSheet(f"""
-            font-size: {FONT_SIZE_16};
+            font-size: {FONT_SIZE_14};
             color: #6366f1;
-            margin-top: 20px;
+            margin-top: 10px;
         """)
         hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(hint)
+        content_layout.addWidget(hint)
 
-        layout.addStretch()
+        main_layout.addWidget(content_container)
 
 class SettingsPlugin(ToolPlugin):
     """设置插件 - 包含通用设置和关于信息"""
