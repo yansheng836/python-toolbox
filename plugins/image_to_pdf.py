@@ -318,8 +318,9 @@ class ImageToPDF(ToolPlugin):
         return widget
 
     def add_images(self):
+        parent = self.widget if self.widget else None
         files, _ = QFileDialog.getOpenFileNames(
-            self.parent, "选择图片", "",
+            parent, "选择图片", "",
             "图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff)"
         )
         for f in files:
@@ -363,8 +364,9 @@ class ImageToPDF(ToolPlugin):
             self.table.setItem(i, 2, QTableWidgetItem("就绪"))
 
     def browse_output(self):
+        parent = self.widget if self.widget else None
         path, _ = QFileDialog.getSaveFileName(
-            self.parent, "保存PDF", "", "PDF文件 (*.pdf)"
+            parent, "保存PDF", "", "PDF文件 (*.pdf)"
         )
         if path:
             if not path.endswith('.pdf'):
@@ -373,17 +375,20 @@ class ImageToPDF(ToolPlugin):
 
     def start_conversion(self):
         if not self.files:
-            QMessageBox.warning(self.parent, "警告", "请先添加图片！")
+            parent = self.widget if self.widget else None
+            QMessageBox.warning(parent, "警告", "请先添加图片！")
             return
 
         output = self.output_path.text()
         if not output:
-            QMessageBox.warning(self.parent, "警告", "请选择输出路径！")
+            parent = self.widget if self.widget else None
+            QMessageBox.warning(parent, "警告", "请选择输出路径！")
             return
 
         if not (IMG2PDF_AVAILABLE or FITZ_AVAILABLE or PIL_AVAILABLE):
+            parent = self.widget if self.widget else None
             QMessageBox.critical(
-                self.parent, "错误",
+                parent, "错误",
                 "请先安装依赖: pip install img2pdf 或 pip install PyMuPDF 或 pip install Pillow"
             )
             return
@@ -407,7 +412,13 @@ class ImageToPDF(ToolPlugin):
     def conversion_finished(self, success, message):
         self.convert_btn.setEnabled(True)
         self.progress.setVisible(False)
+        parent = self.widget if self.widget else None
+        msg_box = QMessageBox(parent)
         if success:
-            QMessageBox.information(self.parent, "完成", message)
+            msg_box.setIcon(QMessageBox.Icon.Information)
+            msg_box.setWindowTitle("完成")
         else:
-            QMessageBox.critical(self.parent, "错误", message)
+            msg_box.setIcon(QMessageBox.Icon.Critical)
+            msg_box.setWindowTitle("错误")
+        msg_box.setText(message)
+        msg_box.exec()

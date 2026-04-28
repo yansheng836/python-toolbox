@@ -274,8 +274,9 @@ class ImageCompressor(ToolPlugin):
         return widget
 
     def add_images(self):
+        parent = self.widget if self.widget else None
         files, _ = QFileDialog.getOpenFileNames(
-            self.parent, "选择图片", "",
+            parent, "选择图片", "",
             "图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.gif)"
         )
         if files:
@@ -290,17 +291,20 @@ class ImageCompressor(ToolPlugin):
         DragDropHandler.update_file_list_display(self.file_list, self.files)
 
     def browse_output(self):
-        path = QFileDialog.getExistingDirectory(self.parent, "选择输出目录")
+        parent = self.widget if self.widget else None
+        path = QFileDialog.getExistingDirectory(parent, "选择输出目录")
         if path:
             self.output_path.setText(path)
 
     def start_compression(self):
         if not self.files:
-            QMessageBox.warning(self.parent, "警告", "请先添加图片！")
+            parent = self.widget if self.widget else None
+            QMessageBox.warning(parent, "警告", "请先添加图片！")
             return
 
         if not PIL_AVAILABLE:
-            QMessageBox.critical(self.parent, "错误", "请先安装 Pillow: pip install Pillow")
+            parent = self.widget if self.widget else None
+            QMessageBox.critical(parent, "错误", "请先安装 Pillow: pip install Pillow")
             return
 
         self.progress_bar.setVisible(True)
