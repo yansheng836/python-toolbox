@@ -951,6 +951,25 @@ class ToolboxWindow(QMainWindow):
             }}
             QPushButton:hover {{ background-color: {theme['primary_hover']}; }}
             QPushButton:disabled {{ background-color: {theme['surface']}; color: {theme['text_secondary']}; }}
+            QMessageBox {{
+                background-color: {theme['bg_secondary']};
+                color: {theme['text']};
+            }}
+            QMessageBox QLabel {{
+                color: {theme['text']};
+            }}
+            QMessageBox QPushButton {{
+                background-color: {theme['primary']};
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 6px 20px;
+                font-size: {FONT_SIZE_16};
+                font-weight: {FONT_WEIGHT_600};
+            }}
+            QMessageBox QPushButton:hover {{
+                background-color: {theme['primary_hover']};
+            }}
         """)
 
         self.sidebar.setStyleSheet(f"""

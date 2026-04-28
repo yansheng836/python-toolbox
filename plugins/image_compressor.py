@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QProgressBar, QComboBox, QSlider, QLineEdit, QGridLayout,
     QFileDialog, QMessageBox
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
 
 try:
     from PIL import Image
@@ -110,6 +110,7 @@ class ImageCompressor(ToolPlugin):
 
     def update_theme(self, theme):
         """更新主题"""
+        self.current_theme = theme
         try:
             if hasattr(self, 'title_label'):
                 self.title_label.setStyleSheet(
@@ -326,14 +327,8 @@ class ImageCompressor(ToolPlugin):
     def compression_finished(self, success, message):
         self.start_btn.setEnabled(True)
         self.status_label.setText("")
-        parent = self.widget if self.widget else None
-        msg_box = QMessageBox(parent)
-        if success:
-            msg_box.setIcon(QMessageBox.Icon.Information)
-            msg_box.setWindowTitle("完成")
-        else:
-            msg_box.setIcon(QMessageBox.Icon.Critical)
-            msg_box.setWindowTitle("错误")
-        msg_box.setText(message)
-        msg_box.exec()
         self.progress_bar.setVisible(False)
+        if success:
+            QMessageBox.information(None, "完成", message)
+        else:
+            QMessageBox.critical(None, "错误", message)
