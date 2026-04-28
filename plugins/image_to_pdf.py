@@ -9,7 +9,7 @@ import io
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QProgressBar,
     QComboBox, QSlider, QLineEdit, QTableWidget, QTableWidgetItem,
-    QHeaderView, QAbstractItemView, QGridLayout, QCheckBox
+    QHeaderView, QAbstractItemView, QGridLayout, QCheckBox, QFileDialog
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
