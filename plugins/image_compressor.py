@@ -65,17 +65,18 @@ class CompressionWorker(QThread):
                     output_path = os.path.join(dir_name, f"{base_name}_compressed.{fmt.lower()}")
 
                 # 处理图片
-                if img.mode in ('RGBA', 'LA', 'P') and fmt == 'JPEG':
-                    background = Image.new('RGB', img.size, (255, 255, 255))
-                    if img.mode == 'P':
-                        img = img.convert('RGBA')
+                if fmt == 'JPEG':
                     if img.mode in ('RGBA', 'LA'):
+                        background = Image.new('RGB', img.size, (255, 255, 255))
                         background.paste(img, mask=img.split()[-1])
                         img = background
-                    else:
+                    elif img.mode == 'P':
+                        img = img.convert('RGBA')
+                        background = Image.new('RGB', img.size, (255, 255, 255))
+                        background.paste(img, mask=img.split()[-1])
+                        img = background
+                    elif img.mode != 'RGB':
                         img = img.convert('RGB')
-                elif img.mode != 'RGB' and fmt == 'JPEG':
-                    img = img.convert('RGB')
 
                 # 保存
                 save_kwargs = {}
@@ -321,8 +322,14 @@ class ImageCompressor(ToolPlugin):
     def compression_finished(self, success, message):
         self.start_btn.setEnabled(True)
         self.status_label.setText("")
+        parent = self.widget if self.widget else None
+        msg_box = QMessageBox(parent)
         if success:
-            QMessageBox.information(self.parent, "完成", message)
+            msg_box.setIcon(QMessageBox.Icon.Information)
+            msg_box.setWindowTitle("完成")
         else:
-            QMessageBox.critical(self.parent, "错误", message)
+            msg_box.setIcon(QMessageBox.Icon.Critical)
+            msg_box.setWindowTitle("错误")
+        msg_box.setText(message)
+        msg_box.exec()
         self.progress_bar.setVisible(False)
