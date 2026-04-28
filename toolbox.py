@@ -306,55 +306,49 @@ class WelcomePage(QWidget):
         return str(base_path / "favicon.ico")
 
     def setup_ui(self):
-        main_layout = QVBoxLayout(self)
-        main_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_layout.setSpacing(0)
-
-        # 内容容器：限制最大宽度，使内容居中紧凑
-        content_container = QWidget()
-        content_container.setMaximumWidth(900)
-        content_layout = QVBoxLayout(content_container)
-        content_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        content_layout.setSpacing(6)
-        content_layout.setContentsMargins(20, 10, 20, 10)
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.setSpacing(24)
+        layout.setContentsMargins(5, 0, 5, 0)
 
         logo = QLabel()
         if self.favicon_path and os.path.exists(self.favicon_path):
             pixmap = QPixmap(self.favicon_path)
             if not pixmap.isNull():
-                scaled_pixmap = pixmap.scaled(64, 64, Qt.AspectRatioMode.KeepAspectRatio,
+                scaled_pixmap = pixmap.scaled(128, 128, Qt.AspectRatioMode.KeepAspectRatio,
                                                 Qt.TransformationMode.SmoothTransformation)
                 logo.setPixmap(scaled_pixmap)
             else:
                 logo.setText("🧰")
-                logo.setStyleSheet("font-size: 36px;")
+                logo.setStyleSheet("font-size: 72px;")
         else:
             logo.setText("🧰")
-            logo.setStyleSheet("font-size: 36px;")
+            logo.setStyleSheet("font-size: 72px;")
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        content_layout.addWidget(logo)
+        layout.addWidget(logo)
 
         title = QLabel(APP_NAME)
         title.setStyleSheet(f"""
-            font-size: 24px;
+            font-size: 36px;
             font-weight: {FONT_WEIGHT_800};
             color: #f1f5f9;
         """)
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        content_layout.addWidget(title)
+        layout.addWidget(title)
 
         subtitle = QLabel(WELCOME_CONFIG.get("subtitle", ""))
         subtitle.setStyleSheet(f"""
-            font-size: {FONT_SIZE_12};
+            font-size: {FONT_SIZE_16};
             color: #94a3b8;
         """)
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        content_layout.addWidget(subtitle)
+        layout.addWidget(subtitle)
 
         # 功能卡片区域 - 使用横向滚动
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+        # 设置卡片高度
+        scroll_area.setFixedHeight(300)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setStyleSheet("""
@@ -382,10 +376,9 @@ class WelcomePage(QWidget):
         scroll_area.viewport().setStyleSheet("background-color: transparent;")
 
         features = QWidget()
-        features.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
         features_layout = QHBoxLayout(features)
-        features_layout.setSpacing(10)
-        features_layout.setContentsMargins(20, 5, 20, 5)
+        features_layout.setSpacing(16)
+        features_layout.setContentsMargins(5, 10, 5, 10)
 
         for icon, text, desc in FEATURE_MODULES:
             card = QFrame()
@@ -394,37 +387,37 @@ class WelcomePage(QWidget):
                     background-color: #1e293b;
                     border-radius: 12px;
                     border: 1px solid #334155;
-                    padding: 6px;
+                    padding: 12px;
                 }
             """)
-            card.setMinimumWidth(260)
-            card.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            card.setMinimumWidth(200)
+
             card_layout = QVBoxLayout(card)
-            card_layout.setSpacing(4)
-            card_layout.setContentsMargins(6, 6, 6, 6)
+            card_layout.setSpacing(10)
 
             icon_label = QLabel(icon)
             icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
             font = icon_label.font()
-            font.setPointSize(18)
+            font.setPointSize(20)
             font.setBold(True)
             icon_label.setFont(font)
-            icon_label.setMinimumSize(28, 28)
+            icon_label.setMinimumSize(36, 36)
             card_layout.addWidget(icon_label)
 
             text_label = QLabel(text)
             font = text_label.font()
-            font.setPointSize(12)
+            font.setPointSize(14)
             font.setBold(True)
             text_label.setFont(font)
             text_label.setStyleSheet("color: #f1f5f9;")
             text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             card_layout.addWidget(text_label)
 
-            desc_label = QLabel(desc)
+            desc_text = desc[:30] + "..." if len(desc) > 30 else desc
+            desc_label = QLabel(desc_text)
             desc_font = desc_label.font()
-            desc_font.setPointSize(9)
+            desc_font.setPointSize(10)
             desc_label.setFont(desc_font)
             desc_label.setWordWrap(True)
             desc_label.setStyleSheet("color: #94a3b8;")
@@ -434,18 +427,18 @@ class WelcomePage(QWidget):
             features_layout.addWidget(card)
 
         scroll_area.setWidget(features)
-        content_layout.addWidget(scroll_area)
+        layout.addWidget(scroll_area)
 
         hint = QLabel(WELCOME_CONFIG.get("hint", ""))
         hint.setStyleSheet(f"""
-            font-size: {FONT_SIZE_14};
+            font-size: {FONT_SIZE_16};
             color: #6366f1;
-            margin-top: 10px;
+            margin-top: 20px;
         """)
         hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        content_layout.addWidget(hint)
+        layout.addWidget(hint)
 
-        main_layout.addWidget(content_container)
+        layout.addStretch()
 
 class SettingsPlugin(ToolPlugin):
     """设置插件 - 包含通用设置和关于信息"""
