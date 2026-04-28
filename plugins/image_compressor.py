@@ -8,7 +8,7 @@ import sys
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit,
     QProgressBar, QComboBox, QSlider, QLineEdit, QGridLayout,
-    QFileDialog
+    QFileDialog, QMessageBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
