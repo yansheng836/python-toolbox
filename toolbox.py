@@ -161,14 +161,6 @@ class Card(QFrame):
         self.content_layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.content)
 
-        self.setStyleSheet("""
-            QFrame#card {
-                background-color: #1e293b;
-                border-radius: 12px;
-                border: none;
-            }
-        """)
-
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(20)
         shadow.setColor(QColor(0, 0, 0, 60))
@@ -294,6 +286,7 @@ class WelcomePage(QWidget):
         super().__init__(parent)
         self.plugins = plugins or {}
         self.favicon_path = self._get_favicon_path()
+        self.separators = []
         self.setup_ui()
 
     @staticmethod
@@ -382,14 +375,8 @@ class WelcomePage(QWidget):
 
         for icon, text, desc in FEATURE_MODULES:
             card = QFrame()
-            card.setStyleSheet("""
-                QFrame {
-                    background-color: #1e293b;
-                    border-radius: 12px;
-                    border: 1px solid #334155;
-                    padding: 12px;
-                }
-            """)
+            card.setObjectName("card")
+            card.setContentsMargins(12, 12, 12, 12)
             card.setMinimumWidth(200)
 
             card_layout = QVBoxLayout(card)
@@ -405,6 +392,13 @@ class WelcomePage(QWidget):
             icon_label.setMinimumSize(36, 36)
             card_layout.addWidget(icon_label)
 
+            # 分隔线
+            line1 = QFrame()
+            line1.setFrameShape(QFrame.Shape.HLine)
+            line1.setStyleSheet("background-color: #334155; max-height: 1px;")
+            self.separators.append(line1)
+            card_layout.addWidget(line1)
+
             text_label = QLabel(text)
             font = text_label.font()
             font.setPointSize(14)
@@ -413,6 +407,13 @@ class WelcomePage(QWidget):
             text_label.setStyleSheet("color: #f1f5f9;")
             text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             card_layout.addWidget(text_label)
+
+            # 分隔线
+            line2 = QFrame()
+            line2.setFrameShape(QFrame.Shape.HLine)
+            line2.setStyleSheet("background-color: #334155; max-height: 1px;")
+            self.separators.append(line2)
+            card_layout.addWidget(line2)
 
             desc_text = desc[:30] + "..." if len(desc) > 30 else desc
             desc_label = QLabel(desc_text)
@@ -887,7 +888,11 @@ class ToolboxWindow(QMainWindow):
         self.setStyleSheet(f"""
             QMainWindow {{ background-color: {theme['bg']}; }}
             QScrollArea {{ border: none; background-color: {theme['bg']}; }}
-            QFrame {{ background-color: {theme['bg_secondary']}; border: 1px solid {theme['surface']}; }}
+            QFrame#card {{
+                background-color: {theme['bg_secondary']};
+                border: 1px solid {theme['surface']};
+                border-radius: 12px;
+            }}
             QLabel {{ color: {theme['text']}; }}
             *[style*="color: #f1f5f9"] {{ color: {theme['text']} !important; }}
             *[style*="color: white"] {{ color: {theme['text']} !important; }}
