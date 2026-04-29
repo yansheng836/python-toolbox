@@ -428,14 +428,34 @@ class ImageScalerWidget(QWidget):
         self.update_file_list()
 
     def move_up(self):
-        if len(self.input_files) > 1:
-            self.input_files.insert(0, self.input_files.pop())
+        if not self.input_files:
+            return
+        selected_rows = []
+        for item in self.table.selectedItems():
+            if item.column() == 0:
+                selected_rows.append(item.row())
+        if not selected_rows:
+            return
+        row = sorted(set(selected_rows))[0]
+        if row > 0:
+            self.input_files[row], self.input_files[row - 1] = self.input_files[row - 1], self.input_files[row]
             self.update_file_list()
+            self.table.selectRow(row - 1)
 
     def move_down(self):
-        if len(self.input_files) > 1:
-            self.input_files.append(self.input_files.pop(0))
+        if not self.input_files:
+            return
+        selected_rows = []
+        for item in self.table.selectedItems():
+            if item.column() == 0:
+                selected_rows.append(item.row())
+        if not selected_rows:
+            return
+        row = sorted(set(selected_rows))[0]
+        if row < len(self.input_files) - 1:
+            self.input_files[row], self.input_files[row + 1] = self.input_files[row + 1], self.input_files[row]
             self.update_file_list()
+            self.table.selectRow(row + 1)
 
     def update_file_list(self):
         self.table.setRowCount(0)

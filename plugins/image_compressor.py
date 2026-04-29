@@ -390,14 +390,34 @@ class ImageCompressor(ToolPlugin):
         self.update_file_list()
 
     def move_up(self):
-        if len(self.files) > 1:
-            self.files.insert(0, self.files.pop())
+        if not self.files:
+            return
+        selected_rows = []
+        for item in self.table.selectedItems():
+            if item.column() == 0:
+                selected_rows.append(item.row())
+        if not selected_rows:
+            return
+        row = sorted(set(selected_rows))[0]
+        if row > 0:
+            self.files[row], self.files[row - 1] = self.files[row - 1], self.files[row]
             self.update_file_list()
+            self.table.selectRow(row - 1)
 
     def move_down(self):
-        if len(self.files) > 1:
-            self.files.append(self.files.pop(0))
+        if not self.files:
+            return
+        selected_rows = []
+        for item in self.table.selectedItems():
+            if item.column() == 0:
+                selected_rows.append(item.row())
+        if not selected_rows:
+            return
+        row = sorted(set(selected_rows))[0]
+        if row < len(self.files) - 1:
+            self.files[row], self.files[row + 1] = self.files[row + 1], self.files[row]
             self.update_file_list()
+            self.table.selectRow(row + 1)
 
     def clear_images(self):
         self.files = []
