@@ -8,7 +8,8 @@ import sys
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit,
     QProgressBar, QComboBox, QSlider, QLineEdit, QGridLayout,
-    QFileDialog, QMessageBox
+    QFileDialog, QMessageBox, QTableWidget, QTableWidgetItem,
+    QHeaderView, QAbstractItemView
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
 
@@ -105,9 +106,9 @@ class ImageCompressor(ToolPlugin):
 
     def setup_drag_handler(self):
         """设置拖拽处理器"""
-        if hasattr(self, 'file_list'):
-            DragDropHandler.setup_drag_drop(self.file_list, self.files)
-            DragDropHandler.update_file_list_display(self.file_list, self.files)
+        if hasattr(self, 'table') and DragDropHandler:
+            DragDropHandler.setup_drag_drop(self.table, self.files)
+            self.update_file_list()
 
     def update_theme(self, theme):
         """更新主题"""
@@ -121,13 +122,23 @@ class ImageCompressor(ToolPlugin):
                 )
             if hasattr(self, 'desc_label'):
                 self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};")
-            if hasattr(self, 'file_list'):
-                self.file_list.setStyleSheet(f"""
-                    QTextEdit {{
+            if hasattr(self, 'table'):
+                self.table.setStyleSheet(f"""
+                    QTableWidget {{
                         background-color: {theme['bg']};
-                        border: 2px dashed {theme['surface']};
+                        border: 1px solid {theme['surface']};
                         border-radius: 8px;
+                        color: {theme['text']};
+                        gridline-color: {theme['surface']};
+                    }}
+                    QHeaderView::section {{
+                        background-color: {theme['bg_secondary']};
                         color: {theme['text_secondary']};
+                        padding: 8px;
+                        border: none;
+                        font-weight: {FONT_WEIGHT_600};
+                    }}
+                    QTableWidget::item {{
                         padding: 8px;
                     }}
                 """)
@@ -218,27 +229,26 @@ class ImageCompressor(ToolPlugin):
         file_card = Card(title="选择图片")
         file_layout = file_card.content_layout
 
-        self.file_list = QTextEdit()
-        self.file_list.setPlaceholderText("拖拽图片到此处，或点击按钮选择...")
-        self.file_list.setMaximumHeight(120)
-        self.file_list.setStyleSheet("""
-            QTextEdit {
-                background-color: #0f172a;
-                border: 2px dashed #334155;
-                border-radius: 8px;
-                color: #94a3b8;
-                padding: 8px;
-            }
-        """)
-        file_layout.addWidget(self.file_list)
+        self.table = QTableWidget()
+        self.table.setColumnCount(3)
+        self.table.setHorizontalHeaderLabels(["文件名", "尺寸", "大小"])
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        file_layout.addWidget(self.table)
 
         btn_layout = QHBoxLayout()
         self.add_btn = AnimatedButton("添加图片")
         self.add_btn.clicked.connect(self.add_images)
-        self.clear_btn = AnimatedButton("清空列表")
-        self.clear_btn.clicked.connect(self.clear_images)
+        self.remove_btn = AnimatedButton("删除选中")
+        self.remove_btn.clicked.connect(self.remove_selected)
+        self.up_btn = AnimatedButton("上移")
+        self.up_btn.clicked.connect(self.move_up)
+        self.down_btn = AnimatedButton("下移")
+        self.down_btn.clicked.connect(self.move_down)
         btn_layout.addWidget(self.add_btn)
-        btn_layout.addWidget(self.clear_btn)
+        btn_layout.addWidget(self.remove_btn)
+        btn_layout.addWidget(self.up_btn)
+        btn_layout.addWidget(self.down_btn)
         btn_layout.addStretch()
         file_layout.addLayout(btn_layout)
 
@@ -358,15 +368,71 @@ class ImageCompressor(ToolPlugin):
             "图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.gif)"
         )
         if files:
-            self.files.extend(files)
+            for f in files:
+                if f not in self.files:
+                    self.files.append(f)
+            self.update_file_list()
+
+    def remove_selected(self):
+        selected_rows = []
+        for item in self.table.selectedItems():
+            if item.column() == 0:
+                selected_rows.append(item.row())
+        if not selected_rows:
+            return
+        for row in sorted(set(selected_rows), reverse=True):
+            self.files.pop(row)
+        self.update_file_list()
+
+    def move_up(self):
+        if len(self.files) > 1:
+            self.files.insert(0, self.files.pop())
+            self.update_file_list()
+
+    def move_down(self):
+        if len(self.files) > 1:
+            self.files.append(self.files.pop(0))
             self.update_file_list()
 
     def clear_images(self):
         self.files = []
-        self.file_list.clear()
+        self.update_file_list()
 
     def update_file_list(self):
-        DragDropHandler.update_file_list_display(self.file_list, self.files)
+        self.table.setRowCount(0)
+        for file_path in self.files:
+            row = self.table.rowCount()
+            self.table.insertRow(row)
+            # 文件名
+            name_item = QTableWidgetItem(os.path.basename(file_path))
+            name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.table.setItem(row, 0, name_item)
+            # 尺寸
+            try:
+                if PIL_AVAILABLE:
+                    with Image.open(file_path) as img:
+                        size_text = f"{img.width} x {img.height}"
+                else:
+                    size_text = "N/A"
+            except Exception:
+                size_text = "读取失败"
+            size_item = QTableWidgetItem(size_text)
+            size_item.setFlags(size_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.table.setItem(row, 1, size_item)
+            # 文件大小
+            try:
+                file_size = os.path.getsize(file_path)
+                if file_size < 1024:
+                    size_str = f"{file_size} B"
+                elif file_size < 1024 * 1024:
+                    size_str = f"{file_size / 1024:.1f} KB"
+                else:
+                    size_str = f"{file_size / (1024 * 1024):.1f} MB"
+            except Exception:
+                size_str = "未知"
+            size_item2 = QTableWidgetItem(size_str)
+            size_item2.setFlags(size_item2.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.table.setItem(row, 2, size_item2)
 
     def browse_output(self):
         parent = self.widget if self.widget else None
