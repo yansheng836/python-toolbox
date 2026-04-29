@@ -36,7 +36,8 @@ except ImportError:
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
     QSpinBox, QComboBox, QLineEdit, QProgressBar, QMessageBox,
-    QGridLayout, QCheckBox, QTextEdit
+    QGridLayout, QCheckBox, QTextEdit,
+    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
@@ -159,6 +160,7 @@ class ImageScalerWidget(QWidget):
         self.table.setHorizontalHeaderLabels(["文件名", "尺寸", "大小"])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.table.setMinimumHeight(200)
         file_layout.addWidget(self.table)
 
         btn_layout = QHBoxLayout()
