@@ -5,7 +5,6 @@ from typing import List
 
 try:
     from PIL import Image
-
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
@@ -15,19 +14,15 @@ try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
 except ImportError:
-    # 如果导入失败，定义一个简化的基类
     Theme = None
     class ToolPlugin:
         name = "Base Tool"
         icon = "🔧"
-
         def __init__(self, parent=None):
             self.parent = parent
             self.widget = None
-
         def create_ui(self):
             raise NotImplementedError("Subclasses must implement create_ui()")
-
         def get_widget(self):
             if self.widget is None:
                 self.widget = self.create_ui()
@@ -36,10 +31,43 @@ except ImportError:
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
     QSpinBox, QComboBox, QLineEdit, QProgressBar, QMessageBox,
-    QGridLayout, QCheckBox, QTextEdit,
-    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
+    QGridLayout, QCheckBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
+
+from common.file_list_panel import FileListPanel
+
+
+def _get_image_size(file_path):
+    """获取图片尺寸文本"""
+    if not PIL_AVAILABLE:
+        return "N/A"
+    try:
+        with Image.open(file_path) as img:
+            return f"{img.width} x {img.height}"
+    except Exception:
+        return "读取失败"
+
+
+def _get_file_size(file_path):
+    """获取文件大小文本"""
+    try:
+        size = os.path.getsize(file_path)
+        if size < 1024:
+            return f"{size} B"
+        elif size < 1024 * 1024:
+            return f"{size / 1024:.1f} KB"
+        else:
+            return f"{size / (1024 * 1024):.1f} MB"
+    except Exception:
+        return "未知"
+
+
+IMAGE_COLUMNS = [
+    ("文件名", lambda f: os.path.basename(f)),
+    ("尺寸", _get_image_size),
+    ("大小", _get_file_size)
+]
 
 
 class ScalingWorker(QThread):
@@ -63,15 +91,12 @@ class ScalingWorker(QThread):
     def run(self):
         try:
             os.makedirs(self.output_dir, exist_ok=True)
-
             total = len(self.input_files)
             success_count = 0
 
             for i, input_file in enumerate(self.input_files):
                 try:
-                    # 打开图片
                     with Image.open(input_file) as img:
-                        # 计算新尺寸
                         if self.scale_type == "百分比缩放":
                             new_width = int(img.width * self.scale_value / 100)
                             new_height = int(img.height * self.scale_value / 100)
@@ -90,17 +115,14 @@ class ScalingWorker(QThread):
                         else:
                             raise ValueError(f"未知缩放类型: {self.scale_type}")
 
-                        # 缩放图片
                         scaled_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
-                        # 获取输出文件名
                         input_path = Path(input_file)
                         output_file = os.path.join(
                             self.output_dir,
                             f"{input_path.stem}_scaled{input_path.suffix}"
                         )
 
-                        # 保存图片
                         if input_path.suffix.lower() in ['.jpg', '.jpeg']:
                             scaled_img.save(output_file, "JPEG", quality=self.quality)
                         elif input_path.suffix.lower() == '.png':
@@ -114,7 +136,6 @@ class ScalingWorker(QThread):
                 except Exception as e:
                     print(f"Error processing {input_file}: {str(e)}")
 
-                # 更新进度
                 progress = int((i + 1) / total * 100)
                 self.progress_updated.emit(progress, i + 1)
 
@@ -127,17 +148,14 @@ class ScalingWorker(QThread):
 class ImageScalerWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.input_files = []
         self.worker = None
         self.setup_ui()
 
-        # 检查PIL是否可用
         if not PIL_AVAILABLE:
             self.status_label.setText("错误: 未安装Pillow库，请运行: pip install Pillow")
             self.start_btn.setEnabled(False)
 
     def setup_ui(self):
-        widget = QWidget()
         layout = QVBoxLayout(self)
         layout.setSpacing(16)
 
@@ -153,32 +171,13 @@ class ImageScalerWidget(QWidget):
 
         # 文件选择区域
         file_card = Card(title="选择图片")
-        file_layout = file_card.content_layout
-
-        self.table = QTableWidget()
-        self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(["文件名", "尺寸", "大小"])
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.table.setMinimumHeight(200)
-        file_layout.addWidget(self.table)
-
-        btn_layout = QHBoxLayout()
-        self.add_btn = AnimatedButton("添加图片")
-        self.add_btn.clicked.connect(self.select_files)
-        self.remove_btn = AnimatedButton("删除选中")
-        self.remove_btn.clicked.connect(self.remove_selected)
-        self.up_btn = AnimatedButton("上移")
-        self.up_btn.clicked.connect(self.move_up)
-        self.down_btn = AnimatedButton("下移")
-        self.down_btn.clicked.connect(self.move_down)
-        btn_layout.addWidget(self.add_btn)
-        btn_layout.addWidget(self.remove_btn)
-        btn_layout.addWidget(self.up_btn)
-        btn_layout.addWidget(self.down_btn)
-        btn_layout.addStretch()
-        file_layout.addLayout(btn_layout)
-
+        self.file_panel = FileListPanel(
+            columns=IMAGE_COLUMNS,
+            file_filter="图片文件 (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;所有文件 (*.*)",
+            button_class=AnimatedButton,
+            show_buttons=["add", "remove", "up", "down"]
+        )
+        file_card.content_layout.addWidget(self.file_panel)
         layout.addWidget(file_card)
 
         # 缩放设置区域
@@ -239,7 +238,8 @@ class ImageScalerWidget(QWidget):
         self.width_input.setValue(800)
         self.width_input.setSuffix(" px")
         self.width_input.setStyleSheet(spin_style)
-        settings_layout.addWidget(self.width_input, 3, 1, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        settings_layout.addWidget(self.width_input, 3, 1, 1, 1,
+                                  Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
         # 高度设置
         self.height_label = QLabel("高度:")
@@ -249,7 +249,8 @@ class ImageScalerWidget(QWidget):
         self.height_input.setValue(600)
         self.height_input.setSuffix(" px")
         self.height_input.setStyleSheet(spin_style)
-        settings_layout.addWidget(self.height_input, 4, 1, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        settings_layout.addWidget(self.height_input, 4, 1, 1, 1,
+                                  Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
         settings_layout.addWidget(QLabel("图片质量:"), 5, 0, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         self.quality_combo = QComboBox()
@@ -357,7 +358,6 @@ class ImageScalerWidget(QWidget):
     def on_scale_type_changed(self):
         scale_type = self.scale_type_combo.currentText()
 
-        # 显示/隐藏相应的输入框和标签
         if scale_type == "百分比缩放":
             self.scale_value_input.setVisible(True)
             self.width_label.setVisible(False)
@@ -392,133 +392,77 @@ class ImageScalerWidget(QWidget):
                 self.width_input.setEnabled(True)
                 self.width_input.setSuffix(" px")
 
-    def clear_images(self):
-        self.input_files = []
-        self.update_file_list()
-        self.start_btn.setEnabled(False)
-        self.status_label.setText("就绪")
-
-    def select_files(self):
-        files, _ = QFileDialog.getOpenFileNames(
-            self,
-            "选择图片文件",
-            "",
-            "图片文件 (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;所有文件 (*.*)"
+    def select_output_dir(self):
+        dir_path = QFileDialog.getExistingDirectory(
+            self, "选择输出目录", ""
         )
-        if files:
-            existing_files = set(self.input_files)
-            for file in files:
-                if file not in existing_files:
-                    self.input_files.append(file)
-                    existing_files.add(file)
-            self.update_file_list()
-            if self.input_files and self.output_path.text():
+        if dir_path:
+            self.output_path.setText(dir_path)
+            if self.file_panel.get_files():
                 self.start_btn.setEnabled(True)
-            self.status_label.setText(f"已选择 {len(self.input_files)} 个文件")
 
-    def remove_selected(self):
-        selected_rows = []
-        for item in self.table.selectedItems():
-            if item.column() == 0:
-                selected_rows.append(item.row())
-        if not selected_rows:
+    def start_scaling(self):
+        files = self.file_panel.get_files()
+        if not files or not self.output_path.text():
+            QMessageBox.warning(self, "警告", "请先选择图片文件和输出目录")
             return
-        for row in sorted(set(selected_rows), reverse=True):
-            self.input_files.pop(row)
-        self.update_file_list()
 
-    def move_up(self):
-        if not self.input_files:
-            return
-        selected_rows = []
-        for item in self.table.selectedItems():
-            if item.column() == 0:
-                selected_rows.append(item.row())
-        if not selected_rows:
-            return
-        row = sorted(set(selected_rows))[0]
-        if row > 0:
-            self.input_files[row], self.input_files[row - 1] = self.input_files[row - 1], self.input_files[row]
-            self.update_file_list()
-            self.table.selectRow(row - 1)
+        scale_type = self.scale_type_combo.currentText()
+        quality = int(self.quality_combo.currentText().split("(")[1].split(")")[0])
 
-    def move_down(self):
-        if not self.input_files:
-            return
-        selected_rows = []
-        for item in self.table.selectedItems():
-            if item.column() == 0:
-                selected_rows.append(item.row())
-        if not selected_rows:
-            return
-        row = sorted(set(selected_rows))[0]
-        if row < len(self.input_files) - 1:
-            self.input_files[row], self.input_files[row + 1] = self.input_files[row + 1], self.input_files[row]
-            self.update_file_list()
-            self.table.selectRow(row + 1)
+        self.worker = ScalingWorker(
+            input_files=files,
+            output_dir=self.output_path.text(),
+            scale_type=scale_type,
+            scale_value=self.scale_value_input.value() if scale_type == "百分比缩放" else 100,
+            quality=quality,
+            maintain_aspect=self.maintain_aspect.isChecked(),
+            width=self.width_input.value() if scale_type in ["指定宽度", "指定高度"] else None,
+            height=self.height_input.value() if scale_type in ["指定宽度", "指定高度"] else None
+        )
 
-    def update_file_list(self):
-        self.table.setRowCount(0)
-        for file_path in self.input_files:
-            row = self.table.rowCount()
-            self.table.insertRow(row)
-            # 文件名
-            name_item = QTableWidgetItem(os.path.basename(file_path))
-            name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.table.setItem(row, 0, name_item)
-            # 尺寸
-            try:
-                if PIL_AVAILABLE:
-                    with Image.open(file_path) as img:
-                        size_text = f"{img.width} x {img.height}"
-                else:
-                    size_text = "N/A"
-            except Exception:
-                size_text = "读取失败"
-            size_item = QTableWidgetItem(size_text)
-            size_item.setFlags(size_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.table.setItem(row, 1, size_item)
-            # 文件大小
-            try:
-                file_size = os.path.getsize(file_path)
-                if file_size < 1024:
-                    size_str = f"{file_size} B"
-                elif file_size < 1024 * 1024:
-                    size_str = f"{file_size / 1024:.1f} KB"
-                else:
-                    size_str = f"{file_size / (1024 * 1024):.1f} MB"
-            except Exception:
-                size_str = "未知"
-            size_item2 = QTableWidgetItem(size_str)
-            size_item2.setFlags(size_item2.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.table.setItem(row, 2, size_item2)
+        self.worker.progress_updated.connect(self.update_progress)
+        self.worker.finished.connect(self.on_scaling_finished)
+        self.worker.image_processed.connect(self.on_image_processed)
+
+        self.start_btn.setEnabled(False)
+        self.cancel_btn.setEnabled(True)
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setValue(0)
+        self.status_label.setText("正在处理...")
+
+        self.worker.start()
+
+    def cancel_scaling(self):
+        if self.worker and self.worker.isRunning():
+            self.worker.terminate()
+            self.worker.wait()
+            self.status_label.setText("已取消")
+            self.start_btn.setEnabled(True)
+            self.cancel_btn.setEnabled(False)
+
+    def update_progress(self, value, current):
+        self.progress_bar.setValue(value)
+        self.status_label.setText(f"正在处理... {current}/{len(self.file_panel.get_files())}")
+
+    def on_image_processed(self, input_file, output_file):
+        pass
+
+    def on_scaling_finished(self, success, message):
+        self.progress_bar.setVisible(False)
+        self.status_label.setText(message)
+        self.start_btn.setEnabled(True)
+        self.cancel_btn.setEnabled(False)
+
+        if success:
+            QMessageBox.information(self, "完成", message)
+        else:
+            QMessageBox.critical(self, "错误", message)
 
     def apply_theme(self, theme):
         """应用主题到所有组件"""
-        if hasattr(self, 'table'):
-            self.table.setStyleSheet(f"""
-                QTableWidget {{
-                    background-color: {theme['bg']};
-                    border: 1px solid {theme['surface']};
-                    border-radius: 8px;
-                    color: {theme['text']};
-                    gridline-color: {theme['surface']};
-                }}
-                QHeaderView::section {{
-                    background-color: {theme['bg_secondary']};
-                    color: {theme['text_secondary']};
-                    padding: 8px;
-                    border: none;
-                    font-weight: {FONT_WEIGHT_600};
-                }}
-                QTableWidget::item {{
-                    padding: 8px;
-                }}
-                QTableCornerButton::section {{
-                    background-color: {theme['bg_secondary']};
-                    border: none;
-                }}
-            """)
+        if hasattr(self, 'file_panel'):
+            self.file_panel.update_theme(theme)
         combo_style = f"""
             QComboBox {{
                 background-color: {theme['bg']};
@@ -606,81 +550,6 @@ class ImageScalerWidget(QWidget):
         """)
         self.status_label.setStyleSheet(f"color: {theme['text_secondary']};")
 
-    def select_output_dir(self):
-        dir_path = QFileDialog.getExistingDirectory(
-            self,
-            "选择输出目录",
-            ""
-        )
-
-        if dir_path:
-            self.output_path.setText(dir_path)
-            if self.input_files:
-                self.start_btn.setEnabled(True)
-
-    def start_scaling(self):
-        if not self.input_files or not self.output_path.text():
-            QMessageBox.warning(self, "警告", "请先选择图片文件和输出目录")
-            return
-
-        # 获取缩放参数
-        scale_type = self.scale_type_combo.currentText()
-        quality = int(self.quality_combo.currentText().split("(")[1].split(")")[0])
-
-        # 准备工作线程
-        self.worker = ScalingWorker(
-            input_files=self.input_files,
-            output_dir=self.output_path.text(),
-            scale_type=scale_type,
-            scale_value=self.scale_value_input.value() if scale_type == "百分比缩放" else 100,
-            quality=quality,
-            maintain_aspect=self.maintain_aspect.isChecked(),
-            width=self.width_input.value() if scale_type in ["指定宽度", "指定高度"] else None,
-            height=self.height_input.value() if scale_type in ["指定宽度", "指定高度"] else None
-        )
-
-        # 连接信号
-        self.worker.progress_updated.connect(self.update_progress)
-        self.worker.finished.connect(self.on_scaling_finished)
-        self.worker.image_processed.connect(self.on_image_processed)
-
-        # 更新UI
-        self.start_btn.setEnabled(False)
-        self.cancel_btn.setEnabled(True)
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setValue(0)
-        self.status_label.setText("正在处理...")
-
-        # 启动工作线程
-        self.worker.start()
-
-    def cancel_scaling(self):
-        if self.worker and self.worker.isRunning():
-            self.worker.terminate()
-            self.worker.wait()
-            self.status_label.setText("已取消")
-            self.start_btn.setEnabled(True)
-            self.cancel_btn.setEnabled(False)
-
-    def update_progress(self, value, current):
-        self.progress_bar.setValue(value)
-        self.status_label.setText(f"正在处理... {current}/{len(self.input_files)}")
-
-    def on_image_processed(self, input_file, output_file):
-        # 可以在这里添加更多反馈，比如更新状态
-        pass
-
-    def on_scaling_finished(self, success, message):
-        self.progress_bar.setVisible(False)
-        self.status_label.setText(message)
-        self.start_btn.setEnabled(True)
-        self.cancel_btn.setEnabled(False)
-
-        if success:
-            QMessageBox.information(self, "完成", message)
-        else:
-            QMessageBox.critical(self, "错误", message)
-
 
 class ImageScaler(ToolPlugin):
     icon = "📏"
@@ -688,8 +557,6 @@ class ImageScaler(ToolPlugin):
     order = 2
 
     def update_theme(self, theme):
-        """更新主题"""
-        # 调用 widget 的 apply_theme 方法
         if hasattr(self, 'widget') and hasattr(self.widget, 'apply_theme'):
             self.widget.apply_theme(theme)
 

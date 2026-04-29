@@ -7,10 +7,9 @@ import sys
 import io
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QProgressBar,
-    QComboBox, QSlider, QLineEdit, QTableWidget, QTableWidgetItem,
-    QHeaderView, QAbstractItemView, QGridLayout, QCheckBox, QFileDialog,
-    QMessageBox
+    QWidget, QVBoxLayout, QLabel, QProgressBar,
+    QComboBox, QSlider, QLineEdit,
+    QGridLayout, QCheckBox, QFileDialog, QMessageBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
@@ -41,6 +40,26 @@ except ImportError:
     Card = None
     AnimatedButton = None
     Theme = None
+
+from common.file_list_panel import FileListPanel
+
+
+def _get_image_size(file_path):
+    """获取图片尺寸文本"""
+    if not PIL_AVAILABLE:
+        return "N/A"
+    try:
+        with Image.open(file_path) as img:
+            return f"{img.width} x {img.height}"
+    except Exception:
+        return "读取失败"
+
+
+IMAGE_COLUMNS_PDF = [
+    ("文件名", lambda f: os.path.basename(f)),
+    ("尺寸", _get_image_size),
+    ("状态", lambda f: "就绪")
+]
 
 
 class PDFWorker(QThread):
@@ -152,26 +171,8 @@ class ImageToPDF(ToolPlugin):
                 )
             if hasattr(self, 'desc_label'):
                 self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};")
-            if hasattr(self, 'table'):
-                self.table.setStyleSheet(f"""
-                    QTableWidget {{
-                        background-color: {theme['bg']};
-                        border: 1px solid {theme['surface']};
-                        border-radius: 8px;
-                        color: {theme['text']};
-                        gridline-color: {theme['surface']};
-                    }}
-                    QHeaderView::section {{
-                        background-color: {theme['bg_secondary']};
-                        color: {theme['text_secondary']};
-                        padding: 8px;
-                        border: none;
-                        font-weight: {FONT_WEIGHT_600};
-                    }}
-                    QTableWidget::item {{
-                        padding: 8px;
-                    }}
-                """)
+            if hasattr(self, 'file_panel'):
+                self.file_panel.update_theme(theme)
             if hasattr(self, 'size_combo'):
                 self.size_combo.setStyleSheet(f"""
                     QComboBox {{
@@ -214,10 +215,9 @@ class ImageToPDF(ToolPlugin):
                         font-size: {FONT_SIZE_16};
                         font-weight: {FONT_WEIGHT_600};
                     }}
-                    QPushButton:hover {{
-                        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                            stop:0 {theme['success_hover']}, stop:1 {theme.get('success_gradient_end', theme['success'])});
-                    }}
+                    QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                        stop:0 {theme['success_hover']}, stop:1 {theme.get('success_gradient_end', theme['success'])}); }}
+                    QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
                 """)
             if hasattr(self, 'progress'):
                 self.progress.setStyleSheet(f"""
@@ -252,50 +252,13 @@ class ImageToPDF(ToolPlugin):
 
         # 图片列表
         list_card = Card(title="图片列表")
-        list_layout = list_card.content_layout
-
-        self.table = QTableWidget()
-        self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(["文件名", "尺寸", "操作"])
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.table.setStyleSheet("""
-            QTableWidget {
-                background-color: #0f172a;
-                border: 1px solid #334155;
-                border-radius: 8px;
-                color: #f1f5f9;
-                gridline-color: #334155;
-            }
-            QHeaderView::section {
-                background-color: #1e293b;
-                color: #94a3b8;
-                padding: 8px;
-                border: none;
-                font-weight: {FONT_WEIGHT_600};
-            }
-            QTableWidget::item {
-                padding: 8px;
-            }
-        """)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        list_layout.addWidget(self.table)
-
-        btn_layout = QHBoxLayout()
-        self.add_btn = AnimatedButton("添加图片")
-        self.add_btn.clicked.connect(self.add_images)
-        self.remove_btn = AnimatedButton("移除选中")
-        self.remove_btn.clicked.connect(self.remove_selected)
-        self.up_btn = AnimatedButton("上移")
-        self.up_btn.clicked.connect(self.move_up)
-        self.down_btn = AnimatedButton("下移")
-        self.down_btn.clicked.connect(self.move_down)
-        btn_layout.addWidget(self.add_btn)
-        btn_layout.addWidget(self.remove_btn)
-        btn_layout.addWidget(self.up_btn)
-        btn_layout.addWidget(self.down_btn)
-        btn_layout.addStretch()
-        list_layout.addLayout(btn_layout)
-
+        self.file_panel = FileListPanel(
+            columns=IMAGE_COLUMNS_PDF,
+            file_filter="图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff)",
+            button_class=AnimatedButton,
+            show_buttons=["add", "remove", "up", "down"]
+        )
+        list_card.content_layout.addWidget(self.file_panel)
         layout.addWidget(list_card)
 
         # 设置
@@ -303,10 +266,7 @@ class ImageToPDF(ToolPlugin):
         settings_layout = QGridLayout()
         settings_card.content_layout.addLayout(settings_layout)
 
-        settings_layout.addWidget(QLabel("页面大小:"), 0, 0)
-        self.size_combo = QComboBox()
-        self.size_combo.addItems(["自动适应", "A4", "A3", "原图尺寸"])
-        self.size_combo.setStyleSheet("""
+        combo_style = """
             QComboBox {
                 background-color: #0f172a;
                 border: 1px solid #334155;
@@ -314,7 +274,12 @@ class ImageToPDF(ToolPlugin):
                 padding: 6px;
                 color: #f1f5f9;
             }
-        """)
+        """
+
+        settings_layout.addWidget(QLabel("页面大小:"), 0, 0)
+        self.size_combo = QComboBox()
+        self.size_combo.addItems(["自动适应", "A4", "A3", "原图尺寸"])
+        self.size_combo.setStyleSheet(combo_style)
         settings_layout.addWidget(self.size_combo, 0, 1)
 
         settings_layout.addWidget(QLabel("启用压缩:"), 1, 0)
@@ -348,11 +313,11 @@ class ImageToPDF(ToolPlugin):
                 color: #f1f5f9;
             }
         """)
-        self.browse_btn = AnimatedButton("浏览")
-        self.browse_btn.clicked.connect(self.browse_output)
-        self.browse_btn.setMaximumWidth(80)
+        browse_btn = AnimatedButton("浏览")
+        browse_btn.setMaximumWidth(80)
+        browse_btn.clicked.connect(self.browse_output)
         path_layout.addWidget(self.output_path)
-        path_layout.addWidget(self.browse_btn)
+        path_layout.addWidget(browse_btn)
         settings_layout.addLayout(path_layout, 3, 1)
 
         layout.addWidget(settings_card)
@@ -370,9 +335,9 @@ class ImageToPDF(ToolPlugin):
                 font-size: {FONT_SIZE_16};
                 font-weight: {FONT_WEIGHT_600};
             }}
-            QPushButton:hover {{
-                background-color: #7c3aed;
-            }}
+            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 #34d399, stop:1 #10b981); }}
+            QPushButton:disabled {{ background: #334155; color: #64748b; }}
         """)
         self.convert_btn.clicked.connect(self.start_conversion)
         layout.addWidget(self.convert_btn)
@@ -395,57 +360,10 @@ class ImageToPDF(ToolPlugin):
 
         layout.addStretch()
 
-        self.files = []
         # 应用初始主题
         if Theme is not None:
             self.update_theme(Theme.DARK)
         return widget
-
-    def add_images(self):
-        parent = self.widget if self.widget else None
-        files, _ = QFileDialog.getOpenFileNames(
-            parent, "选择图片", "",
-            "图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff)"
-        )
-        for f in files:
-            if f not in self.files:
-                self.files.append(f)
-        self.update_table()
-
-    def remove_selected(self):
-        indices = sorted(set([i.row() for i in self.table.selectedIndexes()]), reverse=True)
-        for i in indices:
-            if 0 <= i < len(self.files):
-                self.files.pop(i)
-        self.update_table()
-
-    def move_up(self):
-        row = self.table.currentRow()
-        if row > 0:
-            self.files[row], self.files[row - 1] = self.files[row - 1], self.files[row]
-            self.update_table()
-            self.table.selectRow(row - 1)
-
-    def move_down(self):
-        row = self.table.currentRow()
-        if row < len(self.files) - 1:
-            self.files[row], self.files[row + 1] = self.files[row + 1], self.files[row]
-            self.update_table()
-            self.table.selectRow(row + 1)
-
-    def update_table(self):
-        self.table.setRowCount(len(self.files))
-        for i, f in enumerate(self.files):
-            name = os.path.basename(f)
-            try:
-                img = Image.open(f)
-                size = f"{img.width} x {img.height}"
-            except:
-                size = "未知"
-
-            self.table.setItem(i, 0, QTableWidgetItem(name))
-            self.table.setItem(i, 1, QTableWidgetItem(size))
-            self.table.setItem(i, 2, QTableWidgetItem("就绪"))
 
     def browse_output(self):
         parent = self.widget if self.widget else None
@@ -458,7 +376,8 @@ class ImageToPDF(ToolPlugin):
             self.output_path.setText(path)
 
     def start_conversion(self):
-        if not self.files:
+        files = self.file_panel.get_files()
+        if not files:
             parent = self.widget if self.widget else None
             QMessageBox.warning(parent, "警告", "请先添加图片！")
             return
@@ -479,11 +398,11 @@ class ImageToPDF(ToolPlugin):
 
         self.convert_btn.setEnabled(False)
         self.progress.setVisible(True)
-        self.progress.setMaximum(len(self.files))
+        self.progress.setMaximum(len(files))
         self.progress.setValue(0)
 
         self.worker = PDFWorker(
-            self.files,
+            files,
             output,
             self.size_combo.currentText(),
             self.compress_check.isChecked(),
@@ -497,12 +416,7 @@ class ImageToPDF(ToolPlugin):
         self.convert_btn.setEnabled(True)
         self.progress.setVisible(False)
         parent = self.widget if self.widget else None
-        msg_box = QMessageBox(parent)
         if success:
-            msg_box.setIcon(QMessageBox.Icon.Information)
-            msg_box.setWindowTitle("完成")
+            QMessageBox.information(parent, "完成", message)
         else:
-            msg_box.setIcon(QMessageBox.Icon.Critical)
-            msg_box.setWindowTitle("错误")
-        msg_box.setText(message)
-        msg_box.exec()
+            QMessageBox.critical(parent, "错误", message)
