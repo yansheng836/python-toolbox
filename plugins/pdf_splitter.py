@@ -25,9 +25,10 @@ except ImportError:
 # 导入主程序中的ToolPlugin基类和相关组件
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700
+    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
 except ImportError:
     # 如果导入失败，定义简化的基类
+    Theme = None
     class ToolPlugin:
         name = "Base Tool"
         icon = "🔧"
@@ -369,6 +370,105 @@ class PDFSplitterWidget(QWidget):
         layout.addWidget(action_card)
         layout.addStretch()
 
+        # 应用初始主题
+        if Theme is not None:
+            self.apply_theme(Theme.DARK)
+
+    def apply_theme(self, theme):
+        """应用主题到所有组件"""
+        self.file_display.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {theme['bg']};
+                border: 2px dashed {theme['surface']};
+                border-radius: 8px;
+                padding: 8px;
+                color: {theme['text_secondary']};
+            }}
+            QLineEdit:hover {{
+                border-color: {theme['text_secondary']};
+            }}
+        """)
+        self.file_info_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_12};")
+        self.pdf_radio.setStyleSheet(f"color: {theme['text']};")
+        self.image_radio.setStyleSheet(f"color: {theme['text']};")
+        self.image_format_combo.setStyleSheet(f"""
+            QComboBox {{
+                background-color: {theme['bg']};
+                border: 1px solid {theme['surface']};
+                border-radius: 6px;
+                padding: 6px;
+                color: {theme['text']};
+            }}
+        """)
+        self.pages_spin.setStyleSheet(f"""
+            QSpinBox {{
+                background-color: {theme['bg']};
+                border: 1px solid {theme['surface']};
+                border-radius: 6px;
+                padding: 4px;
+                color: {theme['text']};
+            }}
+        """)
+        self.quality_combo.setStyleSheet(f"""
+            QComboBox {{
+                background-color: {theme['bg']};
+                border: 1px solid {theme['surface']};
+                border-radius: 6px;
+                padding: 6px;
+                color: {theme['text']};
+            }}
+        """)
+        self.output_path.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {theme['bg']};
+                border: 1px solid {theme['surface']};
+                border-radius: 6px;
+                padding: 6px;
+                color: {theme['text']};
+            }}
+        """)
+        self.split_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 {theme['success']}, stop:1 {theme.get('success_gradient_end', theme['success'])});
+                color: {theme['text']};
+                border: none;
+                border-radius: 8px;
+                font-size: {FONT_SIZE_16};
+                font-weight: {FONT_WEIGHT_600};
+            }}
+            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 {theme['success_hover']}, stop:1 {theme.get('success_gradient_end', theme['success'])}); }}
+            QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
+        """)
+        self.cancel_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 {theme['error']}, stop:1 {theme.get('error_gradient_end', theme['error'])});
+                color: {theme['text']};
+                border: none;
+                border-radius: 8px;
+                font-size: {FONT_SIZE_16};
+                font-weight: {FONT_WEIGHT_600};
+            }}
+            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 {theme['error_hover']}, stop:1 {theme.get('error_gradient_end', theme['error'])}); }}
+            QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
+        """)
+        self.progress_bar.setStyleSheet(f"""
+            QProgressBar {{
+                background-color: {theme['bg']};
+                border-radius: 6px;
+                text-align: center;
+                color: {theme['text']};
+            }}
+            QProgressBar::chunk {{
+                background-color: {theme['success']};
+                border-radius: 6px;
+            }}
+        """)
+        self.status_label.setStyleSheet(f"color: {theme['text_secondary']};")
+
     def on_format_changed(self):
         """输出格式改变时更新UI"""
         is_image = self.image_radio.isChecked()
@@ -552,15 +652,8 @@ class PDFSplitter(ToolPlugin):
 
     def update_theme(self, theme):
         """更新主题"""
-        if hasattr(self, 'widget') and hasattr(self.widget, 'title_label'):
-            self.widget.title_label.setStyleSheet(
-                f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700}; color: {theme['text']};"
-            )
-
-        if hasattr(self, 'widget') and hasattr(self.widget, 'desc_label'):
-            self.widget.desc_label.setStyleSheet(
-                f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};"
-            )
+        if hasattr(self, 'widget') and hasattr(self.widget, 'apply_theme'):
+            self.widget.apply_theme(theme)
 
     def create_ui(self):
         """创建UI"""

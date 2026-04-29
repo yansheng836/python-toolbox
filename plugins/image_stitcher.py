@@ -20,12 +20,13 @@ except ImportError:
 # 导入主程序中的基类和组件
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600
+    from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
 except ImportError:
     ToolPlugin = object
     Card = None
     AnimatedButton = None
     DragDropHandler = None
+    Theme = None
 
 
 class ImageStitchWorker(QThread):
@@ -145,6 +146,69 @@ class ImageStitcher(ToolPlugin):
                 )
             if hasattr(self, 'desc_label'):
                 self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};")
+            if hasattr(self, 'file_list'):
+                self.file_list.setStyleSheet(f"""
+                    QTextEdit {{
+                        background-color: {theme['bg']};
+                        border: 2px dashed {theme['surface']};
+                        border-radius: 8px;
+                        color: {theme['text_secondary']};
+                        padding: 8px;
+                    }}
+                """)
+            combo_style = f"""
+                QComboBox {{
+                    background-color: {theme['bg']};
+                    border: 1px solid {theme['surface']};
+                    border-radius: 6px;
+                    padding: 6px;
+                    color: {theme['text']};
+                }}
+            """
+            if hasattr(self, 'dir_combo'):
+                self.dir_combo.setStyleSheet(combo_style)
+            if hasattr(self, 'align_combo'):
+                self.align_combo.setStyleSheet(combo_style)
+            spin_style = f"""
+                QSpinBox {{
+                    background-color: {theme['bg']};
+                    border: 1px solid {theme['surface']};
+                    border-radius: 6px;
+                    padding: 4px;
+                    color: {theme['text']};
+                    max-width: 60px;
+                }}
+            """
+            for spin in [getattr(self, 'bg_r', None), getattr(self, 'bg_g', None), getattr(self, 'bg_b', None)]:
+                if spin:
+                    spin.setStyleSheet(spin_style)
+            if hasattr(self, 'output_path'):
+                self.output_path.setStyleSheet(f"""
+                    QLineEdit {{
+                        background-color: {theme['bg']};
+                        border: 1px solid {theme['surface']};
+                        border-radius: 6px;
+                        padding: 6px;
+                        color: {theme['text']};
+                    }}
+                """)
+            if hasattr(self, 'start_btn'):
+                self.start_btn.setStyleSheet(f"""
+                    QPushButton {{
+                        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                            stop:0 {theme['success']}, stop:1 {theme.get('success_gradient_end', theme['success'])});
+                        color: {theme['text']};
+                        border: none;
+                        border-radius: 8px;
+                        font-size: {FONT_SIZE_16};
+                        font-weight: {FONT_WEIGHT_600};
+                    }}
+                    QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                        stop:0 {theme['success_hover']}, stop:1 {theme.get('success_gradient_end', theme['success'])}); }}
+                    QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
+                """)
+            if hasattr(self, 'status_label'):
+                self.status_label.setStyleSheet(f"color: {theme['text_secondary']};")
         except RuntimeError:
             pass  # C++ object already deleted
 
@@ -296,6 +360,9 @@ class ImageStitcher(ToolPlugin):
         layout.addStretch()
 
         self.files = self.FileListWrapper(self.file_list, self._refresh_list)
+        # 应用初始主题
+        if Theme is not None:
+            self.update_theme(Theme.DARK)
         return widget
 
     def add_images(self):

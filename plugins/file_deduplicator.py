@@ -19,9 +19,10 @@ from PyQt6.QtGui import QFont
 # 导入主程序中的ToolPlugin基类和相关组件
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700
+    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
 except ImportError:
     # 如果导入失败，定义简化的基类
+    Theme = None
     class ToolPlugin:
         name = "Base Tool"
         icon = "🔧"
@@ -296,6 +297,148 @@ class FileDeduplicatorWidget(QWidget):
 
         layout.addStretch()
 
+        # 应用初始主题
+        if Theme is not None:
+            self.apply_theme(Theme.DARK)
+
+    def apply_theme(self, theme):
+        """应用主题到所有组件"""
+        # 标题和描述
+        if hasattr(self, 'title_label'):
+            self.title_label.setStyleSheet(
+                f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700}; color: {theme['text']};"
+            )
+        if hasattr(self, 'desc_label'):
+            self.desc_label.setStyleSheet(
+                f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};"
+            )
+
+        # 文件夹输入框
+        if hasattr(self, 'folder_display'):
+            self.folder_display.setStyleSheet(f"""
+                QLineEdit {{
+                    background-color: {theme['bg']};
+                    border: 1px solid {theme['border']};
+                    border-radius: 6px;
+                    padding: 6px;
+                    color: {theme['text']};
+                }}
+                QLineEdit:hover {{
+                    border-color: {theme['text_secondary']};
+                }}
+            """)
+
+        # 扫描按钮
+        if hasattr(self, 'scan_btn'):
+            self.scan_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                        stop:0 {theme['primary']}, stop:1 {theme['primary_hover']});
+                    color: {theme['text']};
+                    border: none; border-radius: 8px;
+                    font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
+                }}
+                QPushButton:hover {{
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                        stop:0 {theme['primary_hover']}, stop:1 {theme['primary']});
+                }}
+                QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
+            """)
+
+        # 进度条
+        if hasattr(self, 'progress_bar'):
+            self.progress_bar.setStyleSheet(f"""
+                QProgressBar {{
+                    background-color: {theme['bg']};
+                    border-radius: 6px;
+                    text-align: center;
+                    color: {theme['text']};
+                }}
+                QProgressBar::chunk {{
+                    background-color: {theme['primary']};
+                    border-radius: 6px;
+                }}
+            """)
+
+        # 状态标签
+        if hasattr(self, 'status_label'):
+            self.status_label.setStyleSheet(f"color: {theme['text_secondary']};")
+            self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # 取消按钮
+        if hasattr(self, 'cancel_btn'):
+            self.cancel_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: {theme['error']};
+                    color: {theme['text']}; border: none; border-radius: 8px;
+                    font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
+                }}
+                QPushButton:hover {{ background: {theme['error_hover']}; }}
+                QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
+            """)
+
+        # 结果树状列表
+        if hasattr(self, 'results_tree'):
+            self.results_tree.setStyleSheet(f"""
+                QTreeWidget {{
+                    background-color: {theme['bg']};
+                    border: 1px solid {theme['border']};
+                    border-radius: 6px;
+                    color: {theme['text']};
+                    padding: 4px;
+                }}
+                QTreeWidget::item {{
+                    padding: 6px;
+                }}
+                QTreeWidget::item:selected {{
+                    background-color: {theme['primary']};
+                }}
+                QTreeWidget::item:hover {{
+                    background-color: {theme['surface']};
+                }}
+            """)
+
+        # 统计标签
+        if hasattr(self, 'stats_label'):
+            self.stats_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_12};")
+
+        # 下拉框
+        if hasattr(self, 'rule_combo'):
+            self.rule_combo.setStyleSheet(f"""
+                QComboBox {{
+                    background-color: {theme['bg']};
+                    border: 1px solid {theme['border']};
+                    border-radius: 6px;
+                    padding: 6px;
+                    color: {theme['text']};
+                }}
+                QComboBox::drop-down {{
+                    border: none;
+                }}
+                QComboBox QAbstractItemView {{
+                    background-color: {theme['bg_secondary']};
+                    color: {theme['text']};
+                    selection-background-color: {theme['primary']};
+                }}
+            """)
+
+        # 删除按钮
+        if hasattr(self, 'delete_btn'):
+            self.delete_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                        stop:0 {theme['error']}, stop:1 {theme.get('error_gradient_end', theme['error'])});
+                    color: {theme['text']};
+                    border: none; border-radius: 8px;
+                    font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
+                }}
+                QPushButton:hover {{
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                        stop:0 {theme['error_hover']}, stop:1 {theme.get('error_gradient_end', theme['error'])});
+                }}
+                QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
+            """)
+
     def browse_folder(self):
         """选择文件夹"""
         dir_path = QFileDialog.getExistingDirectory(
@@ -502,143 +645,8 @@ class FileDeduplicator(ToolPlugin):
 
     def update_theme(self, theme):
         """更新主题"""
-        if not hasattr(self, 'widget'):
-            return
-        w = self.widget
-
-        # 标题和描述
-        if hasattr(w, 'title_label'):
-            w.title_label.setStyleSheet(
-                f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700}; color: {theme['text']};"
-            )
-        if hasattr(w, 'desc_label'):
-            w.desc_label.setStyleSheet(
-                f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};"
-            )
-
-        # 文件夹输入框
-        if hasattr(w, 'folder_display'):
-            w.folder_display.setStyleSheet(f"""
-                QLineEdit {{
-                    background-color: {theme['bg']};
-                    border: 1px solid {theme['border']};
-                    border-radius: 6px;
-                    padding: 6px;
-                    color: {theme['text']};
-                }}
-                QLineEdit:hover {{
-                    border-color: {theme['text_secondary']};
-                }}
-            """)
-
-        # 扫描按钮
-        if hasattr(w, 'scan_btn'):
-            w.scan_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                        stop:0 {theme['primary']}, stop:1 {theme['primary_hover']});
-                    color: white; border: none; border-radius: 8px;
-                    font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-                }}
-                QPushButton:hover {{
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                        stop:0 {theme['primary_hover']}, stop:1 {theme['primary']});
-                }}
-                QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
-            """)
-
-        # 进度条
-        if hasattr(w, 'progress_bar'):
-            w.progress_bar.setStyleSheet(f"""
-                QProgressBar {{
-                    background-color: {theme['bg']};
-                    border-radius: 6px;
-                    text-align: center;
-                    color: {theme['text']};
-                }}
-                QProgressBar::chunk {{
-                    background-color: {theme['primary']};
-                    border-radius: 6px;
-                }}
-            """)
-
-        # 状态标签
-        if hasattr(w, 'status_label'):
-            w.status_label.setStyleSheet(f"color: {theme['text_secondary']};")
-            w.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # 取消按钮
-        if hasattr(w, 'cancel_btn'):
-            w.cancel_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background: {theme['error']};
-                    color: white; border: none; border-radius: 8px;
-                    font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-                }}
-                QPushButton:hover {{ background: {theme['error']}cc; }}
-                QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
-            """)
-
-        # 结果树状列表
-        if hasattr(w, 'results_tree'):
-            w.results_tree.setStyleSheet(f"""
-                QTreeWidget {{
-                    background-color: {theme['bg']};
-                    border: 1px solid {theme['border']};
-                    border-radius: 6px;
-                    color: {theme['text']};
-                    padding: 4px;
-                }}
-                QTreeWidget::item {{
-                    padding: 6px;
-                }}
-                QTreeWidget::item:selected {{
-                    background-color: {theme['primary']};
-                }}
-                QTreeWidget::item:hover {{
-                    background-color: {theme['surface']};
-                }}
-            """)
-
-        # 统计标签
-        if hasattr(w, 'stats_label'):
-            w.stats_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_12};")
-
-        # 下拉框
-        if hasattr(w, 'rule_combo'):
-            w.rule_combo.setStyleSheet(f"""
-                QComboBox {{
-                    background-color: {theme['bg']};
-                    border: 1px solid {theme['border']};
-                    border-radius: 6px;
-                    padding: 6px;
-                    color: {theme['text']};
-                }}
-                QComboBox::drop-down {{
-                    border: none;
-                }}
-                QComboBox QAbstractItemView {{
-                    background-color: {theme['bg_secondary']};
-                    color: {theme['text']};
-                    selection-background-color: {theme['primary']};
-                }}
-            """)
-
-        # 删除按钮
-        if hasattr(w, 'delete_btn'):
-            w.delete_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                        stop:0 {theme['error']}, stop:1 {theme['error']}cc);
-                    color: white; border: none; border-radius: 8px;
-                    font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-                }}
-                QPushButton:hover {{
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                        stop:0 {theme['error']}cc, stop:1 {theme['error']});
-                }}
-                QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
-            """)
+        if hasattr(self, 'widget') and hasattr(self.widget, 'apply_theme'):
+            self.widget.apply_theme(theme)
 
     def create_ui(self):
         """创建UI"""

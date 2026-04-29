@@ -54,8 +54,12 @@ class Theme:
         'text_secondary': '#94a3b8',
         'border': '#334155',
         'success': '#10b981',
+        'success_hover': '#34d399',
+        'success_gradient_end': '#059669',
         'warning': '#f59e0b',
         'error': '#ef4444',
+        'error_hover': '#f87171',
+        'error_gradient_end': '#dc2626',
         'shadow': 'rgba(0, 0, 0, 0.3)'
     }
 
@@ -71,8 +75,12 @@ class Theme:
         'text_secondary': '#64748b',
         'border': '#e2e8f0',
         'success': '#059669',
+        'success_hover': '#10b981',
+        'success_gradient_end': '#047857',
         'warning': '#d97706',
         'error': '#dc2626',
+        'error_hover': '#ef4444',
+        'error_gradient_end': '#b91c1c',
         'shadow': 'rgba(0, 0, 0, 0.1)'
     }
 
@@ -153,7 +161,7 @@ class Card(QFrame):
             self.title_label = QLabel(self.title)
             self.title_label.setObjectName("cardTitle")
             self.title_label.setStyleSheet(
-                f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']}; color: #f1f5f9;")
+                f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};")
             layout.addWidget(self.title_label)
 
         self.content = QWidget()

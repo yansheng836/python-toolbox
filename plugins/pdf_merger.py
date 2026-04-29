@@ -17,9 +17,10 @@ except ImportError:
 # 导入主程序中的ToolPlugin基类和相关组件
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700
+    from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
 except ImportError:
     # 如果导入失败，定义简化的基类
+    Theme = None
     class ToolPlugin:
         name = "Base Tool"
         icon = "🔧"
@@ -280,6 +281,82 @@ class PDFMergerWidget(QWidget):
         layout.addWidget(action_card)
         layout.addStretch()
 
+        # 应用初始主题
+        if Theme is not None:
+            self.apply_theme(Theme.DARK)
+
+    def apply_theme(self, theme):
+        """应用主题到所有组件"""
+        self.table.setStyleSheet(f"""
+            QTableWidget {{
+                background-color: {theme['bg']};
+                border: 2px dashed {theme['surface']};
+                border-radius: 8px;
+                color: {theme['text']};
+                gridline-color: {theme['surface']};
+            }}
+            QHeaderView::section {{
+                background-color: {theme['bg_secondary']};
+                color: {theme['text_secondary']};
+                padding: 8px;
+                border: none;
+                font-weight: {FONT_WEIGHT_600};
+            }}
+            QTableWidget::item {{
+                padding: 8px;
+            }}
+        """)
+        self.output_path.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {theme['bg']};
+                border: 1px solid {theme['surface']};
+                border-radius: 6px;
+                padding: 6px;
+                color: {theme['text']};
+            }}
+        """)
+        self.merge_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 {theme['success']}, stop:1 {theme.get('success_gradient_end', theme['success'])});
+                color: {theme['text']};
+                border: none;
+                border-radius: 8px;
+                font-size: {FONT_SIZE_16};
+                font-weight: {FONT_WEIGHT_600};
+            }}
+            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 {theme['success_hover']}, stop:1 {theme.get('success_gradient_end', theme['success'])}); }}
+            QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
+        """)
+        self.cancel_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 {theme['error']}, stop:1 {theme.get('error_gradient_end', theme['error'])});
+                color: {theme['text']};
+                border: none;
+                border-radius: 8px;
+                font-size: {FONT_SIZE_16};
+                font-weight: {FONT_WEIGHT_600};
+            }}
+            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 {theme['error_hover']}, stop:1 {theme.get('error_gradient_end', theme['error'])}); }}
+            QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
+        """)
+        self.progress_bar.setStyleSheet(f"""
+            QProgressBar {{
+                background-color: {theme['bg']};
+                border-radius: 6px;
+                text-align: center;
+                color: {theme['text']};
+            }}
+            QProgressBar::chunk {{
+                background-color: {theme['success']};
+                border-radius: 6px;
+            }}
+        """)
+        self.status_label.setStyleSheet(f"color: {theme['text_secondary']};")
+
     def drag_enter_event(self, event):
         """拖拽进入事件"""
         if event.mimeData().hasUrls():
@@ -496,17 +573,8 @@ class PDFMerger(ToolPlugin):
 
     def update_theme(self, theme):
         """更新主题"""
-        # 更新标题颜色
-        if hasattr(self, 'widget') and hasattr(self.widget, 'title_label'):
-            self.widget.title_label.setStyleSheet(
-                f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700}; color: {theme['text']};"
-            )
-
-        # 更新描述颜色
-        if hasattr(self, 'widget') and hasattr(self.widget, 'desc_label'):
-            self.widget.desc_label.setStyleSheet(
-                f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};"
-            )
+        if hasattr(self, 'widget') and hasattr(self.widget, 'apply_theme'):
+            self.widget.apply_theme(theme)
 
     def create_ui(self):
         """创建UI"""

@@ -35,11 +35,12 @@ except ImportError:
 # 导入主程序中的基类和组件
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600
+    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
 except ImportError:
     ToolPlugin = object
     Card = None
     AnimatedButton = None
+    Theme = None
 
 
 class PDFWorker(QThread):
@@ -151,6 +152,75 @@ class ImageToPDF(ToolPlugin):
                 )
             if hasattr(self, 'desc_label'):
                 self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};")
+            if hasattr(self, 'table'):
+                self.table.setStyleSheet(f"""
+                    QTableWidget {{
+                        background-color: {theme['bg']};
+                        border: 1px solid {theme['surface']};
+                        border-radius: 8px;
+                        color: {theme['text']};
+                        gridline-color: {theme['surface']};
+                    }}
+                    QHeaderView::section {{
+                        background-color: {theme['bg_secondary']};
+                        color: {theme['text_secondary']};
+                        padding: 8px;
+                        border: none;
+                        font-weight: {FONT_WEIGHT_600};
+                    }}
+                    QTableWidget::item {{
+                        padding: 8px;
+                    }}
+                """)
+            if hasattr(self, 'size_combo'):
+                self.size_combo.setStyleSheet(f"""
+                    QComboBox {{
+                        background-color: {theme['bg']};
+                        border: 1px solid {theme['surface']};
+                        border-radius: 6px;
+                        padding: 6px;
+                        color: {theme['text']};
+                    }}
+                """)
+            if hasattr(self, 'output_path'):
+                self.output_path.setStyleSheet(f"""
+                    QLineEdit {{
+                        background-color: {theme['bg']};
+                        border: 1px solid {theme['surface']};
+                        border-radius: 6px;
+                        padding: 6px;
+                        color: {theme['text']};
+                    }}
+                """)
+            if hasattr(self, 'convert_btn'):
+                self.convert_btn.setStyleSheet(f"""
+                    QPushButton {{
+                        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                            stop:0 {theme['success']}, stop:1 {theme.get('success_gradient_end', theme['success'])});
+                        color: {theme['text']};
+                        border: none;
+                        border-radius: 8px;
+                        font-size: {FONT_SIZE_16};
+                        font-weight: {FONT_WEIGHT_600};
+                    }}
+                    QPushButton:hover {{
+                        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                            stop:0 {theme['success_hover']}, stop:1 {theme.get('success_gradient_end', theme['success'])});
+                    }}
+                """)
+            if hasattr(self, 'progress'):
+                self.progress.setStyleSheet(f"""
+                    QProgressBar {{
+                        background-color: {theme['bg']};
+                        border-radius: 6px;
+                        text-align: center;
+                        color: {theme['text']};
+                    }}
+                    QProgressBar::chunk {{
+                        background-color: {theme['secondary']};
+                        border-radius: 6px;
+                    }}
+                """)
         except RuntimeError:
             pass  # C++ object already deleted
 
@@ -315,6 +385,9 @@ class ImageToPDF(ToolPlugin):
         layout.addStretch()
 
         self.files = []
+        # 应用初始主题
+        if Theme is not None:
+            self.update_theme(Theme.DARK)
         return widget
 
     def add_images(self):
