@@ -6,7 +6,7 @@ import os
 import sys
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QComboBox, QSpinBox, QGridLayout, QLineEdit, QMessageBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal

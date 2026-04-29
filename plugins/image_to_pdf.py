@@ -7,7 +7,7 @@ import sys
 import io
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QProgressBar,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QProgressBar,
     QComboBox, QSlider, QLineEdit,
     QGridLayout, QCheckBox, QFileDialog, QMessageBox
 )
