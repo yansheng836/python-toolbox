@@ -494,6 +494,10 @@ class ImageScalerWidget(QWidget):
                 QTableWidget::item {{
                     padding: 8px;
                 }}
+                QTableCornerButton::section {{
+                    background-color: {theme['bg_secondary']};
+                    border: none;
+                }}
             """)
         combo_style = f"""
             QComboBox {{

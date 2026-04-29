@@ -141,6 +141,10 @@ class ImageCompressor(ToolPlugin):
                     QTableWidget::item {{
                         padding: 8px;
                     }}
+                    QTableCornerButton::section {{
+                        background-color: {theme['bg_secondary']};
+                        border: none;
+                    }}
                 """)
             if hasattr(self, 'format_combo'):
                 self.format_combo.setStyleSheet(f"""
@@ -434,7 +438,6 @@ class ImageCompressor(ToolPlugin):
             size_item2 = QTableWidgetItem(size_str)
             size_item2.setFlags(size_item2.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.table.setItem(row, 2, size_item2)
-
     def browse_output(self):
         parent = self.widget if self.widget else None
         path = QFileDialog.getExistingDirectory(parent, "选择输出目录")
