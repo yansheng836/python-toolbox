@@ -161,7 +161,7 @@ class Card(QFrame):
             self.title_label = QLabel(self.title)
             self.title_label.setObjectName("cardTitle")
             self.title_label.setStyleSheet(
-                f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};")
+                f"font-size: {FONT_SIZE_20}; font-weight: {FONT_WEIGHT_700};")
             layout.addWidget(self.title_label)
 
         self.content = QWidget()
