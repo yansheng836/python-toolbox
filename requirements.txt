@@ -5,7 +5,7 @@ PyQt6>=6.4.0
 Pillow>=9.0.0
 
 # PDF Conversion (multiple backends for reliability)
-img2pdf>=0.4.4
+img2pdf>=0.6.3
 PyMuPDF>=1.21.0
 
 # Build Tool
