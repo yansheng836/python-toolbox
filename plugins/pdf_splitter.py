@@ -399,6 +399,17 @@ class PDFSplitterWidget(QWidget):
                 padding: 6px;
                 color: {theme['text']};
             }}
+            QComboBox::drop-down {{
+                border: none;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {theme['bg_secondary']};
+                color: {theme['text']};
+                selection-background-color: {theme['primary']};
+                selection-color: {theme['text']};
+                padding: 4px;
+                border: none;
+            }}
         """)
         self.pages_spin.setStyleSheet(f"""
             QSpinBox {{
@@ -416,6 +427,17 @@ class PDFSplitterWidget(QWidget):
                 border-radius: 6px;
                 padding: 6px;
                 color: {theme['text']};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {theme['bg_secondary']};
+                color: {theme['text']};
+                selection-background-color: {theme['primary']};
+                selection-color: {theme['text']};
+                padding: 4px;
+                border: none;
             }}
         """)
         self.output_path.setStyleSheet(f"""

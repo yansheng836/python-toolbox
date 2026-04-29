@@ -129,6 +129,17 @@ class FormatConverter(ToolPlugin):
                         padding: 6px;
                         color: {theme['text']};
                     }}
+                    QComboBox::drop-down {{
+                        border: none;
+                    }}
+                    QComboBox QAbstractItemView {{
+                        background-color: {theme['bg_secondary']};
+                        color: {theme['text']};
+                        selection-background-color: {theme['primary']};
+                        selection-color: {theme['text']};
+                        padding: 4px;
+                        border: none;
+                    }}
                 """)
             if hasattr(self, 'output_path'):
                 self.output_path.setStyleSheet(f"""

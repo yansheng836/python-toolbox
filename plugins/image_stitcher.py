@@ -164,6 +164,17 @@ class ImageStitcher(ToolPlugin):
                     padding: 6px;
                     color: {theme['text']};
                 }}
+                QComboBox::drop-down {{
+                    border: none;
+                }}
+                QComboBox QAbstractItemView {{
+                    background-color: {theme['bg_secondary']};
+                    color: {theme['text']};
+                    selection-background-color: {theme['primary']};
+                    selection-color: {theme['text']};
+                    padding: 4px;
+                    border: none;
+                }}
             """
             if hasattr(self, 'dir_combo'):
                 self.dir_combo.setStyleSheet(combo_style)

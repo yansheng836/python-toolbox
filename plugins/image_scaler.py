@@ -446,6 +446,17 @@ class ImageScalerWidget(QWidget):
                 padding: 6px;
                 color: {theme['text']};
             }}
+            QComboBox::drop-down {{
+                border: none;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {theme['bg_secondary']};
+                color: {theme['text']};
+                selection-background-color: {theme['primary']};
+                selection-color: {theme['text']};
+                padding: 4px;
+                border: none;
+            }}
         """
         self.scale_type_combo.setStyleSheet(combo_style)
         self.quality_combo.setStyleSheet(combo_style)
