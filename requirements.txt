@@ -1,5 +1,5 @@
 # GUI Framework
-PyQt6>=6.4.0
+PyQt6>=6.11.0
 
 # Image Processing
 Pillow>=9.0.0
