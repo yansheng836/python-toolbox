@@ -1,11 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git status:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
+      "Bash(*git:*)",
       "Bash(python:*)",
-      "Bash(git log:*)",
       "Bash(tasklist)",
       "Bash(findstr \"python\")",
       "Bash(taskkill /f /im python.exe)",
@@ -29,13 +26,11 @@
       "Bash(pip list:*)",
       "Bash(grep -n 'font-size: {FONT_SIZE_14}' plugins/*.py)",
       "Bash(grep \"FONT_SIZE_14\" plugins/*.py)",
-      "Bash(git push:*)",
       "Bash(pyflakes toolbox.py plugins/ test/ *.py)",
       "Bash(autoflake --remove-all-unused-imports --in-place toolbox.py plugins/*.py test/*.py menu_system.py settings_page.py)",
       "Bash(pyflakes toolbox.py plugins/*.py test/*.py menu_system.py settings_page.py)",
       "Bash(dir favicon.ico logo.png)",
-      "Bash(gh run:*)",
-      "Bash(git checkout:*)"
+      "Bash(gh run:*)"
     ]
   }
 }
