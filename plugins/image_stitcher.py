@@ -203,7 +203,7 @@ class ImageStitcher(ToolPlugin):
             columns=IMAGE_COLUMNS,
             file_filter="图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff *.tif *.gif)",
             button_class=AnimatedButton,
-            show_buttons=["add", "remove", "up", "down", "clear"]
+            show_buttons=["add", "remove", "clear", "up", "down"]
         )
         file_card.content_layout.addWidget(self.file_panel)
         layout.addWidget(file_card)

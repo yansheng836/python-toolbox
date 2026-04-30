@@ -157,7 +157,7 @@ class PDFMergerWidget(QWidget):
             columns=PDF_COLUMNS,
             file_filter="PDF文件 (*.pdf);;所有文件 (*.*)",
             button_class=AnimatedButton,
-            show_buttons=["add", "remove", "up", "down", "clear"]
+            show_buttons=["add", "remove", "clear", "up", "down"]
         )
         file_layout.addWidget(self.file_panel)
 

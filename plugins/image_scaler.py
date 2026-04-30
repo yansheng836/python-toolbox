@@ -144,7 +144,7 @@ class ImageScalerWidget(QWidget):
             columns=IMAGE_COLUMNS,
             file_filter="图片文件 (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;所有文件 (*.*)",
             button_class=AnimatedButton,
-            show_buttons=["add", "remove", "up", "down"]
+            show_buttons=["add", "remove", "clear", "up", "down"]
         )
         file_card.content_layout.addWidget(self.file_panel)
         layout.addWidget(file_card)

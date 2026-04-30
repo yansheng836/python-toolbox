@@ -63,23 +63,24 @@ class FileListPanel(QWidget):
         self.table.installEventFilter(self)
         layout.addWidget(self.table)
 
-        # 按钮
+        # 按钮（按 show_buttons 顺序添加）
         btn_layout = QHBoxLayout()
-        if "add" in self.show_buttons:
-            self.add_btn = self._create_btn("添加文件", "add")
-            btn_layout.addWidget(self.add_btn)
-        if "remove" in self.show_buttons:
-            self.remove_btn = self._create_btn("删除选中", "remove")
-            btn_layout.addWidget(self.remove_btn)
-        if "up" in self.show_buttons:
-            self.up_btn = self._create_btn("上移", "up")
-            btn_layout.addWidget(self.up_btn)
-        if "down" in self.show_buttons:
-            self.down_btn = self._create_btn("下移", "down")
-            btn_layout.addWidget(self.down_btn)
-        if "clear" in self.show_buttons:
-            self.clear_btn = self._create_btn("清空列表", "clear")
-            btn_layout.addWidget(self.clear_btn)
+        for btn_key in self.show_buttons:
+            if btn_key == "add":
+                self.add_btn = self._create_btn("添加文件", "add")
+                btn_layout.addWidget(self.add_btn)
+            elif btn_key == "remove":
+                self.remove_btn = self._create_btn("删除选中", "remove")
+                btn_layout.addWidget(self.remove_btn)
+            elif btn_key == "clear":
+                self.clear_btn = self._create_btn("清空列表", "clear")
+                btn_layout.addWidget(self.clear_btn)
+            elif btn_key == "up":
+                self.up_btn = self._create_btn("上移", "up")
+                btn_layout.addWidget(self.up_btn)
+            elif btn_key == "down":
+                self.down_btn = self._create_btn("下移", "down")
+                btn_layout.addWidget(self.down_btn)
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
