@@ -3,11 +3,12 @@
 供多个插件复用，减少重复代码
 """
 import os
+import re
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
 )
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QEvent
 
 
 class FileListPanel(QWidget):
@@ -41,6 +42,8 @@ class FileListPanel(QWidget):
         self.file_filter = file_filter
         self.button_class = button_class
         self.show_buttons = show_buttons if show_buttons is not None else ["add", "remove", "up", "down"]
+        # 从 file_filter 解析允许的文件扩展名，用于拖拽过滤
+        self._allowed_extensions = self._parse_filter_extensions(file_filter)
         self._setup_ui()
 
     def _setup_ui(self):
@@ -55,6 +58,9 @@ class FileListPanel(QWidget):
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setMinimumHeight(200)
+        # 启用拖拽支持
+        self.table.setAcceptDrops(True)
+        self.table.installEventFilter(self)
         layout.addWidget(self.table)
 
         # 按钮
@@ -186,6 +192,62 @@ class FileListPanel(QWidget):
                 item = QTableWidgetItem(text)
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.table.setItem(row, col_idx, item)
+
+    def _parse_filter_extensions(self, file_filter):
+        """从 file_filter 解析允许的文件扩展名列表"""
+        # file_filter 格式如 "图片文件 (*.jpg *.jpeg *.png)"
+        match = re.search(r'\((.*?)\)', file_filter)
+        if not match:
+            return []
+        extensions = []
+        for part in match.group(1).split():
+            if part.startswith('*.'):
+                extensions.append(os.path.splitext(part)[1].lower())
+        return extensions
+
+    def _is_allowed_file(self, file_path):
+        """检查文件扩展名是否允许"""
+        if not self._allowed_extensions:
+            return True
+        ext = os.path.splitext(file_path)[1].lower()
+        return ext in self._allowed_extensions
+
+    def eventFilter(self, obj, event):
+        """事件过滤器：处理表格的拖拽事件"""
+        if obj is self.table:
+            if event.type() == QEvent.Type.DragEnter:
+                return self._handle_drag_enter(event)
+            elif event.type() == QEvent.Type.Drop:
+                return self._handle_drop(event)
+        return super().eventFilter(obj, event)
+
+    def _handle_drag_enter(self, event):
+        """拖拽进入事件：只接受匹配的文件类型"""
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                if url.isLocalFile() and self._is_allowed_file(url.toLocalFile()):
+                    event.acceptProposedAction()
+                    return True
+        event.ignore()
+        return True
+
+    def _handle_drop(self, event):
+        """处理文件放下事件，添加拖拽的文件到列表"""
+        if event.mimeData().hasUrls():
+            added = False
+            for url in event.mimeData().urls():
+                if url.isLocalFile():
+                    file_path = url.toLocalFile()
+                    if self._is_allowed_file(file_path) and file_path not in self.files:
+                        self.files.append(file_path)
+                        added = True
+            if added:
+                self.update_list()
+                self.files_changed.emit()
+            event.acceptProposedAction()
+            return True
+        event.ignore()
+        return True
 
     def update_theme(self, theme):
         """更新表格主题样式"""

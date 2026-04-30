@@ -21,7 +21,7 @@ except ImportError:
 # 导入主程序中的基类和组件
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
+    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
 except ImportError:
     ToolPlugin = object
     Card = None
@@ -112,12 +112,6 @@ class ImageCompressor(ToolPlugin):
     description = "批量压缩图片，支持JPG/PNG/WebP格式"
     icon = "🖼️"
     order = 1
-
-    def setup_drag_handler(self):
-        """设置拖拽处理器"""
-        if hasattr(self, 'file_panel') and DragDropHandler:
-            DragDropHandler.setup_drag_drop(self.file_panel.table, self.file_panel.get_files())
-            self.file_panel.update_list()
 
     def update_theme(self, theme):
         """更新主题"""
