@@ -89,7 +89,8 @@ class CompressionWorker(QThread):
                     save_kwargs['quality'] = self.quality
                     save_kwargs['optimize'] = True
                 elif fmt == 'PNG':
-                    save_kwargs['optimize'] = True
+                    # quality 1-100 映射到 compress_level 9-0（值越小压缩越弱）
+                    save_kwargs['compress_level'] = max(0, min(9, int(10 - self.quality / 10)))
 
                 img.save(output_path, fmt, **save_kwargs)
                 processed += 1
@@ -338,29 +339,6 @@ class ImageCompressor(ToolPlugin):
             parent = self.widget if self.widget else None
             QMessageBox.critical(parent, "错误", "请先安装 Pillow: pip install Pillow")
             return
-
-        # 检查是否 PNG 格式（不支持 quality 参数）
-        fmt_text = self.format_combo.currentText()
-        if fmt_text == "PNG":
-            parent = self.widget if self.widget else None
-            QMessageBox.warning(parent, "提示",
-                "PNG 格式不支持质量设置，压缩时将忽略质量滑块的值。\n"
-                "如需调整压缩质量，请选择 JPG 或 WebP 格式。")
-        elif fmt_text == "保持原格式":
-            png_files = []
-            for f in files:
-                try:
-                    with Image.open(f) as img:
-                        if img.format == 'PNG':
-                            png_files.append(os.path.basename(f))
-                except Exception:
-                    pass
-            if png_files:
-                parent = self.widget if self.widget else None
-                QMessageBox.warning(parent, "提示",
-                    f"以下文件为 PNG 格式，不支持质量设置，将忽略质量滑块的值：\n"
-                    f"{', '.join(png_files[:5])}{'...' if len(png_files) > 5 else ''}\n"
-                    "如需调整压缩质量，请选择 JPG 或 WebP 格式。")
 
         self.progress_bar.setVisible(True)
         self.progress_bar.setMaximum(len(files))
