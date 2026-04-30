@@ -185,7 +185,7 @@ class ImageStitcher(ToolPlugin):
     def create_ui(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setSpacing(16)
+        layout.setSpacing(10)
 
         self.title_label = QLabel(self.icon + " " + self.name + "工具")
         self.title_label.setStyleSheet(
@@ -287,7 +287,7 @@ class ImageStitcher(ToolPlugin):
         # 操作区
         action_card = Card()
         self.start_btn = AnimatedButton("开始拼接")
-        self.start_btn.setMinimumHeight(48)
+        self.start_btn.setMinimumHeight(40)
         self.start_btn.setStyleSheet(f"""
             QPushButton {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,

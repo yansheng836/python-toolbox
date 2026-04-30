@@ -126,7 +126,7 @@ class ImageScalerWidget(QWidget):
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.setSpacing(16)
+        layout.setSpacing(10)
 
         # 标题
         self.title_label = QLabel("📏 图片批量缩放")
@@ -258,7 +258,7 @@ class ImageScalerWidget(QWidget):
         button_layout = QHBoxLayout()
 
         self.start_btn = AnimatedButton("开始缩放")
-        self.start_btn.setMinimumHeight(48)
+        self.start_btn.setMinimumHeight(40)
         self.start_btn.setStyleSheet(f"""
             QPushButton {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -275,7 +275,7 @@ class ImageScalerWidget(QWidget):
         button_layout.addWidget(self.start_btn)
 
         self.cancel_btn = AnimatedButton("取消")
-        self.cancel_btn.setMinimumHeight(48)
+        self.cancel_btn.setMinimumHeight(40)
         self.cancel_btn.setStyleSheet(f"""
             QPushButton {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,

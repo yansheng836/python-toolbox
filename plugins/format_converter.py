@@ -6,8 +6,8 @@ import os
 import sys
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit,
-    QProgressBar, QComboBox, QLineEdit, QGridLayout, QFileDialog,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QProgressBar, QComboBox, QLineEdit, QGridLayout,
     QMessageBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
@@ -21,13 +21,15 @@ except ImportError:
 # 导入主程序中的基类和组件
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, DragDropHandler, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
+    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
 except ImportError:
     ToolPlugin = object
     Card = None
     AnimatedButton = None
-    DragDropHandler = None
     Theme = None
+
+from common.file_list_panel import FileListPanel
+from common.utils import IMAGE_COLUMNS
 
 
 class FormatConvertWorker(QThread):
@@ -93,12 +95,6 @@ class FormatConverter(ToolPlugin):
 
     FORMATS = ["JPEG", "PNG", "WebP", "BMP", "TIFF", "GIF"]
 
-    def setup_drag_handler(self):
-        """设置拖拽处理器"""
-        if hasattr(self, 'file_list'):
-            DragDropHandler.setup_drag_drop(self.file_list, self.files)
-            DragDropHandler.update_file_list_display(self.file_list, self.files)
-
     def update_theme(self, theme):
         """更新主题"""
         try:
@@ -110,16 +106,8 @@ class FormatConverter(ToolPlugin):
                 )
             if hasattr(self, 'desc_label'):
                 self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};")
-            if hasattr(self, 'file_list'):
-                self.file_list.setStyleSheet(f"""
-                    QTextEdit {{
-                        background-color: {theme['bg']};
-                        border: 2px dashed {theme['surface']};
-                        border-radius: 8px;
-                        color: {theme['text_secondary']};
-                        padding: 8px;
-                    }}
-                """)
+            if hasattr(self, 'file_panel'):
+                self.file_panel.update_theme(theme)
             if hasattr(self, 'fmt_combo'):
                 self.fmt_combo.setStyleSheet(f"""
                     QComboBox {{
@@ -174,7 +162,7 @@ class FormatConverter(ToolPlugin):
     def create_ui(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setSpacing(16)
+        layout.setSpacing(10)
 
         self.title_label = QLabel("🔄 图片格式批量转换")
         self.title_label.setStyleSheet(
@@ -186,36 +174,21 @@ class FormatConverter(ToolPlugin):
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
-        # 文件选择
+        # 文件选择区域
         file_card = Card(title="选择图片")
-        self.file_list = QTextEdit()
-        self.file_list.setPlaceholderText("拖拽图片到此处，或点击按钮选择...")
-        self.file_list.setMaximumHeight(120)
-        self.file_list.setStyleSheet("""
-            QTextEdit {
-                background-color: #0f172a;
-                border: 2px dashed #334155;
-                border-radius: 8px;
-                color: #94a3b8;
-                padding: 8px;
-            }
-        """)
-        file_card.content_layout.addWidget(self.file_list)
-
-        btn_layout = QHBoxLayout()
-        add_btn = AnimatedButton("添加图片")
-        add_btn.clicked.connect(self.add_images)
-        clear_btn = AnimatedButton("清空列表")
-        clear_btn.clicked.connect(self.clear_images)
-        btn_layout.addWidget(add_btn)
-        btn_layout.addWidget(clear_btn)
-        btn_layout.addStretch()
-        file_card.content_layout.addLayout(btn_layout)
+        self.file_panel = FileListPanel(
+            columns=IMAGE_COLUMNS,
+            file_filter="图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff *.tif *.gif)",
+            button_class=AnimatedButton,
+            show_buttons=["add", "remove", "up", "down", "clear"]
+        )
+        file_card.content_layout.addWidget(self.file_panel)
         layout.addWidget(file_card)
 
         # 转换设置
         settings_card = Card(title="转换设置")
         settings_layout = QGridLayout()
+        settings_layout.setSpacing(8)
         settings_card.content_layout.addLayout(settings_layout)
 
         settings_layout.addWidget(QLabel("目标格式:"), 0, 0)
@@ -260,7 +233,7 @@ class FormatConverter(ToolPlugin):
         action_card.content_layout.addWidget(self.progress_bar)
 
         self.start_btn = AnimatedButton("开始转换")
-        self.start_btn.setMinimumHeight(48)
+        self.start_btn.setMinimumHeight(40)
         self.start_btn.setStyleSheet(f"""
             QPushButton {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -285,42 +258,31 @@ class FormatConverter(ToolPlugin):
         layout.addWidget(action_card)
         layout.addStretch()
 
-        self.files = []
         # 应用初始主题
         if Theme is not None:
             self.update_theme(Theme.DARK)
         return widget
 
-    def add_images(self):
-        files, _ = QFileDialog.getOpenFileNames(
-            None, "选择图片", "",
-            "图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff *.tif *.gif)"
-        )
-        if files:
-            self.files.extend(files)
-            DragDropHandler.update_file_list_display(self.file_list, self.files)
-
-    def clear_images(self):
-        self.files = []
-        self.file_list.clear()
-
     def browse_output(self):
-        path = QFileDialog.getExistingDirectory(None, "选择输出目录")
+        parent = self.widget if self.widget else None
+        path = QFileDialog.getExistingDirectory(parent, "选择输出目录")
         if path:
             self.output_path.setText(path)
 
     def start_convert(self):
-        if not self.files:
-            QMessageBox.warning(None, "警告", "请先添加图片！")
+        files = self.file_panel.get_files()
+        if not files:
+            parent = self.widget if self.widget else None
+            QMessageBox.warning(parent, "警告", "请先添加图片！")
             return
 
         self.progress_bar.setVisible(True)
-        self.progress_bar.setMaximum(len(self.files))
+        self.progress_bar.setMaximum(len(files))
         self.progress_bar.setValue(0)
         self.start_btn.setEnabled(False)
 
         self.worker = FormatConvertWorker(
-            self.files,
+            files,
             self.output_path.text() or None,
             self.fmt_combo.currentText()
         )

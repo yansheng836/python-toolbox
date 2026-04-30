@@ -42,14 +42,7 @@ except ImportError:
     Theme = None
 
 from common.file_list_panel import FileListPanel
-from common.utils import get_image_size
-
-
-IMAGE_COLUMNS_PDF = [
-    ("文件名", lambda f: os.path.basename(f)),
-    ("尺寸", get_image_size),
-    ("状态", lambda f: "就绪")
-]
+from common.utils import IMAGE_COLUMNS
 
 
 class PDFWorker(QThread):
@@ -228,7 +221,7 @@ class ImageToPDF(ToolPlugin):
     def create_ui(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setSpacing(16)
+        layout.setSpacing(10)
 
         self.title_label = QLabel("📄 图片转PDF工具")
         self.title_label.setStyleSheet(
@@ -243,7 +236,7 @@ class ImageToPDF(ToolPlugin):
         # 图片列表
         list_card = Card(title="图片列表")
         self.file_panel = FileListPanel(
-            columns=IMAGE_COLUMNS_PDF,
+            columns=IMAGE_COLUMNS,
             file_filter="图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff)",
             button_class=AnimatedButton,
             show_buttons=["add", "remove", "up", "down"]
@@ -314,7 +307,7 @@ class ImageToPDF(ToolPlugin):
 
         # 操作按钮
         self.convert_btn = AnimatedButton("开始转换")
-        self.convert_btn.setMinimumHeight(48)
+        self.convert_btn.setMinimumHeight(40)
         self.convert_btn.setStyleSheet(f"""
             QPushButton {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
