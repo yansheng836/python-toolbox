@@ -201,7 +201,7 @@ class ImageCompressor(ToolPlugin):
     def create_ui(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setSpacing(16)
+        layout.setSpacing(10)
 
         # 标题
         self.title_label = QLabel("🖼️ 图片压缩工具")
@@ -229,6 +229,7 @@ class ImageCompressor(ToolPlugin):
         # 设置区域
         settings_card = Card(title="压缩设置")
         settings_layout = QGridLayout()
+        settings_layout.setSpacing(8)
         settings_card.content_layout.addLayout(settings_layout)
 
         settings_layout.addWidget(QLabel("输出格式:"), 0, 0)
@@ -239,7 +240,7 @@ class ImageCompressor(ToolPlugin):
                 background-color: #0f172a;
                 border: 1px solid #334155;
                 border-radius: 6px;
-                padding: 6px;
+                padding: 4px;
                 color: #f1f5f9;
             }
         """)
@@ -267,7 +268,7 @@ class ImageCompressor(ToolPlugin):
                 background-color: #0f172a;
                 border: 1px solid #334155;
                 border-radius: 6px;
-                padding: 6px;
+                padding: 4px;
                 color: #f1f5f9;
             }
         """)
@@ -301,7 +302,7 @@ class ImageCompressor(ToolPlugin):
         progress_layout.addWidget(self.progress_bar)
 
         self.start_btn = AnimatedButton("开始压缩")
-        self.start_btn.setMinimumHeight(48)
+        self.start_btn.setMinimumHeight(40)
         self.start_btn.setStyleSheet(f"""
             QPushButton {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,

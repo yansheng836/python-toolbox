@@ -154,8 +154,10 @@ class Card(QFrame):
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(12)
+        # 卡片内边距：调小至12px，使卡片内容更紧凑（原20px）
+        layout.setContentsMargins(12, 12, 12, 12)
+        # 卡片内部元素间距：调小至8px（原12px）
+        layout.setSpacing(8)
 
         if self.title:
             self.title_label = QLabel(self.title)
