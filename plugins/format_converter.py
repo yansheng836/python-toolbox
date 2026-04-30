@@ -91,7 +91,7 @@ class FormatConverter(ToolPlugin):
     name = "图片格式转换"
     description = "批量转换图片格式，支持 JPEG/PNG/WebP/BMP/TIFF/GIF"
     icon = "🔄"
-    order = 3
+    order = 2
 
     FORMATS = ["JPEG", "PNG", "WebP", "BMP", "TIFF", "GIF"]
 
@@ -180,7 +180,7 @@ class FormatConverter(ToolPlugin):
             columns=IMAGE_COLUMNS,
             file_filter="图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff *.tif *.gif)",
             button_class=AnimatedButton,
-            show_buttons=["add", "remove", "clear", "up", "down"]
+            show_buttons=["add", "remove", "clear"]
         )
         file_card.content_layout.addWidget(self.file_panel)
         layout.addWidget(file_card)

@@ -208,7 +208,7 @@ class ImageCompressor(ToolPlugin):
             columns=IMAGE_COLUMNS,
             file_filter="图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.gif)",
             button_class=AnimatedButton,
-            show_buttons=["add", "remove", "clear", "up", "down"]
+            show_buttons=["add", "remove", "clear"]
         )
         file_card.content_layout.addWidget(self.file_panel)
         layout.addWidget(file_card)

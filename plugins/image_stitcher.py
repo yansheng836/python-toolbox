@@ -100,7 +100,7 @@ class ImageStitcher(ToolPlugin):
     name = "图片拼接"
     description = "多图横向/纵向合并为一张"
     icon = "📐"
-    order = 4
+    order = 3
 
     def update_theme(self, theme):
         """更新主题"""

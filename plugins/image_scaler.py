@@ -144,7 +144,7 @@ class ImageScalerWidget(QWidget):
             columns=IMAGE_COLUMNS,
             file_filter="图片文件 (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;所有文件 (*.*)",
             button_class=AnimatedButton,
-            show_buttons=["add", "remove", "clear", "up", "down"]
+            show_buttons=["add", "remove", "clear"]
         )
         file_card.content_layout.addWidget(self.file_panel)
         layout.addWidget(file_card)
@@ -522,8 +522,8 @@ class ImageScalerWidget(QWidget):
 
 class ImageScaler(ToolPlugin):
     icon = "📏"
-    name = "图片批量缩放"
-    order = 2
+    name = "图片缩放"
+    order = 4
 
     def update_theme(self, theme):
         if hasattr(self, 'widget') and hasattr(self.widget, 'apply_theme'):
