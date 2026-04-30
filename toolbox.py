@@ -678,12 +678,7 @@ class ToolboxWindow(QMainWindow):
         self.sidebar.setObjectName("sidebar")
         self.sidebar.setMaximumWidth(260)
         self.sidebar.setMinimumWidth(260)
-        self.sidebar.setStyleSheet("""
-            QFrame#sidebar {
-                background-color: #0f172a;
-                border-right: 1px solid #1e293b;
-            }
-        """)
+        # 初始样式会在 apply_theme 中设置
 
         sidebar_layout = QVBoxLayout(self.sidebar)
         sidebar_layout.setContentsMargins(16, 16, 16, 16)
@@ -704,16 +699,15 @@ class ToolboxWindow(QMainWindow):
         else:
             logo_icon.setText("🧰")
             logo_icon.setStyleSheet("font-size: 28px;")
-        logo_text = QLabel("工具箱")
-        logo_text.setStyleSheet(f"font-size: {FONT_SIZE_20}; font-weight: {FONT_WEIGHT_700};")
+        self.logo_text = QLabel("工具箱")
         logo_layout.addWidget(logo_icon)
-        logo_layout.addWidget(logo_text)
+        logo_layout.addWidget(self.logo_text)
         logo_layout.addStretch()
         sidebar_layout.addLayout(logo_layout)
 
         line = QFrame()
+        line.setObjectName("sidebarLine")
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("background-color: #334155;")
         line.setMaximumHeight(1)
         sidebar_layout.addWidget(line)
 
@@ -725,10 +719,9 @@ class ToolboxWindow(QMainWindow):
 
         sidebar_layout.addStretch()
 
-        version = QLabel(f"v{APP_VERSION}")
-        version.setStyleSheet(f"color: #475569; font-size: {FONT_SIZE_12};")
-        version.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sidebar_layout.addWidget(version)
+        self.version_label = QLabel(f"v{APP_VERSION}")
+        self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sidebar_layout.addWidget(self.version_label)
 
         main_layout.addWidget(self.sidebar)
 
@@ -987,7 +980,20 @@ class ToolboxWindow(QMainWindow):
                 background-color: {theme['bg_secondary']};
                 border-right: 1px solid {theme['surface']};
             }}
+            QFrame#sidebarLine {{
+                background-color: {theme['surface']};
+            }}
         """)
+
+        if hasattr(self, 'version_label'):
+            self.version_label.setStyleSheet(
+                f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_12};"
+            )
+
+        if hasattr(self, 'logo_text'):
+            self.logo_text.setStyleSheet(
+                f"font-size: {FONT_SIZE_20}; font-weight: {FONT_WEIGHT_700}; color: {theme['text']};"
+            )
 
         self.content.setStyleSheet(f"""
             QStackedWidget {{ background-color: {theme['bg']}; }}
