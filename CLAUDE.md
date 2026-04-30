@@ -133,6 +133,7 @@ Long operations run in `QThread` workers that emit progress signals — never bl
 | `DragDropHandler` | `toolbox.py` | Drag-and-drop utility |
 | `SidebarButton` | `toolbox.py` | Sidebar navigation button |
 | `FileListPanel` | `common/file_list_panel.py` | Reusable file list table with buttons |
+| `get_image_size`, `get_file_size` | `common/utils.py` | Image size and file size helper functions |
 
 **Use these shared components whenever possible instead of reimplementing similar functionality.**
 

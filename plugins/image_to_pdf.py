@@ -42,22 +42,12 @@ except ImportError:
     Theme = None
 
 from common.file_list_panel import FileListPanel
-
-
-def _get_image_size(file_path):
-    """获取图片尺寸文本"""
-    if not PIL_AVAILABLE:
-        return "N/A"
-    try:
-        with Image.open(file_path) as img:
-            return f"{img.width} x {img.height}"
-    except Exception:
-        return "读取失败"
+from common.utils import get_image_size
 
 
 IMAGE_COLUMNS_PDF = [
     ("文件名", lambda f: os.path.basename(f)),
-    ("尺寸", _get_image_size),
+    ("尺寸", get_image_size),
     ("状态", lambda f: "就绪")
 ]
 

@@ -29,37 +29,13 @@ except ImportError:
     Theme = None
 
 from common.file_list_panel import FileListPanel
-
-
-def _get_image_size(file_path):
-    """获取图片尺寸文本"""
-    if not PIL_AVAILABLE:
-        return "N/A"
-    try:
-        with Image.open(file_path) as img:
-            return f"{img.width} x {img.height}"
-    except Exception:
-        return "读取失败"
-
-
-def _get_file_size(file_path):
-    """获取文件大小文本"""
-    try:
-        size = os.path.getsize(file_path)
-        if size < 1024:
-            return f"{size} B"
-        elif size < 1024 * 1024:
-            return f"{size / 1024:.1f} KB"
-        else:
-            return f"{size / (1024 * 1024):.1f} MB"
-    except Exception:
-        return "未知"
+from common.utils import get_image_size, get_file_size
 
 
 IMAGE_COLUMNS = [
     ("文件名", lambda f: os.path.basename(f)),
-    ("尺寸", _get_image_size),
-    ("大小", _get_file_size)
+    ("尺寸", get_image_size),
+    ("大小", get_file_size)
 ]
 
 
