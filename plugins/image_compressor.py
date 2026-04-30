@@ -54,11 +54,12 @@ class CompressionWorker(QThread):
 
                 img = Image.open(file_path)
 
-                # 确定输出格式
+                # 确定输出格式，统一 JPG/JPEG 命名
+                format_map = {'JPG': 'JPEG', 'PNG': 'PNG', 'WebP': 'WEBP', 'BMP': 'BMP'}
                 if self.format_str == "保持原格式":
-                    fmt = img.format or 'JPEG'
+                    fmt = format_map.get(img.format, img.format) if img.format else 'JPEG'
                 else:
-                    fmt = {'JPG': 'JPEG', 'PNG': 'PNG', 'WebP': 'WEBP'}[self.format_str]
+                    fmt = format_map[self.format_str]
 
                 # 确定输出路径
                 base_name = os.path.splitext(os.path.basename(file_path))[0]
@@ -237,8 +238,8 @@ class ImageCompressor(ToolPlugin):
         quality_layout = QHBoxLayout()
         self.quality_slider = QSlider(Qt.Orientation.Horizontal)
         self.quality_slider.setRange(1, 100)
-        self.quality_slider.setValue(85)
-        self.quality_label = QLabel("85%")
+        self.quality_slider.setValue(75)
+        self.quality_label = QLabel("75%")
         self.quality_slider.valueChanged.connect(
             lambda v: self.quality_label.setText(f"{v}%")
         )
@@ -249,7 +250,7 @@ class ImageCompressor(ToolPlugin):
         settings_layout.addWidget(QLabel("输出目录:"), 2, 0)
         output_layout = QHBoxLayout()
         self.output_path = QLineEdit()
-        self.output_path.setPlaceholderText("默认保存到原图目录")
+        self.output_path.setPlaceholderText("默认保存到原图目录（图片压缩后带 _compressed 后缀）")
         self.output_path.setStyleSheet("""
             QLineEdit {
                 background-color: #0f172a;
@@ -337,6 +338,29 @@ class ImageCompressor(ToolPlugin):
             parent = self.widget if self.widget else None
             QMessageBox.critical(parent, "错误", "请先安装 Pillow: pip install Pillow")
             return
+
+        # 检查是否 PNG 格式（不支持 quality 参数）
+        fmt_text = self.format_combo.currentText()
+        if fmt_text == "PNG":
+            parent = self.widget if self.widget else None
+            QMessageBox.warning(parent, "提示",
+                "PNG 格式不支持质量设置，压缩时将忽略质量滑块的值。\n"
+                "如需调整压缩质量，请选择 JPG 或 WebP 格式。")
+        elif fmt_text == "保持原格式":
+            png_files = []
+            for f in files:
+                try:
+                    with Image.open(f) as img:
+                        if img.format == 'PNG':
+                            png_files.append(os.path.basename(f))
+                except Exception:
+                    pass
+            if png_files:
+                parent = self.widget if self.widget else None
+                QMessageBox.warning(parent, "提示",
+                    f"以下文件为 PNG 格式，不支持质量设置，将忽略质量滑块的值：\n"
+                    f"{', '.join(png_files[:5])}{'...' if len(png_files) > 5 else ''}\n"
+                    "如需调整压缩质量，请选择 JPG 或 WebP 格式。")
 
         self.progress_bar.setVisible(True)
         self.progress_bar.setMaximum(len(files))
