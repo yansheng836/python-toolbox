@@ -30,14 +30,7 @@ except ImportError:
     Theme = None
 
 from common.file_list_panel import FileListPanel
-from common.utils import get_image_size, get_file_size
-
-
-IMAGE_COLUMNS = [
-    ("文件名", lambda f: os.path.basename(f)),
-    ("尺寸", get_image_size),
-    ("大小", get_file_size)
-]
+from common.utils import IMAGE_COLUMNS
 
 
 class CompressionWorker(QThread):

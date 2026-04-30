@@ -35,3 +35,11 @@ def get_file_size(file_path):
             return f"{size / (1024 * 1024):.1f} MB"
     except Exception:
         return "未知"
+
+
+# 图片类插件通用的表格列定义
+IMAGE_COLUMNS = [
+    ("文件名", lambda f: os.path.basename(f)),
+    ("尺寸", get_image_size),
+    ("大小", get_file_size)
+]
