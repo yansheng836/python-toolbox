@@ -114,7 +114,57 @@ class MyTool(ToolPlugin):
 
 ### Threading
 
-Long operations run in `QThread` workers (`CompressionWorker`, `PDFWorker`, `PDFMergeWorker`, `PDFSplitWorker`, `FormatConvertWorker`, `ImageStitchWorker`, `ScalingWorker`) that emit progress signals — never block the main thread.
+Long operations run in `QThread` workers that emit progress signals — never block the main thread.
+
+**Note:** Currently each plugin defines its own Worker class with similar structure. When adding new plugins, consider whether a shared base Worker class can be created in `common/` to reduce duplication.
+
+### Code Reuse Guidelines
+
+**Principle:** If code is used in 2+ plugins, abstract it into a shared component.
+
+#### Shared Components (in `toolbox.py` or `common/`)
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `ToolPlugin` | `toolbox.py` | Base class for all plugins |
+| `Theme` | `toolbox.py` | Dark/light color palettes |
+| `AnimatedButton` | `toolbox.py` | Reusable button with hover effects |
+| `Card` | `toolbox.py` | Card container with title/content layout |
+| `DragDropHandler` | `toolbox.py` | Drag-and-drop utility |
+| `SidebarButton` | `toolbox.py` | Sidebar navigation button |
+| `FileListPanel` | `common/file_list_panel.py` | Reusable file list table with buttons |
+
+**Use these shared components whenever possible instead of reimplementing similar functionality.**
+
+#### Common Patterns to Abstract
+
+When you notice these patterns duplicated across plugins, consider abstracting them:
+
+1. **Worker Classes** — All plugins have `QThread` Workers with similar signals (progress, status, finished). Consider a base `BaseWorker` in `common/` if adding new plugins with similar threading needs.
+
+2. **Image Helper Functions** — Functions like `_get_image_size()`, `_get_file_size()` are duplicated in 4+ plugins. These should be moved to a shared `utils.py` in `common/`.
+
+3. **Button/Progress Bar Styles** — Gradient styles for start/cancel buttons and progress bars are copy-pasted across plugins. Consider defining these in `Theme` or a shared styles module.
+
+4. **`apply_theme()` Method** — Each plugin reimplements theme application for similar widget types. A base implementation in `ToolPlugin` or a shared helper could reduce per-plugin code by 60-80 lines.
+
+5. **Import Fallback Pattern** — All plugins repeat the same `try/except` import block. Consider simplifying or documenting this pattern clearly.
+
+#### When Adding New Plugins
+
+1. **Check `FileListPanel` first** — If the plugin needs a file list with add/remove/clear buttons, use `FileListPanel` from `common/file_list_panel.py` instead of building custom UI.
+2. **Use shared UI components** — Import `AnimatedButton`, `Card` from `toolbox` instead of creating custom buttons/cards.
+3. **Reuse helper functions** — Check if needed utilities already exist in `common/` before writing new ones.
+4. **Follow existing patterns** — If you must write plugin-specific code, follow the patterns established by existing plugins for consistency.
+
+#### Creating New Shared Components
+
+When you identify code that should be shared:
+
+1. Create new shared code in `common/` directory (e.g., `common/utils.py`, `common/base_worker.py`)
+2. Update `ToolPlugin` base class in `toolbox.py` if the shared code is fundamental to all plugins
+3. Update this CLAUDE.md file to document the new shared component in the table above
+4. Refactor existing plugins to use the new shared component (in a separate commit)
 
 ### Theme System
 
