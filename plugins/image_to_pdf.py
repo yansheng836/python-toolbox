@@ -183,6 +183,10 @@ class PDFWorker(QThread):
                             append_images=pil_imgs[1:]
                         )
 
+                # 验证临时PDF不为空
+                if os.path.getsize(temp_pdf) == 0:
+                    raise Exception(f"临时PDF生成失败（0字节）: {temp_pdf}")
+
                 temp_pdfs.append(temp_pdf)
 
                 # 2d. 清理本批 JPEG（PDF 已生成，JPEG 不再需要）
@@ -229,6 +233,9 @@ class PDFWorker(QThread):
             if skipped > 0:
                 msg += f"\n（已跳过 {skipped} 张损坏图片）"
             self.progress.emit(processed_count + 1)  # 合并阶段完成
+            # 验证输出PDF不为空
+            if os.path.getsize(self.output) == 0:
+                raise Exception(f"输出PDF为空（0字节）: {self.output}")
             self.finished.emit(True, msg)
         except Exception as e:
             self.finished.emit(False, f"转换失败: {str(e)}")
