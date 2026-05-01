@@ -79,59 +79,104 @@ class PDFWorker(QThread):
 
     def run(self):
         try:
-            if IMG2PDF_AVAILABLE:
-                if self.compress:
-                    compressed_images = []
-                    for i, img_path in enumerate(self.files):
-                        buf = self.compress_image(img_path, self.quality)
-                        compressed_images.append(buf)
-                        self.progress.emit(i + 1)
+            # 1. 读取图片
+            img_data = []  # 元素: (file_path, PIL.Image)
+            for f in self.files:
+                try:
+                    img = Image.open(f)
+                    img.load()
+                    if img.mode in ('RGBA', 'LA', 'P'):
+                        img = img.convert('RGBA')
+                    else:
+                        img = img.convert('RGB')
+                    img_data.append((f, img))
+                    self.progress.emit(len(img_data))
+                except Exception:
+                    continue
 
-                    with open(self.output, "wb") as f:
-                        f.write(img2pdf.convert(compressed_images))
-                else:
-                    for i, _ in enumerate(self.files):
-                        self.progress.emit(i + 1)
-                    with open(self.output, "wb") as f:
-                        f.write(img2pdf.convert(self.files))
+            if not img_data:
+                self.finished.emit(False, "没有成功读取任何图片，请检查图片文件是否损坏。")
+                return
+
+            skipped = len(self.files) - len(img_data)
+
+            # 2. 根据页面大小选项处理图片（输出 RGB 模式）
+            processed = []
+            if self.page_size == "智能缩放":
+                max_width = max(img.width for _, img in img_data)
+                for _, img in img_data:
+                    if img.width != max_width:
+                        ratio = max_width / img.width
+                        new_height = int(img.height * ratio)
+                        img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+                    if img.mode == 'RGBA':
+                        bg = Image.new('RGB', img.size, (255, 255, 255))
+                        bg.paste(img, mask=img.split()[3])
+                        img = bg
+                    processed.append(img)
+            elif self.page_size == "A4":
+                for _, img in img_data:
+                    img = img.resize((595, 842), Image.Resampling.LANCZOS)
+                    if img.mode == 'RGBA':
+                        bg = Image.new('RGB', img.size, (255, 255, 255))
+                        bg.paste(img, mask=img.split()[3])
+                        img = bg
+                    processed.append(img)
+            elif self.page_size == "A3":
+                for _, img in img_data:
+                    img = img.resize((842, 1191), Image.Resampling.LANCZOS)
+                    if img.mode == 'RGBA':
+                        bg = Image.new('RGB', img.size, (255, 255, 255))
+                        bg.paste(img, mask=img.split()[3])
+                        img = bg
+                    processed.append(img)
+            else:  # 自动适应 / 原图尺寸
+                for _, img in img_data:
+                    if img.mode == 'RGBA':
+                        bg = Image.new('RGB', img.size, (255, 255, 255))
+                        bg.paste(img, mask=img.split()[3])
+                        img = bg
+                    processed.append(img)
+
+            # 3. 转为 JPEG BytesIO（统一格式供后端使用）
+            io_list = []
+            jpeg_quality = self.quality if self.compress else 95
+            for img in processed:
+                buf = io.BytesIO()
+                img.save(buf, format='JPEG', quality=jpeg_quality, optimize=True)
+                buf.seek(0)
+                io_list.append(buf)
+
+            # 4. 使用可用后端生成 PDF
+            if IMG2PDF_AVAILABLE:
+                with open(self.output, "wb") as f:
+                    f.write(img2pdf.convert(io_list))
             elif FITZ_AVAILABLE:
                 doc = fitz.open()
-                for i, img_path in enumerate(self.files):
-                    if self.compress:
-                        buf = self.compress_image(img_path, self.quality)
-                        img = fitz.open("jpg", buf.getvalue())
-                    else:
-                        img = fitz.open(img_path)
-
-                    rect = img[0].rect
-                    pdfbytes = img.convert_to_pdf()
+                for buf in io_list:
+                    fitz_img = fitz.open("jpg", buf.getvalue())
+                    pdfbytes = fitz_img.convert_to_pdf()
                     img_pdf = fitz.open("pdf", pdfbytes)
                     doc.insert_pdf(img_pdf)
-                    self.progress.emit(i + 1)
                 doc.save(self.output)
                 doc.close()
             else:
-                images = []
-                for i, f in enumerate(self.files):
-                    if self.compress:
-                        buf = self.compress_image(f, self.quality)
-                        img = Image.open(buf)
-                    else:
-                        img = Image.open(f)
-                        if img.mode in ('RGBA', 'LA', 'P'):
-                            img = img.convert('RGB')
-                    images.append(img)
-                    self.progress.emit(i + 1)
-
-                if images:
-                    images[0].save(
+                # PIL 后端
+                pil_images = []
+                for buf in io_list:
+                    pil_images.append(Image.open(buf).convert('RGB'))
+                if pil_images:
+                    pil_images[0].save(
                         self.output, "PDF",
                         resolution=100.0,
                         save_all=True,
-                        append_images=images[1:]
+                        append_images=pil_images[1:]
                     )
 
-            self.finished.emit(True, f"PDF已保存至:\n{self.output}")
+            msg = f"PDF已保存至:\n{self.output}"
+            if skipped > 0:
+                msg += f"\n（已跳过 {skipped} 张损坏图片）"
+            self.finished.emit(True, msg)
         except Exception as e:
             self.finished.emit(False, f"转换失败: {str(e)}")
 
@@ -266,7 +311,7 @@ class ImageToPDF(ToolPlugin):
 
         settings_layout.addWidget(QLabel("页面大小:"), 0, 0)
         self.size_combo = QComboBox()
-        self.size_combo.addItems(["自动适应", "A4", "A3", "原图尺寸"])
+        self.size_combo.addItems(["自动适应", "A4", "A3", "原图尺寸", "智能缩放"])
         self.size_combo.setStyleSheet(combo_style)
         settings_layout.addWidget(self.size_combo, 0, 1)
 
