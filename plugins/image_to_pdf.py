@@ -159,19 +159,20 @@ class PDFWorker(QThread):
                 )
                 temp_files.append(temp_pdf)
 
-                if IMG2PDF_AVAILABLE:
-                    with open(temp_pdf, "wb") as f:
-                        img2pdf.convert(batch_jpeg_files, output_file=f)
-                elif FITZ_AVAILABLE:
+                if FITZ_AVAILABLE:
                     doc = fitz.open()
                     for jpg_file in batch_jpeg_files:
                         fitz_img = fitz.open(jpg_file)
                         pdfbytes = fitz_img.convert_to_pdf()
                         img_pdf = fitz.open("pdf", pdfbytes)
                         doc.insert_pdf(img_pdf)
+                        img_pdf.close()
                         fitz_img.close()
                     doc.save(temp_pdf)
                     doc.close()
+                elif IMG2PDF_AVAILABLE:
+                    with open(temp_pdf, "wb") as f:
+                        f.write(img2pdf.convert(batch_jpeg_files))
                 else:
                     pil_imgs = [Image.open(j).convert('RGB') for j in batch_jpeg_files]
                     if pil_imgs:
@@ -211,11 +212,8 @@ class PDFWorker(QThread):
                         src.close()
                     doc.save(self.output)
                     doc.close()
-                elif IMG2PDF_AVAILABLE:
-                    with open(self.output, "wb") as f:
-                        img2pdf.convert(temp_pdfs, output_file=f)
                 else:
-                    self.finished.emit(False, "多批合并需要 PyMuPDF 或 img2pdf，请安装其中之一。")
+                    self.finished.emit(False, "多批合并需要 PyMuPDF，请安装: pip install PyMuPDF")
                     return
 
             # ========= 阶段4：清理所有临时 PDF =========
