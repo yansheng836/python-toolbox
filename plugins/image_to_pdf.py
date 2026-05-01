@@ -253,7 +253,7 @@ class ImageToPDF(ToolPlugin):
     name = "图片转PDF"
     description = "将多张图片合并为一个PDF文件"
     icon = "📄"
-    order = 5
+    order = 20
 
     def update_theme(self, theme):
         """更新主题"""
@@ -343,12 +343,12 @@ class ImageToPDF(ToolPlugin):
         )
         layout.addWidget(self.title_label)
 
-        self.desc_label = QLabel("将多张图片合并为一个PDF文件，支持拖拽排序")
+        self.desc_label = QLabel("将多张图片合并为一个PDF文件，不限图片数量，支持批量排序")
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
         # 图片列表
-        list_card = Card(title="图片列表（列表顺序即PDF页面顺序）")
+        list_card = Card(title="图片列表（列表顺序即PDF顺序）")
         self.file_panel = FileListPanel(
             columns=IMAGE_COLUMNS + [("创建时间", get_create_time)],
             file_filter="图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff)",

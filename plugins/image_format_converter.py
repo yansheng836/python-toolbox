@@ -194,7 +194,7 @@ class FormatConverter(ToolPlugin):
         layout = QVBoxLayout(widget)
         layout.setSpacing(10)
 
-        self.title_label = QLabel("🔄 图片格式批量转换")
+        self.title_label = QLabel("🔄 图片格式转换工具")
         self.title_label.setStyleSheet(
             f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};"
         )

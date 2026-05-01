@@ -131,7 +131,7 @@ class ImageScalerWidget(QWidget):
         layout.setSpacing(10)
 
         # 标题
-        self.title_label = QLabel("📏 图片批量缩放")
+        self.title_label = QLabel("📏 图片缩放工具")
         self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700};")
         layout.addWidget(self.title_label)
 

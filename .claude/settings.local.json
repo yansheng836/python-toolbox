@@ -17,6 +17,7 @@
       "Bash(autoflake --remove-all-unused-imports --in-place toolbox.py plugins/*.py test/*.py menu_system.py settings_page.py)",
       "Bash(pyflakes toolbox.py plugins/*.py test/*.py menu_system.py settings_page.py)",
       "Bash(python:*)",
+      "Bash(python -c:*)",
       "Bash(cd * && python:*)",
       "Bash(gh run:*)",
       "Bash(git add:*)",
