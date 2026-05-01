@@ -6,13 +6,14 @@ import os
 import sys
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
     QComboBox, QSpinBox, QGridLayout, QLineEdit, QMessageBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 try:
     from PIL import Image
+
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
@@ -20,7 +21,8 @@ except ImportError:
 # 导入主程序中的基类和组件
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
+    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, \
+        Theme
 except ImportError:
     ToolPlugin = object
     Card = None
@@ -89,7 +91,17 @@ class ImageStitchWorker(QThread):
                 bg.paste(canvas, mask=canvas.split()[3])
                 canvas = bg
 
-            canvas.save(self.output_path)
+            # 根据输出格式添加压缩参数，避免文件变大
+            save_kwargs = {}
+            if ext in (".jpg", ".jpeg", ".webp"):
+                save_kwargs['quality'] = 85
+                save_kwargs['optimize'] = True
+            elif ext == ".png":
+                save_kwargs['compress_level'] = 6  # 0-9，6 是兼顾压缩率和速度的常用值
+            elif ext == ".tiff":
+                save_kwargs['compression'] = "tiff_deflate"
+
+            canvas.save(self.output_path, **save_kwargs)
             self.finished.emit(True, f"拼接完成，已保存到:\n{self.output_path}")
         except Exception as e:
             self.finished.emit(False, f"拼接失败: {str(e)}")
