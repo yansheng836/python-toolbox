@@ -64,7 +64,21 @@ class FormatConvertWorker(QThread):
                 base = os.path.splitext(os.path.basename(file_path))[0]
                 out_dir = self.output_dir or os.path.dirname(file_path)
                 out_path = os.path.join(out_dir, f"{base}.{ext}")
-                img.save(out_path, pil_fmt)
+                # 为 PNG/BMP/TIFF 添加压缩参数，避免文件变大
+                save_kwargs = {}
+                if pil_fmt == "PNG":
+                    save_kwargs['compress_level'] = 6  # 0-9，6 是兼顾压缩率和速度的常用值
+                    save_kwargs['optimize'] = True
+                elif pil_fmt == "BMP":
+                    # BMP 本身不支持压缩，先转 RGB
+                    if img.mode != "RGB":
+                        img = img.convert("RGB")
+                elif pil_fmt == "TIFF":
+                    # save_kwargs['compression'] = "tiff_lzw"  # LZW 无损压缩
+                    save_kwargs['compression'] = "tiff_deflate"  # Deflate压缩 - 比LZW压缩率更高
+                elif pil_fmt == "GIF":
+                    save_kwargs['optimize'] = True
+                img.save(out_path, pil_fmt, **save_kwargs)
                 processed += 1
                 self.progress.emit(i + 1)
             self.finished.emit(True, f"成功转换 {processed} 张图片！")
