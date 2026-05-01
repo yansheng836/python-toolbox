@@ -37,6 +37,16 @@ def get_file_size(file_path):
         return "未知"
 
 
+def get_create_time(file_path):
+    """获取文件创建时间文本"""
+    try:
+        import time
+        t = os.path.getctime(file_path)
+        return time.strftime("%Y-%m-%d %H:%M", time.localtime(t))
+    except Exception:
+        return "未知"
+
+
 # 图片类插件通用的表格列定义
 IMAGE_COLUMNS = [
     ("文件名", lambda f: os.path.basename(f)),

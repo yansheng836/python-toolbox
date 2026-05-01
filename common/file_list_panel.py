@@ -81,6 +81,12 @@ class FileListPanel(QWidget):
             elif btn_key == "down":
                 self.down_btn = self._create_btn("下移", "down")
                 btn_layout.addWidget(self.down_btn)
+            elif btn_key == "sort_name":
+                self.sort_name_btn = self._create_btn("按名称排序", "sort_name")
+                btn_layout.addWidget(self.sort_name_btn)
+            elif btn_key == "sort_time":
+                self.sort_time_btn = self._create_btn("按创建时间排序", "sort_time")
+                btn_layout.addWidget(self.sort_time_btn)
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
@@ -97,6 +103,10 @@ class FileListPanel(QWidget):
             btn.clicked.connect(self.move_down)
         elif action == "clear":
             btn.clicked.connect(self.clear_files)
+        elif action == "sort_name":
+            btn.clicked.connect(self.sort_by_name)
+        elif action == "sort_time":
+            btn.clicked.connect(self.sort_by_time)
         return btn
 
     def add_files(self):
@@ -176,6 +186,22 @@ class FileListPanel(QWidget):
     def clear_files(self):
         """清空文件列表"""
         self.files = []
+        self.update_list()
+        self.files_changed.emit()
+
+    def sort_by_name(self):
+        """按文件名称排序"""
+        if len(self.files) < 2:
+            return
+        self.files.sort(key=lambda f: os.path.basename(f).lower())
+        self.update_list()
+        self.files_changed.emit()
+
+    def sort_by_time(self):
+        """按文件创建时间排序（从早到晚）"""
+        if len(self.files) < 2:
+            return
+        self.files.sort(key=lambda f: os.path.getctime(f))
         self.update_list()
         self.files_changed.emit()
 

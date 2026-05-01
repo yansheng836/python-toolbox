@@ -4,6 +4,7 @@
 """
 import os
 import sys
+import traceback
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
@@ -31,7 +32,7 @@ except ImportError:
     Theme = None
 
 from common.file_list_panel import FileListPanel
-from common.utils import IMAGE_COLUMNS
+from common.utils import IMAGE_COLUMNS, get_create_time
 
 
 class ImageStitchWorker(QThread):
@@ -50,9 +51,36 @@ class ImageStitchWorker(QThread):
     def run(self):
         try:
             images = []
+            skipped = 0
             for f in self.files:
                 self.status.emit(f"正在读取: {os.path.basename(f)}")
-                images.append(Image.open(f).convert("RGBA"))
+                try:
+                    img = Image.open(f)
+                    img.load()  # 强制加载，提前发现损坏文件
+                    images.append(img.convert("RGBA"))
+                except Exception as e:
+                    skipped += 1
+                    self.status.emit(f"跳过损坏图片: {os.path.basename(f)}")
+                    continue
+
+            if not images:
+                self.finished.emit(False, "没有成功读取任何图片，请检查图片文件是否损坏。")
+                return
+
+            # 检查拼接后尺寸，避免超大图片导致失败
+            if self.direction == "horizontal":
+                total_w = sum(img.width for img in images)
+                total_h = max(img.height for img in images)
+            else:
+                total_w = max(img.width for img in images)
+                total_h = sum(img.height for img in images)
+
+            MAX_DIMENSION = 65535  # 多数格式支持的最大尺寸
+            if total_w > MAX_DIMENSION or total_h > MAX_DIMENSION:
+                self.finished.emit(False,
+                                   f"拼接后尺寸过大（{total_w}x{total_h}），超过 {MAX_DIMENSION} 像素限制。\n"
+                                   f"建议：1) 减少图片数量；2) 先缩小图片尺寸；3) 使用纵向拼接代替横向。")
+                return
 
             self.status.emit("正在拼接...")
             if self.direction == "horizontal":
@@ -98,12 +126,18 @@ class ImageStitchWorker(QThread):
                 save_kwargs['optimize'] = True
             elif ext == ".png":
                 save_kwargs['compress_level'] = 6  # 0-9，6 是兼顾压缩率和速度的常用值
+                save_kwargs['optimize'] = True
             elif ext == ".tiff":
                 save_kwargs['compression'] = "tiff_deflate"
 
             canvas.save(self.output_path, **save_kwargs)
-            self.finished.emit(True, f"拼接完成，已保存到:\n{self.output_path}")
+            msg = f"拼接完成，已保存到:\n{self.output_path}"
+            if skipped > 0:
+                msg += f"\n（已跳过 {skipped} 张损坏图片）"
+            self.finished.emit(True, msg)
         except Exception as e:
+            error_detail = f"{str(e)}\n\n详细错误:\n{traceback.format_exc()}"
+            print(error_detail)  # 输出到控制台方便调试
             self.finished.emit(False, f"拼接失败: {str(e)}")
 
 
@@ -209,16 +243,21 @@ class ImageStitcher(ToolPlugin):
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
-        # 文件列表
-        file_card = Card(title="选择图片（顺序即拼接顺序）")
+        # 文件列表（含创建时间列）
+        file_card = Card(title="选择图片（列表顺序即拼接顺序）")
         self.file_panel = FileListPanel(
-            columns=IMAGE_COLUMNS,
+            columns=IMAGE_COLUMNS + [("创建时间", get_create_time)],
             file_filter="图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff *.tif *.gif)",
             button_class=AnimatedButton,
-            show_buttons=["add", "remove", "clear", "up", "down"]
+            show_buttons=["add", "remove", "clear", "up", "down", "sort_name", "sort_time"]
         )
         file_card.content_layout.addWidget(self.file_panel)
         layout.addWidget(file_card)
+
+        # 调整"创建时间"列宽（默认可能太窄，完整显示 "YYYY-MM-DD HH:MM" 需要约 130px）
+        header = self.file_panel.table.horizontalHeader()
+        create_time_col = len(IMAGE_COLUMNS)  # "创建时间"是第4列，索引为3
+        header.resizeSection(create_time_col, 140)
 
         # 拼接设置
         settings_card = Card(title="拼接设置")
@@ -338,6 +377,11 @@ class ImageStitcher(ToolPlugin):
         files = self.file_panel.get_files()
         if len(files) < 2:
             QMessageBox.warning(None, "警告", "请至少添加 2 张图片！")
+            return
+        MAX_IMAGES = 20
+        if len(files) > MAX_IMAGES:
+            QMessageBox.warning(None, "警告",
+                                f"图片数量过多（当前 {len(files)} 张），请控制在 {MAX_IMAGES} 张以内，避免内存不足或处理失败。")
             return
         if not self.output_path.text():
             QMessageBox.warning(None, "警告", "请选择输出文件路径！")
