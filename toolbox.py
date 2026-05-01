@@ -12,7 +12,8 @@ try:
         APP_WEBSITE_URL, APP_WEBSITE_LINK_TEXT,
         FEATURE_MODULES, UI_CONFIG, THEME_CONFIG, WELCOME_CONFIG,
         TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_20,
-        FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
+        FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800,
+        SPACING_SMALL, SPACING_MEDIUM
     )
 except ImportError:
     __version__ = "1.0.0"
@@ -157,7 +158,7 @@ class Card(QFrame):
         # 卡片内边距：调小至12px，使卡片内容更紧凑（原20px）
         layout.setContentsMargins(12, 12, 12, 12)
         # 卡片内部元素间距：调小至8px（原12px）
-        layout.setSpacing(8)
+        layout.setSpacing(SPACING_SMALL)
 
         if self.title:
             self.title_label = QLabel(self.title)
@@ -682,7 +683,7 @@ class ToolboxWindow(QMainWindow):
 
         sidebar_layout = QVBoxLayout(self.sidebar)
         sidebar_layout.setContentsMargins(16, 16, 16, 16)
-        sidebar_layout.setSpacing(8)
+        sidebar_layout.setSpacing(SPACING_SMALL)
 
         logo_layout = QHBoxLayout()
         logo_icon = QLabel()

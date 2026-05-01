@@ -31,6 +31,10 @@ WELCOME_CONFIG = {
 }
 
 # 全局标题样式配置
+# UI间距配置
+SPACING_SMALL = 8  # 小间距，用于标签和控件之间
+SPACING_MEDIUM = 20  # 中间距，用于设置项之间
+
 # UI配置
 UI_CONFIG = {
     "window_title": f"工具箱 v{APP_VERSION}",

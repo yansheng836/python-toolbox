@@ -24,12 +24,15 @@ try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, \
         Theme
+    from config import SPACING_SMALL, SPACING_MEDIUM
 except ImportError:
     ToolPlugin = object
     Card = None
     AnimatedButton = None
     DragDropHandler = None
     Theme = None
+    SPACING_SMALL = 8
+    SPACING_MEDIUM = 20
 
 from common.file_list_panel import FileListPanel
 from common.utils import IMAGE_COLUMNS, get_create_time
@@ -239,7 +242,7 @@ class ImageStitcher(ToolPlugin):
         )
         layout.addWidget(self.title_label)
 
-        self.desc_label = QLabel("将多张图片横向或纵向合并为一张，支持对齐方式和背景色设置\n（最大支持20张图片，因图片尺寸限制，大尺寸图片数量会更少）")
+        self.desc_label = QLabel("将多张图片横向或纵向合并为一张，支持对齐方式和背景色设置（最大支持20张图片，因图片尺寸限制，大尺寸图片数量会更少）")
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
@@ -262,6 +265,8 @@ class ImageStitcher(ToolPlugin):
         # 拼接设置
         settings_card = Card(title="拼接设置")
         grid = QGridLayout()
+        grid.setHorizontalSpacing(8)  # 两列之间无间距
+        grid.setVerticalSpacing(10)
         settings_card.content_layout.addLayout(grid)
 
         combo_style = """
@@ -274,20 +279,39 @@ class ImageStitcher(ToolPlugin):
             }
         """
 
-        grid.addWidget(QLabel("拼接方向:"), 0, 0)
+        # 第0行：拼接方向占左半边，对齐方式占右半边，两半紧贴无间距
+        # 左半边：拼接方向（标签+下拉框，下拉框拉伸占满左半边）
+        dir_widget = QWidget()
+        dir_layout = QHBoxLayout(dir_widget)
+        dir_layout.setContentsMargins(0, 0, 0, 0)
+        dir_layout.setSpacing(SPACING_SMALL)  # 标签和控件之间8px
+        dir_layout.addWidget(QLabel("拼接方向:"))
         self.dir_combo = QComboBox()
         self.dir_combo.addItems(["横向（左→右）", "纵向（上→下）"])
+        self.dir_combo.setCurrentIndex(1)  # 默认竖向拼接
         self.dir_combo.setStyleSheet(combo_style)
-        grid.addWidget(self.dir_combo, 0, 1)
+        dir_layout.addWidget(self.dir_combo, 1)  # 拉伸占满左半边
+        grid.addWidget(dir_widget, 0, 0)
 
-        grid.addWidget(QLabel("对齐方式:"), 1, 0)
+        # 右半边：对齐方式（标签+下拉框，下拉框拉伸占满右半边）
+        align_widget = QWidget()
+        align_layout = QHBoxLayout(align_widget)
+        align_layout.setContentsMargins(0, 0, 0, 0)
+        align_layout.setSpacing(SPACING_SMALL)  # 标签和控件之间8px
+        align_layout.addWidget(QLabel("对齐方式:"))
         self.align_combo = QComboBox()
         self.align_combo.addItems(["顶部/左侧对齐", "居中对齐", "底部/右侧对齐"])
         self.align_combo.setStyleSheet(combo_style)
-        grid.addWidget(self.align_combo, 1, 1)
+        align_layout.addWidget(self.align_combo, 1)  # 拉伸占满右半边
+        grid.addWidget(align_widget, 0, 1)
 
-        grid.addWidget(QLabel("背景颜色:"), 2, 0)
+        grid.setColumnStretch(0, 1)
+        grid.setColumnStretch(1, 1)
+
+        # 第1行：背景颜色（标签和控件之间无间距）
         bg_row = QHBoxLayout()
+        bg_row.setSpacing(SPACING_SMALL)
+        bg_row.addWidget(QLabel("背景颜色:"))
         self.bg_r = QSpinBox()
         self.bg_r.setRange(0, 255)
         self.bg_r.setValue(255)
@@ -312,10 +336,12 @@ class ImageStitcher(ToolPlugin):
             spin.setStyleSheet(spin_style)
             bg_row.addWidget(spin)
         bg_row.addStretch()
-        grid.addLayout(bg_row, 2, 1)
+        grid.addLayout(bg_row, 1, 0, 1, 2)  # 跨两列
 
-        grid.addWidget(QLabel("输出文件:"), 3, 0)
+        # 第2行：输出文件（标签和控件之间无间距）
         out_row = QHBoxLayout()
+        out_row.setSpacing(SPACING_SMALL)
+        out_row.addWidget(QLabel("输出文件:"))
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("选择保存路径...")
         self.output_path.setStyleSheet("""
@@ -332,7 +358,7 @@ class ImageStitcher(ToolPlugin):
         browse_btn.clicked.connect(self.browse_output)
         out_row.addWidget(self.output_path)
         out_row.addWidget(browse_btn)
-        grid.addLayout(out_row, 3, 1)
+        grid.addLayout(out_row, 2, 0, 1, 2)  # 跨两列
         layout.addWidget(settings_card)
 
         # 操作区
@@ -367,8 +393,8 @@ class ImageStitcher(ToolPlugin):
 
     def browse_output(self):
         path, _ = QFileDialog.getSaveFileName(
-            None, "保存拼接图片", "stitched.png",
-            "PNG (*.png);;JPEG (*.jpg);;WebP (*.webp)"
+            None, "保存拼接图片", "stitched.jpg",
+            "JPEG (*.jpg);;PNG (*.png);;WebP (*.webp)"
         )
         if path:
             self.output_path.setText(path)

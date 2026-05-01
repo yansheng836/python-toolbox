@@ -15,7 +15,7 @@ from PyQt6.QtGui import (
     QColor, QFont, QKeySequence, QAction
 )
 
-from config import FONT_SIZE_16, FONT_SIZE_20
+from config import FONT_SIZE_16, FONT_SIZE_20, SPACING_SMALL, SPACING_MEDIUM
 
 # 平台检测
 IS_WINDOWS = sys.platform == 'win32'
@@ -846,7 +846,7 @@ class MainWindow(QMainWindow):
 
         sidebar_layout = QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(16, 16, 16, 16)
-        sidebar_layout.setSpacing(8)
+        sidebar_layout.setSpacing(SPACING_SMALL)
 
         # Logo
         logo = QLabel("🧰 Toolbox")

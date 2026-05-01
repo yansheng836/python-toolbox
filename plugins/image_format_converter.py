@@ -22,11 +22,14 @@ except ImportError:
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
+    from config import SPACING_SMALL, SPACING_MEDIUM
 except ImportError:
     ToolPlugin = object
     Card = None
     AnimatedButton = None
     Theme = None
+    SPACING_SMALL = 8
+    SPACING_MEDIUM = 20
 
 from common.file_list_panel import FileListPanel
 from common.utils import IMAGE_COLUMNS
@@ -202,7 +205,7 @@ class FormatConverter(ToolPlugin):
         # 转换设置
         settings_card = Card(title="转换设置")
         settings_layout = QGridLayout()
-        settings_layout.setSpacing(8)
+        settings_layout.setSpacing(SPACING_SMALL)
         settings_card.content_layout.addLayout(settings_layout)
 
         settings_layout.addWidget(QLabel("目标格式:"), 0, 0)
