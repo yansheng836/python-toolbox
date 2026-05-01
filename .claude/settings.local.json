@@ -30,7 +30,12 @@
       "Bash(autoflake --remove-all-unused-imports --in-place toolbox.py plugins/*.py test/*.py menu_system.py settings_page.py)",
       "Bash(pyflakes toolbox.py plugins/*.py test/*.py menu_system.py settings_page.py)",
       "Bash(dir favicon.ico logo.png)",
-      "Bash(gh run:*)"
+      "Bash(gh run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\荷塘月色\\\\.claude\\\\statusline-model-stats.ps1\")",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }

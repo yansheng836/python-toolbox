@@ -54,20 +54,42 @@ class CompressionWorker(QThread):
 
                 img = Image.open(file_path)
 
-                # 确定输出格式，统一 JPG/JPEG 命名
-                format_map = {'JPG': 'JPEG', 'PNG': 'PNG', 'WebP': 'WEBP', 'BMP': 'BMP'}
+                # 确定输出格式及扩展名
+                # Pillow 格式映射（JPG/JPEG 底层都是 JPEG）
+                format_map = {'JPG': 'JPEG', 'JPEG': 'JPEG', 'PNG': 'PNG', 'WebP': 'WEBP'}
+                # 原扩展名 → Pillow 格式
+                ext_map = {'.jpg': 'JPEG', '.jpeg': 'JPEG', '.png': 'PNG',
+                            '.webp': 'WEBP', '.bmp': 'BMP'}
+                # 输出扩展名：JPG→jpg，JPEG→jpeg，其余用对应小写
+                out_ext_map = {'JPG': 'jpg', 'JPEG': 'jpeg', 'PNG': 'png',
+                               'WebP': 'webp'}
+
                 if self.format_str == "保持原格式":
-                    fmt = format_map.get(img.format, img.format) if img.format else 'JPEG'
+                    # 保留原扩展名（区分 jpg/jpeg）
+                    orig_ext = os.path.splitext(file_path)[1].lstrip('.')
+                    if orig_ext.lower() in ('jpg', 'jpeg'):
+                        fmt = 'JPEG'
+                        output_ext = orig_ext  # 保留原始大小写风格
+                    elif orig_ext.lower() == 'png':
+                        fmt = 'PNG'
+                        output_ext = orig_ext
+                    elif orig_ext.lower() == 'webp':
+                        fmt = 'WEBP'
+                        output_ext = orig_ext
+                    else:
+                        fmt = img.format if img.format else 'JPEG'
+                        output_ext = fmt.lower()
                 else:
                     fmt = format_map[self.format_str]
+                    output_ext = out_ext_map[self.format_str]
 
                 # 确定输出路径
                 base_name = os.path.splitext(os.path.basename(file_path))[0]
                 if self.output_dir:
-                    output_path = os.path.join(self.output_dir, f"{base_name}_compressed.{fmt.lower()}")
+                    output_path = os.path.join(self.output_dir, f"{base_name}_compressed.{output_ext}")
                 else:
                     dir_name = os.path.dirname(file_path)
-                    output_path = os.path.join(dir_name, f"{base_name}_compressed.{fmt.lower()}")
+                    output_path = os.path.join(dir_name, f"{base_name}_compressed.{output_ext}")
 
                 # 处理图片
                 if fmt == 'JPEG':
@@ -91,6 +113,7 @@ class CompressionWorker(QThread):
                 elif fmt == 'PNG':
                     # quality 1-100 映射到 compress_level 9-0（值越小压缩越弱）
                     save_kwargs['compress_level'] = max(0, min(9, int(10 - self.quality / 10)))
+                    save_kwargs['optimize'] = True
 
                 img.save(output_path, fmt, **save_kwargs)
                 processed += 1
@@ -223,7 +246,7 @@ class ImageCompressor(ToolPlugin):
 
         settings_layout.addWidget(QLabel("输出格式:"), 0, 0)
         self.format_combo = QComboBox()
-        self.format_combo.addItems(["保持原格式", "JPG", "PNG", "WebP"])
+        self.format_combo.addItems(["保持原格式", "JPG", "JPEG", "PNG", "WebP"])
         self.format_combo.setStyleSheet("""
             QComboBox {
                 background-color: #0f172a;
