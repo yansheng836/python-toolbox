@@ -312,6 +312,7 @@ class ImageToPDF(ToolPlugin):
         settings_layout.addWidget(QLabel("页面大小:"), 0, 0)
         self.size_combo = QComboBox()
         self.size_combo.addItems(["自动适应", "A4", "A3", "原图尺寸", "智能缩放"])
+        self.size_combo.setCurrentIndex(4)  # 默认智能缩放
         self.size_combo.setStyleSheet(combo_style)
         settings_layout.addWidget(self.size_combo, 0, 1)
 
