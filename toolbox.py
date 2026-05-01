@@ -133,14 +133,18 @@ class AnimatedButton(QPushButton):
         self.setStyleSheet(self.base_style)
 
     def enterEvent(self, event):
-        self.setStyleSheet(self.base_style.replace(
-            f"background-color: {Theme.DARK['primary']};",
-            f"background-color: {Theme.DARK['primary_hover']};"
-        ))
+        # 渐变样式由 :hover 伪状态处理，不在此处替换颜色
+        if "qlineargradient" not in self.styleSheet():
+            self.setStyleSheet(self.base_style.replace(
+                f"background-color: {Theme.DARK['primary']};",
+                f"background-color: {Theme.DARK['primary_hover']};"
+            ))
         super().enterEvent(event)
 
     def leaveEvent(self, event):
-        self.setStyleSheet(self.base_style)
+        # 渐变样式由 :hover 伪状态处理，不在此处替换颜色
+        if "qlineargradient" not in self.styleSheet():
+            self.setStyleSheet(self.base_style)
         super().leaveEvent(event)
 
 
