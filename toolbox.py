@@ -115,9 +115,9 @@ class AnimatedButton(QPushButton):
                 color: white;
                 border: none;
                 border-radius: 8px;
-                padding: 8px 16px;
+                padding: 6px 12px;
                 font-weight: {FONT_WEIGHT_600};
-                font-size: {FONT_SIZE_16};
+                font-size: {FONT_SIZE_14};
             }}
             QPushButton:hover {{
                 background-color: {theme['primary_hover']};

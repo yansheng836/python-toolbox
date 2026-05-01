@@ -289,7 +289,7 @@ class FileListPanel(QWidget):
             QHeaderView::section {{
                 background-color: {theme['bg_secondary']};
                 color: {theme['text_secondary']};
-                padding: 8px;
+                padding: 4px 8px;
                 border: none;
                 font-weight: bold;
             }}
