@@ -18,16 +18,17 @@
       "Bash(pyflakes toolbox.py plugins/*.py test/*.py menu_system.py settings_page.py)",
       "Bash(python:*)",
       "Bash(python -c:*)",
+      "Bash(python -c :*)",
       "Bash(cd * && python:*)",
       "Bash(gh run:*)",
+      "Bash(git status:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m ':*)",
-      "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(git mv *)",
       "Bash(git log*)",
       "Bash(git tag *)",
-      "Bash(git show *)"
+      "Bash(git show *)",
+      "Bash(git checkout *)"
     ]
   }
 }

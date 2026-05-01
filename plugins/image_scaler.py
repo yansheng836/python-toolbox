@@ -13,8 +13,11 @@ except ImportError:
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
+    from config import SPACING_SMALL, SPACING_MEDIUM
 except ImportError:
     Theme = None
+    SPACING_SMALL = 8
+    SPACING_MEDIUM = 20
     class ToolPlugin:
         name = "Base Tool"
         icon = "🔧"
@@ -61,7 +64,9 @@ class ScalingWorker(QThread):
 
     def run(self):
         try:
-            os.makedirs(self.output_dir, exist_ok=True)
+            # 如果指定了输出目录，则创建
+            if self.output_dir:
+                os.makedirs(self.output_dir, exist_ok=True)
             total = len(self.input_files)
             success_count = 0
 
@@ -89,8 +94,10 @@ class ScalingWorker(QThread):
                         scaled_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
                         input_path = Path(input_file)
+                        # 确定输出目录：如果指定了则用指定的，否则用原图目录
+                        output_dir = self.output_dir if self.output_dir else str(input_path.parent)
                         output_file = os.path.join(
-                            self.output_dir,
+                            output_dir,
                             f"{input_path.stem}_scaled{input_path.suffix}"
                         )
 
@@ -151,10 +158,12 @@ class ImageScalerWidget(QWidget):
         file_card.content_layout.addWidget(self.file_panel)
         layout.addWidget(file_card)
 
-        # 缩放设置区域
+        # 缩放设置区域（参考图片拼接布局方式）
         settings_card = Card(title="缩放设置")
-        settings_layout = QGridLayout()
-        settings_card.content_layout.addLayout(settings_layout)
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(8)   # 两列之间间距，同图片拼接
+        grid.setVerticalSpacing(SPACING_SMALL)
+        settings_card.content_layout.addLayout(grid)
 
         combo_style = """
             QComboBox {
@@ -177,67 +186,103 @@ class ImageScalerWidget(QWidget):
             }
         """
 
-        settings_layout.addWidget(QLabel("缩放方式:"), 0, 0, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        # 第0行：缩放方式占左半边，保持宽高比占右半边，各占一半
+        # 左半边：缩放方式（标签+下拉框，下拉框拉伸占满左半边）
+        scale_widget = QWidget()
+        scale_layout = QHBoxLayout(scale_widget)
+        scale_layout.setContentsMargins(0, 0, 0, 0)
+        scale_layout.setSpacing(SPACING_SMALL)
+        scale_layout.addWidget(QLabel("缩放方式:"))
         self.scale_type_combo = QComboBox()
         self.scale_type_combo.addItems(["百分比缩放", "指定宽度", "指定高度"])
         self.scale_type_combo.setStyleSheet(combo_style)
         self.scale_type_combo.currentTextChanged.connect(self.on_scale_type_changed)
-        settings_layout.addWidget(self.scale_type_combo, 0, 1, 1, 1,
-                                  Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        scale_layout.addWidget(self.scale_type_combo, 1)
+        grid.addWidget(scale_widget, 0, 0)
 
+        # 右半边：保持宽高比
+        self.aspect_widget = QWidget()
+        aspect_layout = QHBoxLayout(self.aspect_widget)
+        aspect_layout.setContentsMargins(0, 0, 0, 0)
+        aspect_layout.setSpacing(SPACING_SMALL)
         self.maintain_aspect = QCheckBox("保持宽高比")
         self.maintain_aspect.setChecked(True)
         self.maintain_aspect.setStyleSheet("color: #f1f5f9;")
         self.maintain_aspect.stateChanged.connect(self.on_scale_type_changed)
-        settings_layout.addWidget(self.maintain_aspect, 1, 0, 1, 2,
-                                  Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        aspect_layout.addWidget(self.maintain_aspect)
+        aspect_layout.addStretch()
+        grid.addWidget(self.aspect_widget, 0, 1)
 
-        settings_layout.addWidget(QLabel("缩放值:"), 2, 0, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        grid.setColumnStretch(0, 1)
+        grid.setColumnStretch(1, 1)
+
+        # 第1行：缩放值（跨两列）
+        self.zoom_row_widget = QWidget()
+        zoom_layout = QHBoxLayout(self.zoom_row_widget)
+        zoom_layout.setContentsMargins(0, 0, 0, 0)
+        zoom_layout.setSpacing(SPACING_SMALL)
+        zoom_layout.addWidget(QLabel("缩放值:"))
         self.scale_value_input = QSpinBox()
         self.scale_value_input.setRange(1, 200)
         self.scale_value_input.setValue(50)
         self.scale_value_input.setSuffix(" %")
         self.scale_value_input.setStyleSheet(spin_style)
-        settings_layout.addWidget(self.scale_value_input, 2, 1, 1, 1,
-                                  Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        zoom_layout.addWidget(self.scale_value_input, 1)
+        grid.addWidget(self.zoom_row_widget, 1, 0, 1, 2)
 
-        # 宽度设置
+        # 第2行：宽度（跨两列）
+        self.width_row_widget = QWidget()
+        width_layout = QHBoxLayout(self.width_row_widget)
+        width_layout.setContentsMargins(0, 0, 0, 0)
+        width_layout.setSpacing(SPACING_SMALL)
         self.width_label = QLabel("宽度:")
-        settings_layout.addWidget(self.width_label, 3, 0, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        width_layout.addWidget(self.width_label)
         self.width_input = QSpinBox()
         self.width_input.setRange(1, 10000)
         self.width_input.setValue(800)
         self.width_input.setSuffix(" px")
         self.width_input.setStyleSheet(spin_style)
-        settings_layout.addWidget(self.width_input, 3, 1, 1, 1,
-                                  Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        width_layout.addWidget(self.width_input, 1)
+        grid.addWidget(self.width_row_widget, 2, 0, 1, 2)
+        self.width_row_widget.setVisible(False)
 
-        # 高度设置
+        # 第3行：高度（跨两列）
+        self.height_row_widget = QWidget()
+        height_layout = QHBoxLayout(self.height_row_widget)
+        height_layout.setContentsMargins(0, 0, 0, 0)
+        height_layout.setSpacing(SPACING_SMALL)
         self.height_label = QLabel("高度:")
-        settings_layout.addWidget(self.height_label, 4, 0, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        height_layout.addWidget(self.height_label)
         self.height_input = QSpinBox()
         self.height_input.setRange(1, 10000)
         self.height_input.setValue(600)
         self.height_input.setSuffix(" px")
         self.height_input.setStyleSheet(spin_style)
-        settings_layout.addWidget(self.height_input, 4, 1, 1, 1,
-                                  Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        height_layout.addWidget(self.height_input, 1)
+        grid.addWidget(self.height_row_widget, 3, 0, 1, 2)
+        self.height_row_widget.setVisible(False)
 
-        settings_layout.addWidget(QLabel("图片质量:"), 5, 0, 1, 1, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        # 第4行：图片质量（跨两列）
+        self.quality_row_widget = QWidget()
+        quality_layout = QHBoxLayout(self.quality_row_widget)
+        quality_layout.setContentsMargins(0, 0, 0, 0)
+        quality_layout.setSpacing(SPACING_SMALL)
+        quality_layout.addWidget(QLabel("图片质量:"))
         self.quality_combo = QComboBox()
         self.quality_combo.addItems(["高质量 (95)", "标准 (85)", "较小文件 (75)", "最小文件 (50)"])
         self.quality_combo.setCurrentIndex(1)
         self.quality_combo.setStyleSheet(combo_style)
-        settings_layout.addWidget(self.quality_combo, 5, 1, 1, 1,
-                                  Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        quality_layout.addWidget(self.quality_combo, 1)
+        grid.addWidget(self.quality_row_widget, 4, 0, 1, 2)
 
-        layout.addWidget(settings_card)
-
-        # 输出设置
-        output_card = Card(title="输出设置")
-        output_layout = QHBoxLayout()
+        # 第5行：输出目录（跨两列）
+        self.output_row_widget = QWidget()
+        output_dir_layout = QHBoxLayout(self.output_row_widget)
+        output_dir_layout.setContentsMargins(0, 0, 0, 0)
+        output_dir_layout.setSpacing(SPACING_SMALL)
+        output_dir_layout.addWidget(QLabel("输出目录:"))
         self.output_path = QLineEdit()
-        self.output_path.setPlaceholderText("选择输出目录...")
+        self.output_path.setPlaceholderText("默认保存到原图目录（图片缩放后带 _scaled 后缀）")
         self.output_path.setStyleSheet("""
             QLineEdit {
                 background-color: #0f172a;
@@ -250,10 +295,11 @@ class ImageScalerWidget(QWidget):
         self.browse_btn = AnimatedButton("浏览")
         self.browse_btn.setMaximumWidth(80)
         self.browse_btn.clicked.connect(self.select_output_dir)
-        output_layout.addWidget(self.output_path)
-        output_layout.addWidget(self.browse_btn)
-        output_card.content_layout.addLayout(output_layout)
-        layout.addWidget(output_card)
+        output_dir_layout.addWidget(self.output_path, 1)
+        output_dir_layout.addWidget(self.browse_btn)
+        grid.addWidget(self.output_row_widget, 5, 0, 1, 2)
+
+        layout.addWidget(settings_card)
 
         # 操作区
         action_card = Card()
@@ -330,19 +376,15 @@ class ImageScalerWidget(QWidget):
         scale_type = self.scale_type_combo.currentText()
 
         if scale_type == "百分比缩放":
-            self.scale_value_input.setVisible(True)
-            self.width_label.setVisible(False)
-            self.width_input.setVisible(False)
-            self.height_label.setVisible(False)
-            self.height_input.setVisible(False)
-            self.maintain_aspect.setVisible(True)
+            self.zoom_row_widget.setVisible(True)
+            self.width_row_widget.setVisible(False)
+            self.height_row_widget.setVisible(False)
+            self.aspect_widget.setVisible(True)
         elif scale_type == "指定宽度":
-            self.scale_value_input.setVisible(False)
-            self.width_label.setVisible(True)
-            self.width_input.setVisible(True)
-            self.height_label.setVisible(True)
-            self.height_input.setVisible(True)
-            self.maintain_aspect.setVisible(True)
+            self.zoom_row_widget.setVisible(False)
+            self.width_row_widget.setVisible(True)
+            self.height_row_widget.setVisible(True)
+            self.aspect_widget.setVisible(True)
             if self.maintain_aspect.isChecked():
                 self.height_input.setEnabled(False)
                 self.height_input.setSuffix(" (自动)")
@@ -350,12 +392,10 @@ class ImageScalerWidget(QWidget):
                 self.height_input.setEnabled(True)
                 self.height_input.setSuffix(" px")
         elif scale_type == "指定高度":
-            self.scale_value_input.setVisible(False)
-            self.width_label.setVisible(True)
-            self.width_input.setVisible(True)
-            self.height_label.setVisible(True)
-            self.height_input.setVisible(True)
-            self.maintain_aspect.setVisible(True)
+            self.zoom_row_widget.setVisible(False)
+            self.width_row_widget.setVisible(True)
+            self.height_row_widget.setVisible(True)
+            self.aspect_widget.setVisible(True)
             if self.maintain_aspect.isChecked():
                 self.width_input.setEnabled(False)
                 self.width_input.setSuffix(" (自动)")
@@ -374,8 +414,8 @@ class ImageScalerWidget(QWidget):
 
     def start_scaling(self):
         files = self.file_panel.get_files()
-        if not files or not self.output_path.text():
-            show_warning(self, "警告", "请先选择图片文件和输出目录")
+        if not files:
+            show_warning(self, "警告", "请先选择图片文件")
             return
 
         scale_type = self.scale_type_combo.currentText()

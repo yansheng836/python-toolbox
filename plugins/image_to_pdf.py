@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
 )
 
 from common.message_utils import show_info, show_error, show_warning
+from common.action_panel import ActionPanel
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 try:
@@ -299,36 +300,8 @@ class ImageToPDF(ToolPlugin):
                         color: {theme['text']};
                     }}
                 """)
-            if hasattr(self, 'convert_btn'):
-                self.convert_btn.setStyleSheet(f"""
-                    QPushButton {{
-                        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                            stop:0 {theme['success']}, stop:1 {theme.get('success_gradient_end', theme['success'])});
-                        color: {theme['text']};
-                        border: none;
-                        border-radius: 8px;
-                        font-size: {FONT_SIZE_16};
-                        font-weight: {FONT_WEIGHT_600};
-                    }}
-                    QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                        stop:0 {theme['success_hover']}, stop:1 {theme.get('success_gradient_end', theme['success'])}); }}
-                    QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
-                """)
-            if hasattr(self, 'progress'):
-                self.progress.setStyleSheet(f"""
-                    QProgressBar {{
-                        background-color: {theme['bg']};
-                        border-radius: 6px;
-                        text-align: center;
-                        color: {theme['text']};
-                    }}
-                    QProgressBar::chunk {{
-                        background-color: {theme['secondary']};
-                        border-radius: 6px;
-                    }}
-                """)
-            if hasattr(self, 'status_label'):
-                self.status_label.setStyleSheet(f"color: {theme['text_secondary']};")
+            if hasattr(self, 'action_panel'):
+                self.action_panel.update_theme(theme)
         except RuntimeError:
             pass  # C++ object already deleted
 
@@ -425,46 +398,17 @@ class ImageToPDF(ToolPlugin):
 
         layout.addWidget(settings_card)
 
-        # 操作按钮
-        self.convert_btn = AnimatedButton("开始转换")
-        self.convert_btn.setMinimumHeight(40)
-        self.convert_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #10b981, stop:1 #059669);
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-size: {FONT_SIZE_16};
-                font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #34d399, stop:1 #10b981); }}
-            QPushButton:disabled {{ background: #334155; color: #64748b; }}
-        """)
-        self.convert_btn.clicked.connect(self.start_conversion)
-        layout.addWidget(self.convert_btn)
-
-        self.progress = QProgressBar()
-        self.progress.setStyleSheet("""
-            QProgressBar {
-                background-color: #0f172a;
-                border-radius: 6px;
-                text-align: center;
-                color: white;
-            }
-            QProgressBar::chunk {
-                background-color: #8b5cf6;
-                border-radius: 6px;
-            }
-        """)
-        self.progress.setVisible(False)
-        layout.addWidget(self.progress)
-
-        self.status_label = QLabel("")
-        self.status_label.setStyleSheet("color: #94a3b8;")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.status_label)
+        # 操作面板（按钮 + 进度条 + 状态标签）
+        self.action_panel = ActionPanel(
+            button_text="开始转换",
+            use_gradient=True,
+            gradient_colors=("#10b981", "#059669"),
+            gradient_hover_colors=("#34d399", "#10b981"),
+            progress_chunk_color='#8b5cf6',
+            status_text=""
+        )
+        self.action_panel.clicked.connect(self.start_conversion)
+        layout.addWidget(self.action_panel)
 
         layout.addStretch()
 
@@ -504,11 +448,7 @@ class ImageToPDF(ToolPlugin):
             )
             return
 
-        self.convert_btn.setEnabled(False)
-        self.progress.setVisible(True)
-        self.progress.setMaximum(len(files) + 1)  # +1 给合并阶段留一个刻度
-        self.progress.setValue(0)
-        self.status_label.setText("")
+        self.action_panel.start_task(len(files) + 1, status="")
 
         self.worker = PDFWorker(
             files,
@@ -517,15 +457,13 @@ class ImageToPDF(ToolPlugin):
             self.compress_check.isChecked(),
             self.quality_slider.value()
         )
-        self.worker.progress.connect(self.progress.setValue)
-        self.worker.status.connect(self.status_label.setText)
+        self.worker.progress.connect(self.action_panel.update_progress)
+        self.worker.status.connect(self.action_panel.update_status)
         self.worker.finished.connect(self.conversion_finished)
         self.worker.start()
 
     def conversion_finished(self, success, message):
-        self.convert_btn.setEnabled(True)
-        self.progress.setVisible(False)
-        self.status_label.setText(message)
+        self.action_panel.finish_task(message)
         parent = self.widget if self.widget else None
         if success:
             show_info(parent, "完成", message)

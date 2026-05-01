@@ -765,8 +765,6 @@ class ToolboxWindow(QMainWindow):
             QMainWindow { background-color: #0f172a; }
             QScrollArea { border: none; background-color: transparent; }
             QLabel { color: #f1f5f9; }
-            QMessageBox { background-color: #1e293b; }
-            QMessageBox QLabel { color: #f1f5f9; }
             QDialog { background-color: #0f172a; }
         """)
 
@@ -959,25 +957,6 @@ class ToolboxWindow(QMainWindow):
             }}
             QPushButton:hover {{ background-color: {theme['primary_hover']}; }}
             QPushButton:disabled {{ background-color: {theme['surface']}; color: {theme['text_secondary']}; }}
-            QMessageBox {{
-                background-color: {theme['bg_secondary']};
-                color: {theme['text']};
-            }}
-            QMessageBox QLabel {{
-                color: {theme['text']};
-            }}
-            QMessageBox QPushButton {{
-                background-color: {theme['primary']};
-                color: {theme['text']};
-                border: none;
-                border-radius: 6px;
-                padding: 6px 20px;
-                font-size: {FONT_SIZE_16};
-                font-weight: {FONT_WEIGHT_600};
-            }}
-            QMessageBox QPushButton:hover {{
-                background-color: {theme['primary_hover']};
-            }}
         """)
 
         self.sidebar.setStyleSheet(f"""
