@@ -408,7 +408,7 @@ class PDFMerger(ToolPlugin):
     """PDF合并插件"""
     icon = "📑"
     name = "PDF合并"
-    order = 10
+    order = 100
 
     def update_theme(self, theme):
         """更新主题"""

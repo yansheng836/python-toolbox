@@ -121,7 +121,7 @@ class FormatConverter(ToolPlugin):
     name = "图片格式转换"
     description = "批量转换图片格式，支持 JPEG/PNG/WebP/BMP/TIFF/GIF"
     icon = "🔄"
-    order = 2
+    order = 10
 
     FORMATS = ["JPEG", "PNG", "WebP", "BMP", "TIFF", "GIF"]
 

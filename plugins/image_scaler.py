@@ -525,7 +525,7 @@ class ImageScalerWidget(QWidget):
 class ImageScaler(ToolPlugin):
     icon = "📏"
     name = "图片缩放"
-    order = 4
+    order = 25
 
     def update_theme(self, theme):
         if hasattr(self, 'widget') and hasattr(self.widget, 'apply_theme'):
