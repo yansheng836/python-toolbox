@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Development Standards
+
+### File Encoding and Line Endings
+
+- **File Encoding**: All Python files (new or modified) MUST use UTF-8 encoding
+- **Line Endings**: All Python files (new or modified) MUST use LF (`\n`) line endings, not CRLF (`\r\n`)
+- Configure your editor to use UTF-8 and LF for this project
+
 ## Project Structure
 
 ```
