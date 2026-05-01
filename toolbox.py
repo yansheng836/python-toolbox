@@ -968,7 +968,7 @@ class ToolboxWindow(QMainWindow):
             }}
             QMessageBox QPushButton {{
                 background-color: {theme['primary']};
-                color: white;
+                color: {theme['text']};
                 border: none;
                 border-radius: 6px;
                 padding: 6px 20px;
