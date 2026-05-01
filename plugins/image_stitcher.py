@@ -239,7 +239,7 @@ class ImageStitcher(ToolPlugin):
         )
         layout.addWidget(self.title_label)
 
-        self.desc_label = QLabel("将多张图片横向或纵向合并为一张，支持对齐方式和背景色设置")
+        self.desc_label = QLabel("将多张图片横向或纵向合并为一张，支持对齐方式和背景色设置\n（最大支持20张图片，因图片尺寸限制，大尺寸图片数量会更少）")
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
