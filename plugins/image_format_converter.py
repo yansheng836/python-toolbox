@@ -64,22 +64,27 @@ class FormatConvertWorker(QThread):
             for i, file_path in enumerate(self.files):
                 self.status.emit(f"正在转换: {os.path.basename(file_path)}")
                 img = Image.open(file_path)
+                img.load()  # 强制加载，提前发现损坏文件
                 img = self._prepare_image(img, pil_fmt)
                 base = os.path.splitext(os.path.basename(file_path))[0]
                 out_dir = self.output_dir or os.path.dirname(file_path)
                 out_path = os.path.join(out_dir, f"{base}.{ext}")
-                # 为 PNG/BMP/TIFF 添加压缩参数，避免文件变大
+                # 为各格式添加压缩参数，避免文件变大
                 save_kwargs = {}
-                if pil_fmt == "PNG":
-                    save_kwargs['compress_level'] = 6  # 0-9，6 是兼顾压缩率和速度的常用值
+                if pil_fmt == "JPEG":
+                    save_kwargs['quality'] = 85
+                    save_kwargs['optimize'] = True
+                    # 去除 ICC 配置，避免某些图片报 "broken data stream" 错误
+                    if 'icc_profile' in img.info:
+                        del img.info['icc_profile']
+                elif pil_fmt == "PNG":
+                    save_kwargs['compress_level'] = 6
                     save_kwargs['optimize'] = True
                 elif pil_fmt == "BMP":
-                    # BMP 本身不支持压缩，先转 RGB
                     if img.mode != "RGB":
                         img = img.convert("RGB")
                 elif pil_fmt == "TIFF":
-                    # save_kwargs['compression'] = "tiff_lzw"  # LZW 无损压缩
-                    save_kwargs['compression'] = "tiff_deflate"  # Deflate压缩 - 比LZW压缩率更高
+                    save_kwargs['compression'] = "tiff_deflate"
                 elif pil_fmt == "GIF":
                     save_kwargs['optimize'] = True
                 img.save(out_path, pil_fmt, **save_kwargs)
@@ -92,16 +97,23 @@ class FormatConvertWorker(QThread):
     def _prepare_image(self, img, pil_fmt):
         """处理模式兼容性，JPEG/BMP 不支持透明通道"""
         if pil_fmt in ("JPEG", "BMP"):
+            # P 模式先转 RGBA 以保留可能的透明信息，再统一去透明
             if img.mode == "P":
                 img = img.convert("RGBA")
             if img.mode in ("RGBA", "LA"):
                 bg = Image.new("RGB", img.size, (255, 255, 255))
                 bg.paste(img, mask=img.split()[-1])
-                return bg
-            return img.convert("RGB") if img.mode != "RGB" else img
+                img = bg
+            elif img.mode != "RGB":
+                img = img.convert("RGB")
+            return img
         if pil_fmt == "GIF":
-            return img.convert("P") if img.mode not in ("P", "L", "RGB") else img
-        return img  # PNG/WebP/TIFF 支持透明，直接保留
+            # GIF 仅支持 P/L/RGB 模式
+            if img.mode not in ("P", "L", "RGB"):
+                img = img.convert("P")
+            return img
+        # PNG/WebP/TIFF 支持透明，直接保留
+        return img
 
 
 class FormatConverter(ToolPlugin):
