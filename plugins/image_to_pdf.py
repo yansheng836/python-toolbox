@@ -50,6 +50,7 @@ from common.utils import IMAGE_COLUMNS, get_create_time
 class PDFWorker(QThread):
     """PDF转换工作线程"""
     progress = pyqtSignal(int)
+    status = pyqtSignal(str)
     finished = pyqtSignal(bool, str)
 
     def __init__(self, files, output, page_size, compress=True, quality=85):
@@ -60,114 +61,186 @@ class PDFWorker(QThread):
         self.compress = compress
         self.quality = quality
 
+    BATCH_SIZE = 50  # 每批处理图片数，控制内存占用
+
     def run(self):
+        temp_files = []  # 所有临时文件，用于异常时清理
         try:
-            # 1. 读取图片
-            img_data = []  # 元素: (file_path, PIL.Image)
-            for f in self.files:
-                try:
-                    img = Image.open(f)
-                    img.load()
-                    if img.mode in ('RGBA', 'LA', 'P'):
-                        img = img.convert('RGBA')
-                    else:
-                        img = img.convert('RGB')
-                    img_data.append((f, img))
-                    self.progress.emit(len(img_data))
-                except Exception:
+            total = len(self.files)
+            skipped = 0
+
+            # ========= 阶段1：智能缩放需要先扫描最大宽度 =========
+            max_width = None
+            if self.page_size == "智能缩放":
+                self.status.emit("正在扫描图片尺寸...")
+                for f in self.files:
+                    try:
+                        img = Image.open(f)
+                        if max_width is None or img.width > max_width:
+                            max_width = img.width
+                    except Exception:
+                        skipped += 1
+                if max_width is None:
+                    self.finished.emit(False, "没有成功读取任何图片，请检查图片文件是否损坏。")
+                    return
+
+            # ========= 阶段2：分批处理图片 =========
+            temp_pdfs = []
+            processed_count = 0
+            self.status.emit("正在处理图片...")
+
+            for batch_start in range(0, total, self.BATCH_SIZE):
+                batch_files = self.files[batch_start:min(batch_start + self.BATCH_SIZE, total)]
+                self.status.emit(f"正在处理第 {batch_start // self.BATCH_SIZE + 1} 批图片...")
+
+                # 2a. 读取并处理本批图片
+                batch_imgs = []
+                for f in batch_files:
+                    try:
+                        img = Image.open(f)
+                        img.load()
+                        if img.mode in ('RGBA', 'LA', 'P'):
+                            img = img.convert('RGBA')
+                        else:
+                            img = img.convert('RGB')
+                        batch_imgs.append(img)
+                        processed_count += 1
+                        self.progress.emit(processed_count)
+                    except Exception:
+                        skipped += 1
+                        processed_count += 1
+                        self.progress.emit(processed_count)
+                        continue
+
+                if not batch_imgs:
                     continue
 
-            if not img_data:
-                self.finished.emit(False, "没有成功读取任何图片，请检查图片文件是否损坏。")
+                # 2b. 页面大小处理 + 转 RGB JPEG
+                jpeg_quality = self.quality if self.compress else 95
+                batch_jpeg_files = []
+
+                for img in batch_imgs:
+                    # 页面大小
+                    if self.page_size == "智能缩放" and img.width != max_width:
+                        ratio = max_width / img.width
+                        img = img.resize((max_width, int(img.height * ratio)), Image.Resampling.LANCZOS)
+                    elif self.page_size == "A4":
+                        img = img.resize((595, 842), Image.Resampling.LANCZOS)
+                    elif self.page_size == "A3":
+                        img = img.resize((842, 1191), Image.Resampling.LANCZOS)
+
+                    # 确保 RGB 模式
+                    if img.mode == 'RGBA':
+                        bg = Image.new('RGB', img.size, (255, 255, 255))
+                        bg.paste(img, mask=img.split()[3])
+                        img = bg
+                    elif img.mode != 'RGB':
+                        img = img.convert('RGB')
+
+                    # 去除 ICC 配置，避免 "broken data stream" 错误
+                    if 'icc_profile' in img.info:
+                        del img.info['icc_profile']
+
+                    # 保存为临时 JPEG
+                    tmp_jpg = os.path.join(
+                        os.path.dirname(self.output) or '.',
+                        f".temp_{id(img)}.jpg"
+                    )
+                    img.save(tmp_jpg, format='JPEG', quality=jpeg_quality, optimize=True)
+                    batch_jpeg_files.append(tmp_jpg)
+                    temp_files.append(tmp_jpg)  # 注册临时文件
+
+                batch_imgs.clear()
+
+                # 2c. 本批生成临时 PDF
+                temp_pdf = os.path.join(
+                    os.path.dirname(self.output) or '.',
+                    f".temp_{batch_start}.pdf"
+                )
+                temp_files.append(temp_pdf)
+
+                if IMG2PDF_AVAILABLE:
+                    with open(temp_pdf, "wb") as f:
+                        img2pdf.convert(batch_jpeg_files, output_file=f)
+                elif FITZ_AVAILABLE:
+                    doc = fitz.open()
+                    for jpg_file in batch_jpeg_files:
+                        fitz_img = fitz.open(jpg_file)
+                        pdfbytes = fitz_img.convert_to_pdf()
+                        img_pdf = fitz.open("pdf", pdfbytes)
+                        doc.insert_pdf(img_pdf)
+                        fitz_img.close()
+                    doc.save(temp_pdf)
+                    doc.close()
+                else:
+                    pil_imgs = [Image.open(j).convert('RGB') for j in batch_jpeg_files]
+                    if pil_imgs:
+                        pil_imgs[0].save(
+                            temp_pdf, "PDF",
+                            resolution=100.0,
+                            save_all=True,
+                            append_images=pil_imgs[1:]
+                        )
+
+                temp_pdfs.append(temp_pdf)
+
+                # 2d. 清理本批 JPEG（PDF 已生成，JPEG 不再需要）
+                for jpg_file in batch_jpeg_files:
+                    try:
+                        os.remove(jpg_file)
+                        temp_files.remove(jpg_file)
+                    except OSError:
+                        pass
+
+            if not temp_pdfs:
+                self.finished.emit(False, "没有成功处理任何图片，请检查图片文件是否损坏。")
                 return
 
-            skipped = len(self.files) - len(img_data)
-
-            # 2. 根据页面大小选项处理图片（输出 RGB 模式）
-            processed = []
-            if self.page_size == "智能缩放":
-                max_width = max(img.width for _, img in img_data)
-                for _, img in img_data:
-                    if img.width != max_width:
-                        ratio = max_width / img.width
-                        new_height = int(img.height * ratio)
-                        img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
-                    if img.mode == 'RGBA':
-                        bg = Image.new('RGB', img.size, (255, 255, 255))
-                        bg.paste(img, mask=img.split()[3])
-                        img = bg
-                    processed.append(img)
-            elif self.page_size == "A4":
-                for _, img in img_data:
-                    img = img.resize((595, 842), Image.Resampling.LANCZOS)
-                    if img.mode == 'RGBA':
-                        bg = Image.new('RGB', img.size, (255, 255, 255))
-                        bg.paste(img, mask=img.split()[3])
-                        img = bg
-                    processed.append(img)
-            elif self.page_size == "A3":
-                for _, img in img_data:
-                    img = img.resize((842, 1191), Image.Resampling.LANCZOS)
-                    if img.mode == 'RGBA':
-                        bg = Image.new('RGB', img.size, (255, 255, 255))
-                        bg.paste(img, mask=img.split()[3])
-                        img = bg
-                    processed.append(img)
-            else:  # 自动适应 / 原图尺寸
-                for _, img in img_data:
-                    if img.mode == 'RGBA':
-                        bg = Image.new('RGB', img.size, (255, 255, 255))
-                        bg.paste(img, mask=img.split()[3])
-                        img = bg
-                    processed.append(img)
-
-            # 3. 转为 JPEG BytesIO（统一格式供后端使用）
-            io_list = []
-            jpeg_quality = self.quality if self.compress else 95
-            for img in processed:
-                # 确保 RGB 模式
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
-                # 去除 ICC 配置，避免 "broken data stream" 错误
-                if 'icc_profile' in img.info:
-                    del img.info['icc_profile']
-                buf = io.BytesIO()
-                img.save(buf, format='JPEG', quality=jpeg_quality, optimize=True)
-                buf.seek(0)
-                io_list.append(buf)
-
-            # 4. 使用可用后端生成 PDF
-            if IMG2PDF_AVAILABLE:
-                with open(self.output, "wb") as f:
-                    f.write(img2pdf.convert(io_list))
-            elif FITZ_AVAILABLE:
-                doc = fitz.open()
-                for buf in io_list:
-                    fitz_img = fitz.open("jpg", buf.getvalue())
-                    pdfbytes = fitz_img.convert_to_pdf()
-                    img_pdf = fitz.open("pdf", pdfbytes)
-                    doc.insert_pdf(img_pdf)
-                doc.save(self.output)
-                doc.close()
+            # ========= 阶段3：合并所有临时 PDF =========
+            self.status.emit("正在合并PDF...")
+            if len(temp_pdfs) == 1:
+                import shutil
+                shutil.move(temp_pdfs[0], self.output)
+                temp_files.remove(temp_pdfs[0])
             else:
-                # PIL 后端
-                pil_images = []
-                for buf in io_list:
-                    pil_images.append(Image.open(buf).convert('RGB'))
-                if pil_images:
-                    pil_images[0].save(
-                        self.output, "PDF",
-                        resolution=100.0,
-                        save_all=True,
-                        append_images=pil_images[1:]
-                    )
+                if FITZ_AVAILABLE:
+                    doc = fitz.open()
+                    for tpdf in temp_pdfs:
+                        src = fitz.open(tpdf)
+                        doc.insert_pdf(src)
+                        src.close()
+                    doc.save(self.output)
+                    doc.close()
+                elif IMG2PDF_AVAILABLE:
+                    with open(self.output, "wb") as f:
+                        img2pdf.convert(temp_pdfs, output_file=f)
+                else:
+                    self.finished.emit(False, "多批合并需要 PyMuPDF 或 img2pdf，请安装其中之一。")
+                    return
+
+            # ========= 阶段4：清理所有临时 PDF =========
+            self.status.emit("正在清理临时文件...")
+            for tpdf in temp_pdfs:
+                try:
+                    os.remove(tpdf)
+                    temp_files.remove(tpdf)
+                except OSError:
+                    pass
 
             msg = f"PDF已保存至:\n{self.output}"
             if skipped > 0:
                 msg += f"\n（已跳过 {skipped} 张损坏图片）"
+            self.progress.emit(processed_count + 1)  # 合并阶段完成
             self.finished.emit(True, msg)
         except Exception as e:
             self.finished.emit(False, f"转换失败: {str(e)}")
+        finally:
+            # 异常或正常结束时，清理所有未删除的临时文件
+            for tf in list(temp_files):
+                try:
+                    os.remove(tf)
+                except OSError:
+                    pass
 
 
 class ImageToPDF(ToolPlugin):
@@ -249,6 +322,8 @@ class ImageToPDF(ToolPlugin):
                         border-radius: 6px;
                     }}
                 """)
+            if hasattr(self, 'status_label'):
+                self.status_label.setStyleSheet(f"color: {theme['text_secondary']};")
         except RuntimeError:
             pass  # C++ object already deleted
 
@@ -381,6 +456,11 @@ class ImageToPDF(ToolPlugin):
         self.progress.setVisible(False)
         layout.addWidget(self.progress)
 
+        self.status_label = QLabel("")
+        self.status_label.setStyleSheet("color: #94a3b8;")
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.status_label)
+
         layout.addStretch()
 
         # 应用初始主题
@@ -421,8 +501,9 @@ class ImageToPDF(ToolPlugin):
 
         self.convert_btn.setEnabled(False)
         self.progress.setVisible(True)
-        self.progress.setMaximum(len(files))
+        self.progress.setMaximum(len(files) + 1)  # +1 给合并阶段留一个刻度
         self.progress.setValue(0)
+        self.status_label.setText("")
 
         self.worker = PDFWorker(
             files,
@@ -432,12 +513,14 @@ class ImageToPDF(ToolPlugin):
             self.quality_slider.value()
         )
         self.worker.progress.connect(self.progress.setValue)
+        self.worker.status.connect(self.status_label.setText)
         self.worker.finished.connect(self.conversion_finished)
         self.worker.start()
 
     def conversion_finished(self, success, message):
         self.convert_btn.setEnabled(True)
         self.progress.setVisible(False)
+        self.status_label.setText(message)
         parent = self.widget if self.widget else None
         if success:
             show_info(parent, "完成", message)
