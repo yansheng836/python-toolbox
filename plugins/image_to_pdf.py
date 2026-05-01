@@ -42,7 +42,7 @@ except ImportError:
     Theme = None
 
 from common.file_list_panel import FileListPanel
-from common.utils import IMAGE_COLUMNS
+from common.utils import IMAGE_COLUMNS, get_create_time
 
 
 class PDFWorker(QThread):
@@ -234,15 +234,20 @@ class ImageToPDF(ToolPlugin):
         layout.addWidget(self.desc_label)
 
         # 图片列表
-        list_card = Card(title="图片列表")
+        list_card = Card(title="图片列表（列表顺序即PDF页面顺序）")
         self.file_panel = FileListPanel(
-            columns=IMAGE_COLUMNS,
+            columns=IMAGE_COLUMNS + [("创建时间", get_create_time)],
             file_filter="图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff)",
             button_class=AnimatedButton,
-            show_buttons=["add", "remove", "clear", "up", "down"]
+            show_buttons=["add", "remove", "clear", "up", "down", "sort_name", "sort_time"]
         )
         list_card.content_layout.addWidget(self.file_panel)
         layout.addWidget(list_card)
+
+        # 调整"创建时间"列宽（完整显示 "YYYY-MM-DD HH:MM" 需要约 140px）
+        header = self.file_panel.table.horizontalHeader()
+        create_time_col = len(IMAGE_COLUMNS)  # "创建时间"列索引
+        header.resizeSection(create_time_col, 140)
 
         # 设置
         settings_card = Card(title="PDF设置")
