@@ -10,9 +10,11 @@ from collections import defaultdict
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
-    QProgressBar, QMessageBox, QComboBox, QTreeWidget, QTreeWidgetItem,
+    QProgressBar, QComboBox, QTreeWidget, QTreeWidgetItem,
     QLineEdit
 )
+
+from common.message_utils import show_info, show_error, show_warning, show_question
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont
 
@@ -455,7 +457,7 @@ class FileDeduplicatorWidget(QWidget):
     def start_scan(self):
         """开始扫描"""
         if not self.selected_folder or not os.path.exists(self.selected_folder):
-            QMessageBox.warning(self, "警告", "请先选择有效的文件夹！")
+            show_warning(self, "警告", "请先选择有效的文件夹！")
             return
 
         self.scan_btn.setEnabled(False)
@@ -559,10 +561,10 @@ class FileDeduplicatorWidget(QWidget):
         if success:
             self.status_label.setText(message)
             if not self.duplicates:
-                QMessageBox.information(self, "完成", "未找到重复文件")
+                show_info(self, "完成", "未找到重复文件")
         else:
             self.status_label.setText("扫描失败")
-            QMessageBox.critical(self, "错误", message)
+            show_error(self, "错误", message)
 
     def show_error(self, error_msg):
         """显示错误"""
@@ -571,7 +573,7 @@ class FileDeduplicatorWidget(QWidget):
     def delete_duplicates(self):
         """删除重复文件"""
         if not self.duplicates:
-            QMessageBox.warning(self, "警告", "没有可删除的重复文件！")
+            show_warning(self, "警告", "没有可删除的重复文件！")
             return
 
         # 根据规则收集待删除文件
@@ -592,7 +594,7 @@ class FileDeduplicatorWidget(QWidget):
             files_to_delete.extend(sorted_files[1:])
 
         if not files_to_delete:
-            QMessageBox.information(self, "提示", "没有需要删除的文件")
+            show_info(self, "提示", "没有需要删除的文件")
             return
 
         # 确认删除对话框
@@ -605,15 +607,9 @@ class FileDeduplicatorWidget(QWidget):
             confirm_msg += f"... 还有 {len(files_to_delete)-10} 个文件未显示\n"
         confirm_msg += "\n此操作不可恢复，请确认！"
 
-        reply = QMessageBox.question(
-            self,
-            "确认删除",
-            confirm_msg,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
-        )
+        reply = show_question(self, "确认删除", confirm_msg)
 
-        if reply == QMessageBox.StandardButton.Yes:
+        if reply:
             # 执行删除
             deleted = 0
             failed = 0
@@ -632,7 +628,7 @@ class FileDeduplicatorWidget(QWidget):
                 result_msg += "\n\n失败文件:\n" + "\n".join(failed_files[:5])
                 if len(failed_files) > 5:
                     result_msg += f"\n... 还有 {len(failed_files)-5} 个失败文件"
-            QMessageBox.information(self, "删除结果", result_msg)
+            show_info(self, "删除结果", result_msg)
             # 重新扫描刷新结果
             self.start_scan()
 

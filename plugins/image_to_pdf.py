@@ -9,8 +9,10 @@ import io
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QProgressBar,
     QComboBox, QSlider, QLineEdit,
-    QGridLayout, QCheckBox, QFileDialog, QMessageBox
+    QGridLayout, QCheckBox, QFileDialog
 )
+
+from common.message_utils import show_info, show_error, show_warning
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 try:
@@ -413,18 +415,18 @@ class ImageToPDF(ToolPlugin):
         files = self.file_panel.get_files()
         if not files:
             parent = self.widget if self.widget else None
-            QMessageBox.warning(parent, "警告", "请先添加图片！")
+            show_warning(parent, "警告", "请先添加图片！")
             return
 
         output = self.output_path.text()
         if not output:
             parent = self.widget if self.widget else None
-            QMessageBox.warning(parent, "警告", "请选择输出路径！")
+            show_warning(parent, "警告", "请选择输出路径！")
             return
 
         if not (IMG2PDF_AVAILABLE or FITZ_AVAILABLE or PIL_AVAILABLE):
             parent = self.widget if self.widget else None
-            QMessageBox.critical(
+            show_error(
                 parent, "错误",
                 "请先安装依赖: pip install img2pdf 或 pip install PyMuPDF 或 pip install Pillow"
             )
@@ -451,6 +453,6 @@ class ImageToPDF(ToolPlugin):
         self.progress.setVisible(False)
         parent = self.widget if self.widget else None
         if success:
-            QMessageBox.information(parent, "完成", message)
+            show_info(parent, "完成", message)
         else:
-            QMessageBox.critical(parent, "错误", message)
+            show_error(parent, "错误", message)

@@ -8,8 +8,10 @@ import traceback
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
-    QComboBox, QSpinBox, QGridLayout, QLineEdit, QMessageBox
+    QComboBox, QSpinBox, QGridLayout, QLineEdit
 )
+
+from common.message_utils import show_info, show_error, show_warning
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 try:
@@ -436,15 +438,15 @@ class ImageStitcher(ToolPlugin):
     def start_stitch(self):
         files = self.file_panel.get_files()
         if len(files) < 2:
-            QMessageBox.warning(None, "警告", "请至少添加 2 张图片！")
+            show_warning(None, "警告", "请至少添加 2 张图片！")
             return
         MAX_IMAGES = 20
         if len(files) > MAX_IMAGES:
-            QMessageBox.warning(None, "警告",
-                                f"图片数量过多（当前 {len(files)} 张），请控制在 {MAX_IMAGES} 张以内，避免内存不足或处理失败。")
+            show_warning(None, "警告",
+                          f"图片数量过多（当前 {len(files)} 张），请控制在 {MAX_IMAGES} 张以内，避免内存不足或处理失败。")
             return
         if not self.output_path.text():
-            QMessageBox.warning(None, "警告", "请选择输出文件路径！")
+            show_warning(None, "警告", "请选择输出文件路径！")
             return
 
         direction = "horizontal" if self.dir_combo.currentIndex() == 0 else "vertical"
@@ -464,6 +466,6 @@ class ImageStitcher(ToolPlugin):
         self.start_btn.setEnabled(True)
         self.status_label.setText("")
         if success:
-            QMessageBox.information(None, "完成", message)
+            show_info(None, "完成", message)
         else:
-            QMessageBox.critical(None, "错误", message)
+            show_error(None, "错误", message)

@@ -55,9 +55,11 @@ except ImportError:
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
-    QProgressBar, QMessageBox, QComboBox, QSpinBox, QLineEdit,
+    QProgressBar, QComboBox, QSpinBox, QLineEdit,
     QRadioButton, QButtonGroup, QFormLayout
 )
+
+from common.message_utils import show_info, show_error, show_warning
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 
@@ -583,19 +585,19 @@ class PDFSplitterWidget(QWidget):
     def start_split(self):
         """开始拆分"""
         if not self.input_file:
-            QMessageBox.warning(self, "警告", "请先选择PDF文件！")
+            show_warning(self, "警告", "请先选择PDF文件！")
             return
 
         if not self.output_path.text():
-            QMessageBox.warning(self, "警告", "请选择输出目录！")
+            show_warning(self, "警告", "请选择输出目录！")
             return
 
         if not FITZ_AVAILABLE:
-            QMessageBox.critical(self, "错误", "请先安装 PyMuPDF: pip install PyMuPDF")
+            show_error(self, "错误", "请先安装 PyMuPDF: pip install PyMuPDF")
             return
 
         if self.image_radio.isChecked() and not PIL_AVAILABLE:
-            QMessageBox.critical(self, "错误", "输出图片需要 Pillow 库: pip install Pillow")
+            show_error(self, "错误", "输出图片需要 Pillow 库: pip install Pillow")
             return
 
         output_format = "pdf" if self.pdf_radio.isChecked() else "image"
@@ -659,10 +661,10 @@ class PDFSplitterWidget(QWidget):
         self.cancel_btn.setEnabled(False)
 
         if success:
-            QMessageBox.information(self, "完成", message)
+            show_info(self, "完成", message)
             self.status_label.setText("拆分完成")
         else:
-            QMessageBox.critical(self, "错误", message)
+            show_error(self, "错误", message)
             self.status_label.setText("拆分失败")
 
 

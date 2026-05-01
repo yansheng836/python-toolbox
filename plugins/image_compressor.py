@@ -8,8 +8,10 @@ import sys
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QProgressBar, QComboBox, QSlider, QLineEdit, QGridLayout,
-    QFileDialog, QMessageBox
+    QFileDialog
 )
+
+from common.message_utils import show_info, show_error, show_warning
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
 
 try:
@@ -358,12 +360,12 @@ class ImageCompressor(ToolPlugin):
         files = self.file_panel.get_files()
         if not files:
             parent = self.widget if self.widget else None
-            QMessageBox.warning(parent, "警告", "请先添加图片！")
+            show_warning(parent, "警告", "请先添加图片！")
             return
 
         if not PIL_AVAILABLE:
             parent = self.widget if self.widget else None
-            QMessageBox.critical(parent, "错误", "请先安装 Pillow: pip install Pillow")
+            show_error(parent, "错误", "请先安装 Pillow: pip install Pillow")
             return
 
         self.progress_bar.setVisible(True)
@@ -387,6 +389,6 @@ class ImageCompressor(ToolPlugin):
         self.status_label.setText("")
         self.progress_bar.setVisible(False)
         if success:
-            QMessageBox.information(None, "完成", message)
+            show_info(None, "完成", message)
         else:
-            QMessageBox.critical(None, "错误", message)
+            show_error(None, "错误", message)

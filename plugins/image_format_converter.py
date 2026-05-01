@@ -7,9 +7,10 @@ import sys
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QProgressBar, QComboBox, QLineEdit, QGridLayout,
-    QMessageBox
+    QProgressBar, QComboBox, QLineEdit, QGridLayout
 )
+
+from common.message_utils import show_info, show_error, show_warning
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 try:
@@ -290,7 +291,7 @@ class FormatConverter(ToolPlugin):
         files = self.file_panel.get_files()
         if not files:
             parent = self.widget if self.widget else None
-            QMessageBox.warning(parent, "警告", "请先添加图片！")
+            show_warning(parent, "警告", "请先添加图片！")
             return
 
         self.progress_bar.setVisible(True)
@@ -313,6 +314,6 @@ class FormatConverter(ToolPlugin):
         self.status_label.setText("")
         self.progress_bar.setVisible(False)
         if success:
-            QMessageBox.information(None, "完成", message)
+            show_info(None, "完成", message)
         else:
-            QMessageBox.critical(None, "错误", message)
+            show_error(None, "错误", message)

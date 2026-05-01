@@ -30,9 +30,11 @@ except ImportError:
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
-    QSpinBox, QComboBox, QLineEdit, QProgressBar, QMessageBox,
+    QSpinBox, QComboBox, QLineEdit, QProgressBar,
     QGridLayout, QCheckBox
 )
+
+from common.message_utils import show_info, show_error, show_warning
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 from common.file_list_panel import FileListPanel
@@ -373,7 +375,7 @@ class ImageScalerWidget(QWidget):
     def start_scaling(self):
         files = self.file_panel.get_files()
         if not files or not self.output_path.text():
-            QMessageBox.warning(self, "警告", "请先选择图片文件和输出目录")
+            show_warning(self, "警告", "请先选择图片文件和输出目录")
             return
 
         scale_type = self.scale_type_combo.currentText()
@@ -424,9 +426,9 @@ class ImageScalerWidget(QWidget):
         self.cancel_btn.setEnabled(False)
 
         if success:
-            QMessageBox.information(self, "完成", message)
+            show_info(self, "完成", message)
         else:
-            QMessageBox.critical(self, "错误", message)
+            show_error(self, "错误", message)
 
     def apply_theme(self, theme):
         """应用主题到所有组件"""

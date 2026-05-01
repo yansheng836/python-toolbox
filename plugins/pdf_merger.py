@@ -46,8 +46,10 @@ except ImportError:
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
-    QProgressBar, QMessageBox, QLineEdit
+    QProgressBar, QLineEdit
 )
+
+from common.message_utils import show_info, show_error, show_warning
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 from common.file_list_panel import FileListPanel
@@ -287,16 +289,16 @@ class PDFMergerWidget(QWidget):
         """开始合并PDF"""
         files = self.file_panel.get_files()
         if len(files) < 2:
-            QMessageBox.warning(self, "警告", "请至少添加 2 个PDF文件！")
+            show_warning(self, "警告", "请至少添加 2 个PDF文件！")
             return
 
         output = self.output_path.text()
         if not output:
-            QMessageBox.warning(self, "警告", "请选择输出文件路径！")
+            show_warning(self, "警告", "请选择输出文件路径！")
             return
 
         if not FITZ_AVAILABLE:
-            QMessageBox.critical(self, "错误", "请先安装 PyMuPDF: pip install PyMuPDF")
+            show_error(self, "错误", "请先安装 PyMuPDF: pip install PyMuPDF")
             return
 
         # 禁用按钮，显示进度条
@@ -335,10 +337,10 @@ class PDFMergerWidget(QWidget):
         self.cancel_btn.setEnabled(False)
 
         if success:
-            QMessageBox.information(self, "完成", message)
+            show_info(self, "完成", message)
             self.status_label.setText("合并完成")
         else:
-            QMessageBox.critical(self, "错误", message)
+            show_error(self, "错误", message)
             self.status_label.setText("合并失败")
 
     def apply_theme(self, theme):
