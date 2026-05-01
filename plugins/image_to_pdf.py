@@ -60,25 +60,6 @@ class PDFWorker(QThread):
         self.compress = compress
         self.quality = quality
 
-    @staticmethod
-    def compress_image(image_path, quality):
-        """压缩图片到内存，返回 BytesIO 对象"""
-        img = Image.open(image_path)
-        if img.mode in ('RGBA', 'LA', 'P'):
-            background = Image.new('RGB', img.size, (255, 255, 255))
-            if img.mode == 'P':
-                img = img.convert('RGBA')
-            if img.mode in ('RGBA', 'LA'):
-                background.paste(img, mask=img.split()[-1])
-                img = background
-        elif img.mode != 'RGB':
-            img = img.convert('RGB')
-
-        buf = io.BytesIO()
-        img.save(buf, format='JPEG', quality=quality, optimize=True)
-        buf.seek(0)
-        return buf
-
     def run(self):
         try:
             # 1. 读取图片
@@ -144,6 +125,12 @@ class PDFWorker(QThread):
             io_list = []
             jpeg_quality = self.quality if self.compress else 95
             for img in processed:
+                # 确保 RGB 模式
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                # 去除 ICC 配置，避免 "broken data stream" 错误
+                if 'icc_profile' in img.info:
+                    del img.info['icc_profile']
                 buf = io.BytesIO()
                 img.save(buf, format='JPEG', quality=jpeg_quality, optimize=True)
                 buf.seek(0)
