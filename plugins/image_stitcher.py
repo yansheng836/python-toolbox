@@ -48,7 +48,7 @@ class ImageStitchWorker(QThread):
         self.files = files
         self.output_path = output_path
         self.direction = direction  # "horizontal" | "vertical"
-        self.align = align  # "start" | "center" | "end"
+        self.align = align  # "start" | "center" | "end" | "max_size"
         self.bg_color = bg_color  # (R, G, B)
 
     def run(self):
@@ -70,6 +70,36 @@ class ImageStitchWorker(QThread):
                 self.finished.emit(False, "没有成功读取任何图片，请检查图片文件是否损坏。")
                 return
 
+            # 按最大尺寸扩展：先缩放图片
+            if self.align == "max_size":
+                self.status.emit("正在按最大尺寸缩放图片...")
+                if self.direction == "vertical":
+                    # 纵向拼接：找出宽度最大的图片，其他图片按比例缩放
+                    max_width = max(img.width for img in images)
+                    scaled_images = []
+                    for img in images:
+                        if img.width != max_width:
+                            ratio = max_width / img.width
+                            new_height = int(img.height * ratio)
+                            scaled = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+                            scaled_images.append(scaled)
+                        else:
+                            scaled_images.append(img)
+                    images = scaled_images
+                else:
+                    # 横向拼接：找出高度最大的图片，其他图片按比例缩放
+                    max_height = max(img.height for img in images)
+                    scaled_images = []
+                    for img in images:
+                        if img.height != max_height:
+                            ratio = max_height / img.height
+                            new_width = int(img.width * ratio)
+                            scaled = img.resize((new_width, max_height), Image.Resampling.LANCZOS)
+                            scaled_images.append(scaled)
+                        else:
+                            scaled_images.append(img)
+                    images = scaled_images
+
             # 检查拼接后尺寸，避免超大图片导致失败
             if self.direction == "horizontal":
                 total_w = sum(img.width for img in images)
@@ -86,15 +116,18 @@ class ImageStitchWorker(QThread):
                 return
 
             self.status.emit("正在拼接...")
+            # 按最大尺寸扩展后，使用 start 对齐（因为尺寸已统一）
+            align = "start" if self.align == "max_size" else self.align
+
             if self.direction == "horizontal":
                 total_w = sum(img.width for img in images)
                 total_h = max(img.height for img in images)
                 canvas = Image.new("RGBA", (total_w, total_h), self.bg_color + (255,))
                 x = 0
                 for img in images:
-                    if self.align == "center":
+                    if align == "center":
                         y = (total_h - img.height) // 2
-                    elif self.align == "end":
+                    elif align == "end":
                         y = total_h - img.height
                     else:
                         y = 0
@@ -106,9 +139,9 @@ class ImageStitchWorker(QThread):
                 canvas = Image.new("RGBA", (total_w, total_h), self.bg_color + (255,))
                 y = 0
                 for img in images:
-                    if self.align == "center":
+                    if align == "center":
                         x = (total_w - img.width) // 2
-                    elif self.align == "end":
+                    elif align == "end":
                         x = total_w - img.width
                     else:
                         x = 0
@@ -300,7 +333,8 @@ class ImageStitcher(ToolPlugin):
         align_layout.setSpacing(SPACING_SMALL)  # 标签和控件之间8px
         align_layout.addWidget(QLabel("对齐方式:"))
         self.align_combo = QComboBox()
-        self.align_combo.addItems(["顶部/左侧对齐", "居中对齐", "底部/右侧对齐"])
+        self.align_combo.addItems(["顶部/左侧对齐", "居中对齐", "底部/右侧对齐", "智能缩放"])
+        self.align_combo.setCurrentIndex(3)  # 默认智能缩放
         self.align_combo.setStyleSheet(combo_style)
         align_layout.addWidget(self.align_combo, 1)  # 拉伸占满右半边
         grid.addWidget(align_widget, 0, 1)
@@ -414,7 +448,7 @@ class ImageStitcher(ToolPlugin):
             return
 
         direction = "horizontal" if self.dir_combo.currentIndex() == 0 else "vertical"
-        align_map = {0: "start", 1: "center", 2: "end"}
+        align_map = {0: "start", 1: "center", 2: "end", 3: "max_size"}
         align = align_map[self.align_combo.currentIndex()]
         bg = (self.bg_r.value(), self.bg_g.value(), self.bg_b.value())
 
