@@ -170,7 +170,7 @@ class PDFWorker(QThread):
                         doc.insert_pdf(img_pdf)
                         img_pdf.close()
                         fitz_img.close()
-                    doc.save(temp_pdf)
+                    doc.save(temp_pdf, garbage=0, deflate=False)
                     doc.close()
                 elif IMG2PDF_AVAILABLE:
                     with open(temp_pdf, "wb") as f:
@@ -216,7 +216,7 @@ class PDFWorker(QThread):
                         src = fitz.open(tpdf)
                         doc.insert_pdf(src)
                         src.close()
-                    doc.save(self.output)
+                    doc.save(self.output, garbage=0, deflate=False)
                     doc.close()
                 else:
                     self.finished.emit(False, "多批合并需要 PyMuPDF，请安装: pip install PyMuPDF")
@@ -342,21 +342,10 @@ class ImageToPDF(ToolPlugin):
         settings_layout = QGridLayout()
         settings_card.content_layout.addLayout(settings_layout)
 
-        combo_style = """
-            QComboBox {
-                background-color: #0f172a;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 6px;
-                color: #f1f5f9;
-            }
-        """
-
         settings_layout.addWidget(QLabel("页面大小:"), 0, 0)
         self.size_combo = QComboBox()
         self.size_combo.addItems(["自动适应", "A4", "A3", "原图尺寸", "智能缩放"])
         self.size_combo.setCurrentIndex(4)  # 默认智能缩放
-        self.size_combo.setStyleSheet(combo_style)
         settings_layout.addWidget(self.size_combo, 0, 1)
 
         settings_layout.addWidget(QLabel("启用压缩:"), 1, 0)
@@ -381,15 +370,6 @@ class ImageToPDF(ToolPlugin):
         path_layout = QHBoxLayout()
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("选择保存位置...")
-        self.output_path.setStyleSheet("""
-            QLineEdit {
-                background-color: #0f172a;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 6px;
-                color: #f1f5f9;
-            }
-        """)
         browse_btn = AnimatedButton("浏览")
         browse_btn.setMaximumWidth(80)
         browse_btn.clicked.connect(self.browse_output)

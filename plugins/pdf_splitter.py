@@ -109,7 +109,7 @@ class PDFSplitWorker(QThread):
                         self.output_dir,
                         f"{base_name}_part{output_count + 1}_pages_{i + 1}-{end_page}.pdf"
                     )
-                    new_doc.save(output_file)
+                    new_doc.save(output_file, garbage=0, deflate=False)
                     new_doc.close()
 
                     output_count += 1
@@ -189,25 +189,12 @@ class PDFSplitterWidget(QWidget):
 
         self.file_display = QLineEdit()
         self.file_display.setPlaceholderText("拖拽PDF文件到此处，或点击按钮选择...")
-        self.file_display.setStyleSheet("""
-            QLineEdit {
-                background-color: #0f172a;
-                border: 2px dashed #334155;
-                border-radius: 8px;
-                padding: 8px;
-                color: #94a3b8;
-            }
-            QLineEdit:hover {
-                border-color: #475569;
-            }
-        """)
         self.file_display.setAcceptDrops(True)
         self.file_display.dragEnterEvent = self.drag_enter_event
         self.file_display.dropEvent = self.drop_event
         file_layout.addWidget(self.file_display)
 
         self.file_info_label = QLabel("未选择文件")
-        self.file_info_label.setStyleSheet(f"color: #64748b; font-size: {FONT_SIZE_12};")
         file_layout.addWidget(self.file_info_label)
 
         btn_layout = QHBoxLayout()
@@ -230,9 +217,7 @@ class PDFSplitterWidget(QWidget):
         format_layout = QHBoxLayout()
         self.pdf_radio = QRadioButton("单页PDF")
         self.pdf_radio.setChecked(True)
-        self.pdf_radio.setStyleSheet("color: #f1f5f9;")
         self.image_radio = QRadioButton("图片")
-        self.image_radio.setStyleSheet("color: #f1f5f9;")
         self.format_group.addButton(self.pdf_radio)
         self.format_group.addButton(self.image_radio)
         format_layout.addWidget(self.pdf_radio)
@@ -243,15 +228,6 @@ class PDFSplitterWidget(QWidget):
 
         self.image_format_combo = QComboBox()
         self.image_format_combo.addItems(["PNG", "JPEG", "WebP"])
-        self.image_format_combo.setStyleSheet("""
-            QComboBox {
-                background-color: #0f172a;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 6px;
-                color: #f1f5f9;
-            }
-        """)
         self.image_format_combo.setVisible(False)
         settings_layout.addRow("图片格式:", self.image_format_combo)
 
@@ -259,29 +235,11 @@ class PDFSplitterWidget(QWidget):
         self.pages_spin.setRange(1, 1000)
         self.pages_spin.setValue(1)
         self.pages_spin.setSuffix(" 页/文件")
-        self.pages_spin.setStyleSheet("""
-            QSpinBox {
-                background-color: #0f172a;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 4px;
-                color: #f1f5f9;
-            }
-        """)
         settings_layout.addRow("拆分页数:", self.pages_spin)
 
         self.quality_combo = QComboBox()
         self.quality_combo.addItems(["高质量 (95)", "标准 (85)", "较小文件 (75)", "最小文件 (50)"])
         self.quality_combo.setCurrentIndex(1)
-        self.quality_combo.setStyleSheet("""
-            QComboBox {
-                background-color: #0f172a;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 6px;
-                color: #f1f5f9;
-            }
-        """)
         self.quality_combo.setVisible(False)
         settings_layout.addRow("图片质量:", self.quality_combo)
 
@@ -292,15 +250,6 @@ class PDFSplitterWidget(QWidget):
         output_layout = QHBoxLayout()
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("选择输出目录...")
-        self.output_path.setStyleSheet("""
-            QLineEdit {
-                background-color: #0f172a;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 6px;
-                color: #f1f5f9;
-            }
-        """)
         self.browse_btn = AnimatedButton("浏览")
         self.browse_btn.setMaximumWidth(80)
         self.browse_btn.clicked.connect(self.browse_output)
@@ -350,22 +299,9 @@ class PDFSplitterWidget(QWidget):
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
-        self.progress_bar.setStyleSheet("""
-            QProgressBar {
-                background-color: #0f172a;
-                border-radius: 6px;
-                text-align: center;
-                color: white;
-            }
-            QProgressBar::chunk {
-                background-color: #10b981;
-                border-radius: 6px;
-            }
-        """)
         action_card.content_layout.addWidget(self.progress_bar)
 
         self.status_label = QLabel("请选择PDF文件")
-        self.status_label.setStyleSheet("color: #94a3b8;")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         action_card.content_layout.addWidget(self.status_label)
 
