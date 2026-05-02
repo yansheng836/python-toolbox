@@ -53,25 +53,13 @@ from common.message_utils import show_info, show_error, show_warning
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 from common.file_list_panel import FileListPanel
-
-
-def _get_pdf_size(file_path):
-    """获取PDF文件大小文本"""
-    try:
-        size = os.path.getsize(file_path)
-        if size < 1024:
-            return f"{size} B"
-        elif size < 1024 * 1024:
-            return f"{size / 1024:.1f} KB"
-        else:
-            return f"{size / (1024 * 1024):.1f} MB"
-    except Exception:
-        return "未知"
+from common.utils import get_create_time, get_file_size
 
 
 PDF_COLUMNS = [
     ("文件名", lambda f: os.path.basename(f)),
-    ("大小", _get_pdf_size)
+    ("大小", get_file_size),
+    ("创建时间", get_create_time)
 ]
 
 
@@ -159,17 +147,21 @@ class PDFMergerWidget(QWidget):
             columns=PDF_COLUMNS,
             file_filter="PDF文件 (*.pdf);;所有文件 (*.*)",
             button_class=AnimatedButton,
-            show_buttons=["add", "remove", "clear", "up", "down"]
+            show_buttons=["add", "remove", "clear", "up", "down", "sort_name", "sort_time"]
         )
         file_layout.addWidget(self.file_panel)
 
-        # 连接文件列表变化信号
-        self.file_panel.files_changed.connect(self.update_merge_button)
+        # 调整"创建时间"列宽（完整显示 "YYYY-MM-DD HH:MM" 需要约 140px）
+        header = self.file_panel.table.horizontalHeader()
+        create_time_col = len(PDF_COLUMNS) - 1  # "创建时间"列索引
+        header.resizeSection(create_time_col, 140)
+
         layout.addWidget(file_card)
 
         # 输出设置
         output_card = Card(title="输出设置")
         output_layout = QHBoxLayout()
+        output_layout.addWidget(QLabel("输出文件:"))
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("选择输出文件路径...")
         self.output_path.setStyleSheet("""
@@ -207,25 +199,7 @@ class PDFMergerWidget(QWidget):
             QPushButton:disabled {{ background: #334155; color: #64748b; }}
         """)
         self.merge_btn.clicked.connect(self.start_merge)
-        self.merge_btn.setEnabled(False)
         button_layout.addWidget(self.merge_btn)
-
-        self.cancel_btn = AnimatedButton("取消")
-        self.cancel_btn.setMinimumHeight(48)
-        self.cancel_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #ef4444, stop:1 #dc2626);
-                color: white; border: none; border-radius: 8px;
-                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #f87171, stop:1 #ef4444); }}
-            QPushButton:disabled {{ background: #334155; color: #64748b; }}
-        """)
-        self.cancel_btn.clicked.connect(self.cancel_merge)
-        self.cancel_btn.setEnabled(False)
-        button_layout.addWidget(self.cancel_btn)
 
         action_card.content_layout.addLayout(button_layout)
 
@@ -257,10 +231,6 @@ class PDFMergerWidget(QWidget):
         if Theme is not None:
             self.apply_theme(Theme.DARK)
 
-    def update_merge_button(self):
-        """更新合并按钮状态"""
-        self.merge_btn.setEnabled(len(self.file_panel.get_files()) >= 2 and bool(self.output_path.text()))
-
     def browse_output(self):
         """选择输出文件路径"""
         # 默认使用第一个输入文件的目录
@@ -283,7 +253,6 @@ class PDFMergerWidget(QWidget):
             if not path.endswith('.pdf'):
                 path += '.pdf'
             self.output_path.setText(path)
-            self.update_merge_button()
 
     def start_merge(self):
         """开始合并PDF"""
@@ -294,8 +263,10 @@ class PDFMergerWidget(QWidget):
 
         output = self.output_path.text()
         if not output:
-            show_warning(self, "警告", "请选择输出文件路径！")
-            return
+            self.browse_output()
+            output = self.output_path.text()
+            if not output:
+                return
 
         if not FITZ_AVAILABLE:
             show_error(self, "错误", "请先安装 PyMuPDF: pip install PyMuPDF")
@@ -303,7 +274,6 @@ class PDFMergerWidget(QWidget):
 
         # 禁用按钮，显示进度条
         self.merge_btn.setEnabled(False)
-        self.cancel_btn.setEnabled(True)
         self.progress_bar.setVisible(True)
         self.progress_bar.setMaximum(len(files))
         self.progress_bar.setValue(0)
@@ -316,16 +286,6 @@ class PDFMergerWidget(QWidget):
         self.worker.finished.connect(self.merge_finished)
         self.worker.start()
 
-    def cancel_merge(self):
-        """取消合并"""
-        if self.worker and self.worker.isRunning():
-            self.worker.terminate()
-            self.worker.wait()
-            self.status_label.setText("已取消")
-            self.merge_btn.setEnabled(True)
-            self.cancel_btn.setEnabled(False)
-            self.progress_bar.setVisible(False)
-
     def update_status(self, message):
         """更新状态标签"""
         self.status_label.setText(message)
@@ -334,7 +294,6 @@ class PDFMergerWidget(QWidget):
         """合并完成回调"""
         self.progress_bar.setVisible(False)
         self.merge_btn.setEnabled(True)
-        self.cancel_btn.setEnabled(False)
 
         if success:
             show_info(self, "完成", message)
@@ -370,21 +329,6 @@ class PDFMergerWidget(QWidget):
                 }}
                 QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 {theme['success_hover']}, stop:1 {theme.get('success_gradient_end', theme['success'])}); }}
-                QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
-            """)
-        if hasattr(self, 'cancel_btn'):
-            self.cancel_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                        stop:0 {theme['error']}, stop:1 {theme.get('error_gradient_end', theme['error'])});
-                    color: {theme['text']};
-                    border: none;
-                    border-radius: 8px;
-                    font-size: {FONT_SIZE_16};
-                    font-weight: {FONT_WEIGHT_600};
-                }}
-                QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 {theme['error_hover']}, stop:1 {theme.get('error_gradient_end', theme['error'])}); }}
                 QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
             """)
         if hasattr(self, 'progress_bar'):
