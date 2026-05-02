@@ -11,6 +11,8 @@ from PyQt6.QtWidgets import (
 )
 
 from common.message_utils import show_info, show_error, show_warning
+from common.dialog_utils import get_existing_directory
+from common.action_panel import ActionPanel
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 try:
@@ -256,36 +258,18 @@ class FormatConverter(ToolPlugin):
         settings_layout.addLayout(out_row, 1, 1)
         layout.addWidget(settings_card)
 
-        # 进度和操作
-        action_card = Card()
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        action_card.content_layout.addWidget(self.progress_bar)
+        # 操作面板（按钮 + 进度条 + 状态标签）
+        self.action_panel = ActionPanel(
+            button_text="开始转换",
+            use_gradient=True,
+            gradient_colors=("#10b981", "#059669"),
+            gradient_hover_colors=("#34d399", "#10b981"),
+            progress_chunk_color='#6366f1',
+            status_text=""
+        )
+        self.action_panel.clicked.connect(self.start_convert)
+        layout.addWidget(self.action_panel)
 
-        self.start_btn = AnimatedButton("开始转换")
-        self.start_btn.setMinimumHeight(40)
-        self.start_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #10b981, stop:1 #059669);
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-size: {FONT_SIZE_16};
-                font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #34d399, stop:1 #10b981); }}
-            QPushButton:disabled {{ background: #334155; color: #64748b; }}
-        """)
-        self.start_btn.clicked.connect(self.start_convert)
-        action_card.content_layout.addWidget(self.start_btn)
-
-        self.status_label = QLabel("")
-        self.status_label.setStyleSheet("color: #94a3b8;")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        action_card.content_layout.addWidget(self.status_label)
-        layout.addWidget(action_card)
         layout.addStretch()
 
         # 应用初始主题
@@ -295,7 +279,7 @@ class FormatConverter(ToolPlugin):
 
     def browse_output(self):
         parent = self.widget if self.widget else None
-        path = QFileDialog.getExistingDirectory(parent, "选择输出目录")
+        path = get_existing_directory(parent, "选择输出目录")
         if path:
             self.output_path.setText(path)
 
@@ -306,26 +290,22 @@ class FormatConverter(ToolPlugin):
             show_warning(parent, "警告", "请先添加图片！")
             return
 
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setMaximum(len(files))
-        self.progress_bar.setValue(0)
-        self.start_btn.setEnabled(False)
+        self.action_panel.start_task(len(files), status="")
 
         self.worker = FormatConvertWorker(
             files,
             self.output_path.text() or None,
             self.fmt_combo.currentText()
         )
-        self.worker.progress.connect(self.progress_bar.setValue)
-        self.worker.status.connect(self.status_label.setText)
+        self.worker.progress.connect(self.action_panel.update_progress)
+        self.worker.status.connect(self.action_panel.update_status)
         self.worker.finished.connect(self.convert_finished)
         self.worker.start()
 
     def convert_finished(self, success, message):
-        self.start_btn.setEnabled(True)
-        self.status_label.setText("")
-        self.progress_bar.setVisible(False)
+        self.action_panel.finish_task(message)
+        parent = self.widget if self.widget else None
         if success:
-            show_info(None, "完成", message)
+            show_info(parent, "完成", message)
         else:
-            show_error(None, "错误", message)
+            show_error(parent, "错误", message)

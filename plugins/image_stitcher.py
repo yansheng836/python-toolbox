@@ -12,6 +12,8 @@ from PyQt6.QtWidgets import (
 )
 
 from common.message_utils import show_info, show_error, show_warning
+from common.dialog_utils import get_save_file_name
+from common.action_panel import ActionPanel
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 try:
@@ -397,29 +399,18 @@ class ImageStitcher(ToolPlugin):
         grid.addLayout(out_row, 2, 0, 1, 2)  # 跨两列
         layout.addWidget(settings_card)
 
-        # 操作区
-        action_card = Card()
-        self.start_btn = AnimatedButton("开始拼接")
-        self.start_btn.setMinimumHeight(40)
-        self.start_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #10b981, stop:1 #059669);
-                color: white; border: none; border-radius: 8px;
-                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #34d399, stop:1 #10b981); }}
-            QPushButton:disabled {{ background: #334155; color: #64748b; }}
-        """)
-        self.start_btn.clicked.connect(self.start_stitch)
-        action_card.content_layout.addWidget(self.start_btn)
+        # 操作面板（按钮 + 进度条 + 状态标签）
+        self.action_panel = ActionPanel(
+            button_text="开始拼接",
+            use_gradient=True,
+            gradient_colors=("#10b981", "#059669"),
+            gradient_hover_colors=("#34d399", "#10b981"),
+            progress_chunk_color='#6366f1',
+            status_text=""
+        )
+        self.action_panel.clicked.connect(self.start_stitch)
+        layout.addWidget(self.action_panel)
 
-        self.status_label = QLabel("")
-        self.status_label.setStyleSheet("color: #94a3b8;")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        action_card.content_layout.addWidget(self.status_label)
-        layout.addWidget(action_card)
         layout.addStretch()
 
         # 应用初始主题
@@ -428,7 +419,7 @@ class ImageStitcher(ToolPlugin):
         return widget
 
     def browse_output(self):
-        path, _ = QFileDialog.getSaveFileName(
+        path = get_save_file_name(
             None, "保存拼接图片", "stitched.jpg",
             "JPEG (*.jpg);;PNG (*.png);;WebP (*.webp)"
         )
@@ -454,17 +445,16 @@ class ImageStitcher(ToolPlugin):
         align = align_map[self.align_combo.currentIndex()]
         bg = (self.bg_r.value(), self.bg_g.value(), self.bg_b.value())
 
-        self.start_btn.setEnabled(False)
+        self.action_panel.start_task(0, status="正在拼接...")
         self.worker = ImageStitchWorker(
             files, self.output_path.text(), direction, align, bg
         )
-        self.worker.status.connect(self.status_label.setText)
+        self.worker.status.connect(self.action_panel.update_status)
         self.worker.finished.connect(self.stitch_finished)
         self.worker.start()
 
     def stitch_finished(self, success, message):
-        self.start_btn.setEnabled(True)
-        self.status_label.setText("")
+        self.action_panel.finish_task(message)
         if success:
             show_info(None, "完成", message)
         else:
