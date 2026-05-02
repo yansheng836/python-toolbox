@@ -75,37 +75,105 @@ class PDFMergeWorker(QThread):
         self.input_files = input_files
         self.output_path = output_path
 
+    def _validate_files(self, input_files):
+        """预检文件：检查存在性和PDF完整性，返回 (valid_files, error_messages)"""
+        valid = []
+        errors = []
+        for pdf_path in input_files:
+            if not os.path.exists(pdf_path):
+                errors.append(f"文件不存在: {os.path.basename(pdf_path)}")
+            else:
+                try:
+                    doc = fitz.open(pdf_path)
+                    doc.close()
+                    valid.append(pdf_path)
+                except Exception as e:
+                    errors.append(f"无效或损坏的PDF: {os.path.basename(pdf_path)} - {str(e)}")
+        return valid, errors
+
     def run(self):
         try:
             if not FITZ_AVAILABLE:
                 self.finished.emit(False, "错误: 未安装PyMuPDF库，请运行: pip install PyMuPDF")
                 return
 
-            self.status.emit("正在准备合并...")
+            self.status.emit("正在检查文件...")
+            valid_files, errors = self._validate_files(self.input_files)
 
-            # 创建一个新的PDF文档
-            merged_doc = fitz.open()
+            if errors:
+                error_msg = "以下文件存在问题:\n" + "\n".join(errors)
+                if not valid_files:
+                    self.finished.emit(False, error_msg)
+                    return
+                self.finished.emit(False, error_msg + "\n\n请修复后重试。")
+                return
 
-            total = len(self.input_files)
-            for i, pdf_path in enumerate(self.input_files):
-                self.status.emit(f"正在处理: {os.path.basename(pdf_path)}")
+            if not valid_files:
+                self.finished.emit(False, "没有有效的PDF文件可合并")
+                return
 
-                # 打开源PDF
-                src_doc = fitz.open(pdf_path)
+            total = len(valid_files)
+            CHUNK_SIZE = 20  # 超过20个文件时分块合并，减少内存占用
 
-                # 插入到合并文档中
-                merged_doc.insert_pdf(src_doc)
+            if total <= CHUNK_SIZE:
+                # 文件较少，直接合并
+                self.status.emit("正在准备合并...")
+                merged_doc = fitz.open()
+                for i, pdf_path in enumerate(valid_files):
+                    self.status.emit(f"正在处理: {os.path.basename(pdf_path)}")
+                    src_doc = fitz.open(pdf_path)
+                    merged_doc.insert_pdf(src_doc)
+                    src_doc.close()
+                    self.progress.emit(i + 1)
 
-                # 关闭源文档
-                src_doc.close()
+                self.status.emit("正在保存...")
+                merged_doc.save(self.output_path, garbage=0, deflate=False)
+                merged_doc.close()
+            else:
+                # 分块合并：每 CHUNK_SIZE 个文件保存一次，减少内存占用
+                self.status.emit("正在分块合并...")
+                import tempfile
+                temp_files = []
+                processed = 0
 
-                # 更新进度
-                self.progress.emit(i + 1)
+                try:
+                    for chunk_start in range(0, total, CHUNK_SIZE):
+                        chunk = valid_files[chunk_start:chunk_start + CHUNK_SIZE]
+                        chunk_doc = fitz.open()
+                        for pdf_path in chunk:
+                            self.status.emit(f"正在处理: {os.path.basename(pdf_path)}")
+                            src_doc = fitz.open(pdf_path)
+                            chunk_doc.insert_pdf(src_doc)
+                            src_doc.close()
+                            processed += 1
+                            self.progress.emit(processed)
 
-            # 保存合并后的文档
-            self.status.emit("正在保存...")
-            merged_doc.save(self.output_path)
-            merged_doc.close()
+                        # 保存当前块到临时文件
+                        temp_fd, temp_path = tempfile.mkstemp(suffix='.pdf')
+                        os.close(temp_fd)
+                        chunk_doc.save(temp_path, garbage=0, deflate=False)
+                        chunk_doc.close()
+                        temp_files.append(temp_path)
+
+                    # 合并所有临时文件
+                    self.status.emit("正在合并分块...")
+                    final_doc = fitz.open()
+                    for temp_path in temp_files:
+                        temp_doc = fitz.open(temp_path)
+                        final_doc.insert_pdf(temp_doc)
+                        temp_doc.close()
+
+                    self.status.emit("正在保存...")
+                    final_doc.save(self.output_path, garbage=0, deflate=False)
+                    final_doc.close()
+
+                finally:
+                    # 清理临时文件
+                    for temp_path in temp_files:
+                        try:
+                            os.remove(temp_path)
+                        except Exception:
+                            pass
 
             self.finished.emit(True, f"成功合并 {total} 个PDF文件！\n保存位置: {self.output_path}")
 

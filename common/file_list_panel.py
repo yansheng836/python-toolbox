@@ -116,10 +116,12 @@ class FileListPanel(QWidget):
             self, "选择文件", "", self.file_filter
         )
         if files:
+            existing = set(self.files)
             added = False
             for f in files:
-                if f not in self.files:
+                if f not in existing:
                     self.files.append(f)
+                    existing.add(f)
                     added = True
             if added:
                 self.update_list()
@@ -207,10 +209,10 @@ class FileListPanel(QWidget):
 
     def update_list(self):
         """根据 self.files 和 columns 配置更新表格"""
+        self.table.setUpdatesEnabled(False)
         self.table.setRowCount(0)
-        for file_path in self.files:
-            row = self.table.rowCount()
-            self.table.insertRow(row)
+        self.table.setRowCount(len(self.files))
+        for row, file_path in enumerate(self.files):
             for col_idx, (col_name, col_func) in enumerate(self.columns):
                 try:
                     text = str(col_func(file_path))
@@ -219,6 +221,7 @@ class FileListPanel(QWidget):
                 item = QTableWidgetItem(text)
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.table.setItem(row, col_idx, item)
+        self.table.setUpdatesEnabled(True)
 
     def _parse_filter_extensions(self, file_filter):
         """从 file_filter 解析允许的文件扩展名列表"""
@@ -261,12 +264,14 @@ class FileListPanel(QWidget):
     def _handle_drop(self, event):
         """处理文件放下事件，添加拖拽的文件到列表"""
         if event.mimeData().hasUrls():
+            existing = set(self.files)
             added = False
             for url in event.mimeData().urls():
                 if url.isLocalFile():
                     file_path = url.toLocalFile()
-                    if self._is_allowed_file(file_path) and file_path not in self.files:
+                    if self._is_allowed_file(file_path) and file_path not in existing:
                         self.files.append(file_path)
+                        existing.add(file_path)
                         added = True
             if added:
                 self.update_list()

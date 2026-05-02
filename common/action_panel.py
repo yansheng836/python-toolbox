@@ -66,14 +66,14 @@ class ActionPanel(Card):
         self.btn.clicked.connect(self.clicked.emit)
         self.content_layout.addWidget(self.btn)
 
-        # 进度条
+        # 进度条（初始样式，update_theme 会更新为主题适配的样式）
         self.progress = QProgressBar()
         self.progress.setStyleSheet(f"""
             QProgressBar {{
-                background-color: #0f172a;
+                background-color: {Theme.DARK['bg_secondary']};
                 border-radius: 6px;
                 text-align: center;
-                color: white;
+                color: {Theme.DARK['text']};
             }}
             QProgressBar::chunk {{
                 background-color: {self.progress_chunk_color};
@@ -85,7 +85,7 @@ class ActionPanel(Card):
 
         # 状态标签
         self.status_label = QLabel(status_text)
-        self.status_label.setStyleSheet("color: #94a3b8;")
+        self.status_label.setStyleSheet(f"color: {Theme.DARK['text_secondary']};")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.content_layout.addWidget(self.status_label)
 
