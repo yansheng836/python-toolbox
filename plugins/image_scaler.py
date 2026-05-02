@@ -186,8 +186,7 @@ class ImageScalerWidget(QWidget):
             }
         """
 
-        # 第0行：缩放方式占左半边，保持宽高比占右半边，各占一半
-        # 左半边：缩放方式（标签+下拉框，下拉框拉伸占满左半边）
+        # 第0行：缩放方式（跨两列）
         scale_widget = QWidget()
         scale_layout = QHBoxLayout(scale_widget)
         scale_layout.setContentsMargins(0, 0, 0, 0)
@@ -198,20 +197,7 @@ class ImageScalerWidget(QWidget):
         self.scale_type_combo.setStyleSheet(combo_style)
         self.scale_type_combo.currentTextChanged.connect(self.on_scale_type_changed)
         scale_layout.addWidget(self.scale_type_combo, 1)
-        grid.addWidget(scale_widget, 0, 0)
-
-        # 右半边：保持宽高比
-        self.aspect_widget = QWidget()
-        aspect_layout = QHBoxLayout(self.aspect_widget)
-        aspect_layout.setContentsMargins(0, 0, 0, 0)
-        aspect_layout.setSpacing(SPACING_SMALL)
-        self.maintain_aspect = QCheckBox("保持宽高比")
-        self.maintain_aspect.setChecked(True)
-        self.maintain_aspect.setStyleSheet("color: #f1f5f9;")
-        self.maintain_aspect.stateChanged.connect(self.on_scale_type_changed)
-        aspect_layout.addWidget(self.maintain_aspect)
-        aspect_layout.addStretch()
-        grid.addWidget(self.aspect_widget, 0, 1)
+        grid.addWidget(scale_widget, 0, 0, 1, 2)
 
         grid.setColumnStretch(0, 1)
         grid.setColumnStretch(1, 1)
@@ -262,7 +248,21 @@ class ImageScalerWidget(QWidget):
         grid.addWidget(self.height_row_widget, 3, 0, 1, 2)
         self.height_row_widget.setVisible(False)
 
-        # 第4行：图片质量（跨两列）
+        # 第4行：保持宽高比（跨两列，放在宽度/高度后面）
+        self.aspect_row_widget = QWidget()
+        aspect_layout = QHBoxLayout(self.aspect_row_widget)
+        aspect_layout.setContentsMargins(0, 0, 0, 0)
+        aspect_layout.setSpacing(SPACING_SMALL)
+        aspect_layout.addStretch()
+        self.maintain_aspect = QCheckBox("保持宽高比")
+        self.maintain_aspect.setChecked(True)
+        self.maintain_aspect.setStyleSheet("color: #f1f5f9;")
+        self.maintain_aspect.stateChanged.connect(self.on_scale_type_changed)
+        aspect_layout.addWidget(self.maintain_aspect)
+        grid.addWidget(self.aspect_row_widget, 4, 0, 1, 2)
+        self.aspect_row_widget.setVisible(False)
+
+        # 第5行：图片质量（跨两列）
         self.quality_row_widget = QWidget()
         quality_layout = QHBoxLayout(self.quality_row_widget)
         quality_layout.setContentsMargins(0, 0, 0, 0)
@@ -273,9 +273,9 @@ class ImageScalerWidget(QWidget):
         self.quality_combo.setCurrentIndex(1)
         self.quality_combo.setStyleSheet(combo_style)
         quality_layout.addWidget(self.quality_combo, 1)
-        grid.addWidget(self.quality_row_widget, 4, 0, 1, 2)
+        grid.addWidget(self.quality_row_widget, 5, 0, 1, 2)
 
-        # 第5行：输出目录（跨两列）
+        # 第6行：输出目录（跨两列）
         self.output_row_widget = QWidget()
         output_dir_layout = QHBoxLayout(self.output_row_widget)
         output_dir_layout.setContentsMargins(0, 0, 0, 0)
@@ -297,7 +297,7 @@ class ImageScalerWidget(QWidget):
         self.browse_btn.clicked.connect(self.select_output_dir)
         output_dir_layout.addWidget(self.output_path, 1)
         output_dir_layout.addWidget(self.browse_btn)
-        grid.addWidget(self.output_row_widget, 5, 0, 1, 2)
+        grid.addWidget(self.output_row_widget, 6, 0, 1, 2)
 
         layout.addWidget(settings_card)
 
@@ -319,7 +319,6 @@ class ImageScalerWidget(QWidget):
             QPushButton:disabled {{ background: #334155; color: #64748b; }}
         """)
         self.start_btn.clicked.connect(self.start_scaling)
-        self.start_btn.setEnabled(False)
         button_layout.addWidget(self.start_btn)
 
         self.cancel_btn = AnimatedButton("取消")
@@ -379,12 +378,12 @@ class ImageScalerWidget(QWidget):
             self.zoom_row_widget.setVisible(True)
             self.width_row_widget.setVisible(False)
             self.height_row_widget.setVisible(False)
-            self.aspect_widget.setVisible(True)
+            self.aspect_row_widget.setVisible(False)
         elif scale_type == "指定宽度":
             self.zoom_row_widget.setVisible(False)
             self.width_row_widget.setVisible(True)
             self.height_row_widget.setVisible(True)
-            self.aspect_widget.setVisible(True)
+            self.aspect_row_widget.setVisible(True)
             if self.maintain_aspect.isChecked():
                 self.height_input.setEnabled(False)
                 self.height_input.setSuffix(" (自动)")
@@ -395,7 +394,7 @@ class ImageScalerWidget(QWidget):
             self.zoom_row_widget.setVisible(False)
             self.width_row_widget.setVisible(True)
             self.height_row_widget.setVisible(True)
-            self.aspect_widget.setVisible(True)
+            self.aspect_row_widget.setVisible(True)
             if self.maintain_aspect.isChecked():
                 self.width_input.setEnabled(False)
                 self.width_input.setSuffix(" (自动)")
@@ -409,13 +408,11 @@ class ImageScalerWidget(QWidget):
         )
         if dir_path:
             self.output_path.setText(dir_path)
-            if self.file_panel.get_files():
-                self.start_btn.setEnabled(True)
 
     def start_scaling(self):
         files = self.file_panel.get_files()
         if not files:
-            show_warning(self, "警告", "请先选择图片文件")
+            show_warning(self, "警告", "请先添加图片！")
             return
 
         scale_type = self.scale_type_combo.currentText()
