@@ -4,6 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Standards
 
+### Code Reuse (MANDATORY)
+
+**Rule: If identical or similar code appears 2+ times, you MUST abstract it into a shared class or method.**
+
+- Before writing new code, check if similar logic already exists in `common/`, `toolbox.py`, or other plugins
+- Duplicated code increases maintenance burden exponentially — every bug fix must be applied in multiple places
+- Shared components should be placed in `common/` directory or the base class (`ToolPlugin`, `Theme`)
+- When refactoring, update ALL occurrences that use the duplicated pattern, not just new code
+
+### UI Styling and Theme Compliance (MANDATORY)
+
+**Rule: When designing styles (especially colors), you MUST consider the current background color to ensure text remains readable.**
+
+- **Dark theme background**: `#2d2d2d` (panels), `#1e1e1e` (window), `#3d3d3d` (sidebar)
+- **Light theme background**: `#f5f5f5` (panels), `#ffffff` (window), `#e8e8e8` (sidebar)
+- **Text colors**: Use `Theme.TEXT_PRIMARY`, `Theme.TEXT_SECONDARY` — NEVER hardcode text colors
+- **Contrast check**: After applying styles, verify text is readable in BOTH themes
+- **Common pitfalls**:
+  - Setting dark text on dark background (or light on light)
+  - Using `QMessageBox` with custom styles that don't adapt to theme
+  - Forgetting that `QPushButton` text inherits parent widget's color in some Qt styles
+  - Gradient buttons must define contrasting text colors for all states (normal, hover, pressed)
+
 ### File Encoding and Line Endings
 
 - **File Encoding**: All Python files (new or modified) MUST use UTF-8 encoding
@@ -128,36 +151,43 @@ Long operations run in `QThread` workers that emit progress signals — never bl
 
 ### Code Reuse Guidelines
 
-**Principle:** If code is used in 2+ plugins, abstract it into a shared component.
+**MANDATORY RULE: If identical or similar code appears 2+ times, you MUST abstract it into a shared class or method immediately.**
+
+This is not a suggestion — it is a strict requirement to prevent maintenance debt. Every duplication:
+- Requires bug fixes in multiple places
+- Increases likelihood of inconsistent behavior
+- Makes future refactoring more dangerous
 
 #### Shared Components (in `toolbox.py` or `common/`)
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
 | `ToolPlugin` | `toolbox.py` | Base class for all plugins |
-| `Theme` | `toolbox.py` | Dark/light color palettes |
+| `Theme` | `toolbox.py` | Dark/light color palettes + **ALL color constants** |
 | `AnimatedButton` | `toolbox.py` | Reusable button with hover effects |
 | `Card` | `toolbox.py` | Card container with title/content layout |
 | `DragDropHandler` | `toolbox.py` | Drag-and-drop utility |
 | `SidebarButton` | `toolbox.py` | Sidebar navigation button |
 | `FileListPanel` | `common/file_list_panel.py` | Reusable file list table with buttons |
 | `get_image_size`, `get_file_size` | `common/utils.py` | Image size and file size helper functions |
+| `BaseWorker` | `common/base_worker.py` | Base QThread worker with standard signals |
+| `MessageUtils` | `common/message_utils.py` | Themed message boxes and dialogs |
 
 **Use these shared components whenever possible instead of reimplementing similar functionality.**
 
-#### Common Patterns to Abstract
+#### Patterns That MUST Be Abstracted (Duplicated 2+ Times)
 
-When you notice these patterns duplicated across plugins, consider abstracting them:
+| Pattern | Duplicated In | Action Required |
+|---------|---------------|-----------------|
+| Worker Classes | All plugins | Use `BaseWorker` from `common/` |
+| Image Helper Functions | 4+ plugins | Use `get_image_size()` from `common/utils.py` |
+| Button/Progress Bar Styles | All plugins | Define in `Theme` class, use `Theme.get_button_style()` |
+| `apply_theme()` Method | All plugins | Implement in `ToolPlugin` base class |
+| Import Fallback Pattern | All plugins | Document once, reference pattern |
+| File size formatting | 3+ plugins | Add `format_file_size()` to `common/utils.py` |
+| Status message updates | All plugins | Use shared helper method |
 
-1. **Worker Classes** — All plugins have `QThread` Workers with similar signals (progress, status, finished). Consider a base `BaseWorker` in `common/` if adding new plugins with similar threading needs.
-
-2. **Image Helper Functions** — Functions like `_get_image_size()`, `_get_file_size()` are duplicated in 4+ plugins. These should be moved to a shared `utils.py` in `common/`.
-
-3. **Button/Progress Bar Styles** — Gradient styles for start/cancel buttons and progress bars are copy-pasted across plugins. Consider defining these in `Theme` or a shared styles module.
-
-4. **`apply_theme()` Method** — Each plugin reimplements theme application for similar widget types. A base implementation in `ToolPlugin` or a shared helper could reduce per-plugin code by 60-80 lines.
-
-5. **Import Fallback Pattern** — All plugins repeat the same `try/except` import block. Consider simplifying or documenting this pattern clearly.
+**Before adding a new plugin, check this table. If your plugin needs any of these patterns, use the shared component.**
 
 #### When Adding New Plugins
 
@@ -165,6 +195,8 @@ When you notice these patterns duplicated across plugins, consider abstracting t
 2. **Use shared UI components** — Import `AnimatedButton`, `Card` from `toolbox` instead of creating custom buttons/cards.
 3. **Reuse helper functions** — Check if needed utilities already exist in `common/` before writing new ones.
 4. **Follow existing patterns** — If you must write plugin-specific code, follow the patterns established by existing plugins for consistency.
+5. **Implement `update_theme()` properly** — MUST update ALL widgets that have custom styles. Use `Theme.get_button_style()` for gradient buttons.
+6. **Test in both themes** — Verify all text is readable in both dark and light themes before marking work complete.
 
 #### Creating New Shared Components
 
@@ -179,8 +211,46 @@ When you identify code that should be shared:
 
 - Two themes: `Theme.DARK` (default) and `Theme.LIGHT`
 - Theme switching via `SettingsPlugin` with persistent storage using `QSettings`
-- All plugins can implement `update_theme(theme)` to respond to theme changes
+- All plugins MUST implement `update_theme(theme)` to respond to theme changes
 - Global stylesheet applied to main window with theme-specific colors
+
+#### Color Constants (Defined in `Theme` class)
+
+| Constant | Dark Theme | Light Theme | Usage |
+|----------|------------|-------------|-------|
+| `BG_PRIMARY` | `#1e1e1e` | `#ffffff` | Main window background |
+| `BG_SECONDARY` | `#2d2d2d` | `#f5f5f5` | Panels, content areas |
+| `BG_TERTIARY` | `#3d3d3d` | `#e8e8e8` | Sidebar, toolbars |
+| `TEXT_PRIMARY` | `#ffffff` | `#000000` | Primary text |
+| `TEXT_SECONDARY` | `#aaaaaa` | `#666666` | Secondary text |
+| `TEXT_DISABLED` | `#666666` | `#999999` | Disabled text |
+| `ACCENT_PRIMARY` | `#4dabf7` | `#1c7ed6` | Links, highlights |
+| `SUCCESS` | `#51cf66` | `#2f9e44` | Success messages |
+| `WARNING` | `#ffd43b` | `#f08c00` | Warning messages |
+| `ERROR` | `#ff6b6b` | `#e03131` | Error messages |
+
+#### Theme Compliance Rules (MANDATORY)
+
+1. **NEVER hardcode colors** — Always use `Theme.COLOR_NAME` or `theme["key"]`
+2. **Text must contrast with background** — Use `TEXT_PRIMARY`/`TEXT_SECONDARY` for all text
+3. **Test in BOTH themes** — Every style change must be verified in dark AND light mode
+4. **QMessageBox styling** — Use `MessageUtils.show_info()`, `MessageUtils.show_error()` etc. from `common/message_utils.py` instead of raw `QMessageBox` to ensure theme compliance
+5. **Gradient buttons** — Text color must be explicitly set for all states:
+   ```python
+   # GOOD: Explicit text color for each state
+   button.setStyleSheet(f"""
+       QPushButton {{ color: {Theme.TEXT_PRIMARY}; }}
+       QPushButton:hover {{ color: {Theme.TEXT_PRIMARY}; }}
+   """)
+   
+   # BAD: Depends on inheritance, may be unreadable
+   button.setStyleSheet("background: qlineargradient(...);")
+   ```
+6. **Status labels** — Use appropriate color constants:
+   - Success: `Theme.SUCCESS`
+   - Error: `Theme.ERROR`
+   - Warning: `Theme.WARNING`
+   - Info: `Theme.ACCENT_PRIMARY`
 
 ### PDF Conversion
 
