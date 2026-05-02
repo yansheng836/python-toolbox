@@ -367,6 +367,10 @@ class ImageScalerWidget(QWidget):
             self.width_row_widget.setVisible(True)
             self.height_row_widget.setVisible(True)
             self.aspect_row_widget.setVisible(True)
+            # 指定宽度模式下，宽度始终可编辑
+            self.width_input.setEnabled(True)
+            self.width_input.setSuffix(" px")
+            # 高度的可编辑性取决于是否保持宽高比
             if self.maintain_aspect.isChecked():
                 self.height_input.setEnabled(False)
                 self.height_input.setSuffix(" (自动)")
@@ -378,6 +382,10 @@ class ImageScalerWidget(QWidget):
             self.width_row_widget.setVisible(True)
             self.height_row_widget.setVisible(True)
             self.aspect_row_widget.setVisible(True)
+            # 指定高度模式下，高度始终可编辑
+            self.height_input.setEnabled(True)
+            self.height_input.setSuffix(" px")
+            # 宽度的可编辑性取决于是否保持宽高比
             if self.maintain_aspect.isChecked():
                 self.width_input.setEnabled(False)
                 self.width_input.setSuffix(" (自动)")
