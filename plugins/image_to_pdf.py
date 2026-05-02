@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
 )
 
 from common.message_utils import show_info, show_error, show_warning
+from common.dialog_utils import get_save_file_name
 from common.action_panel import ActionPanel
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
@@ -419,7 +420,7 @@ class ImageToPDF(ToolPlugin):
 
     def browse_output(self):
         parent = self.widget if self.widget else None
-        path, _ = QFileDialog.getSaveFileName(
+        path = get_save_file_name(
             parent, "保存PDF", "", "PDF文件 (*.pdf)"
         )
         if path:
@@ -437,8 +438,14 @@ class ImageToPDF(ToolPlugin):
         output = self.output_path.text()
         if not output:
             parent = self.widget if self.widget else None
-            show_warning(parent, "警告", "请选择输出路径！")
-            return
+            output = get_save_file_name(
+                parent, "保存PDF", "", "PDF文件 (*.pdf)"
+            )
+            if not output:
+                return
+            if not output.endswith('.pdf'):
+                output += '.pdf'
+            self.output_path.setText(output)
 
         if not (IMG2PDF_AVAILABLE or FITZ_AVAILABLE or PIL_AVAILABLE):
             parent = self.widget if self.widget else None

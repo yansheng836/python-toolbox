@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
 )
 
 from common.message_utils import show_info, show_error, show_warning
+from common.dialog_utils import get_existing_directory
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
 
 try:
@@ -352,7 +353,7 @@ class ImageCompressor(ToolPlugin):
 
     def browse_output(self):
         parent = self.widget if self.widget else None
-        path = QFileDialog.getExistingDirectory(parent, "选择输出目录")
+        path = get_existing_directory(parent, "选择输出目录")
         if path:
             self.output_path.setText(path)
 

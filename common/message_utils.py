@@ -9,9 +9,17 @@ from PyQt6.QtWidgets import QMessageBox
 def _apply_style(msg_box):
     """
     为消息框应用统一样式
-    只设置按钮样式（背景用主题色、文字白色），背景和文字交给系统/主题处理
+    设置白色背景和深色文字，按钮用主题色
     """
     msg_box.setStyleSheet("""
+        QMessageBox {
+            background-color: #ffffff;
+            color: #1f2937;
+        }
+        QMessageBox QLabel {
+            color: #1f2937;
+            background-color: transparent;
+        }
         QMessageBox QPushButton {
             background-color: #4f46e5;
             color: #ffffff;
