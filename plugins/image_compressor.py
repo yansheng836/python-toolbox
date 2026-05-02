@@ -230,7 +230,7 @@ class ImageCompressor(ToolPlugin):
         layout.addWidget(self.title_label)
 
         # 说明
-        self.desc_label = QLabel("支持 JPG、JPEG、PNG、WebP 格式，可批量处理并调整图片压缩质量")
+        self.desc_label = QLabel("支持 JPG、JPEG、PNG、WebP 格式，可调整图片压缩质量")
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 

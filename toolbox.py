@@ -385,13 +385,15 @@ class WelcomePage(QWidget):
 
         features = QWidget()
         features_layout = QHBoxLayout(features)
-        features_layout.setSpacing(16)
+        # 卡片间距：调小至12px，使卡片排列更紧凑（原16px）
+        features_layout.setSpacing(12)
         features_layout.setContentsMargins(5, 10, 5, 10)
 
         for icon, text, desc in FEATURE_MODULES:
             card = QFrame()
             card.setObjectName("card")
-            card.setContentsMargins(12, 12, 12, 12)
+            # 卡片内边距：左右调小至8px，使内容更紧凑（原12px）
+            card.setContentsMargins(8, 12, 8, 12)
             card.setMinimumWidth(200)
 
             card_layout = QVBoxLayout(card)

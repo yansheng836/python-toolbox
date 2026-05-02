@@ -377,7 +377,7 @@ class ImageToPDF(ToolPlugin):
         quality_layout.addWidget(self.quality_label)
         settings_layout.addLayout(quality_layout, 2, 1)
 
-        settings_layout.addWidget(QLabel("输出路径:"), 3, 0)
+        settings_layout.addWidget(QLabel("输出文件:"), 3, 0)
         path_layout = QHBoxLayout()
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("选择保存位置...")
