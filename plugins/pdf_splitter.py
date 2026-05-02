@@ -54,12 +54,15 @@ except ImportError:
             pass
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
-    QProgressBar, QComboBox, QSpinBox, QLineEdit,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QLineEdit,
+    QComboBox, QSpinBox,
     QRadioButton, QButtonGroup, QFormLayout
 )
 
 from common.message_utils import show_info, show_error, show_warning
+from common.file_list_panel import FileListPanel
+from common.action_panel import ActionPanel
+from common.utils import get_file_size, get_create_time
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 
@@ -184,29 +187,23 @@ class PDFSplitterWidget(QWidget):
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
-        file_card = Card(title="选择PDF文件")
+        # PDF文件列表区域（列表模式，参考PDF合并）
+        file_card = Card(title="PDF文件列表（仅支持一个文件）")
         file_layout = file_card.content_layout
 
-        self.file_display = QLineEdit()
-        self.file_display.setPlaceholderText("拖拽PDF文件到此处，或点击按钮选择...")
-        self.file_display.setAcceptDrops(True)
-        self.file_display.dragEnterEvent = self.drag_enter_event
-        self.file_display.dropEvent = self.drop_event
-        file_layout.addWidget(self.file_display)
+        PDF_COLUMNS = [
+            ("文件名", lambda f: os.path.basename(f)),
+            ("大小", get_file_size),
+            ("创建时间", get_create_time)
+        ]
 
-        self.file_info_label = QLabel("未选择文件")
-        file_layout.addWidget(self.file_info_label)
-
-        btn_layout = QHBoxLayout()
-        self.select_btn = AnimatedButton("选择PDF")
-        self.select_btn.clicked.connect(self.select_file)
-        self.clear_btn = AnimatedButton("清空")
-        self.clear_btn.clicked.connect(self.clear_file)
-        btn_layout.addWidget(self.select_btn)
-        btn_layout.addWidget(self.clear_btn)
-        btn_layout.addStretch()
-        file_layout.addLayout(btn_layout)
-
+        self.file_panel = FileListPanel(
+            columns=PDF_COLUMNS,
+            file_filter="PDF文件 (*.pdf);;所有文件 (*.*)",
+            button_class=AnimatedButton,
+            show_buttons=["add", "remove", "clear"]
+        )
+        file_layout.addWidget(self.file_panel)
         layout.addWidget(file_card)
 
         settings_card = Card(title="拆分设置")
@@ -258,54 +255,18 @@ class PDFSplitterWidget(QWidget):
         output_card.content_layout.addLayout(output_layout)
         layout.addWidget(output_card)
 
-        action_card = Card()
-        button_layout = QHBoxLayout()
+        # 操作面板（按钮 + 进度条 + 状态标签，参考PDF合并）
+        self.action_panel = ActionPanel(
+            button_text="开始拆分",
+            use_gradient=True,
+            gradient_colors=("#8b5cf6", "#7c3aed"),
+            gradient_hover_colors=("#a78bfa", "#8b5cf6"),
+            progress_chunk_color='#8b5cf6',
+            status_text=""
+        )
+        self.action_panel.clicked.connect(self.start_split)
+        layout.addWidget(self.action_panel)
 
-        self.split_btn = AnimatedButton("开始拆分")
-        self.split_btn.setMinimumHeight(48)
-        self.split_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #10b981, stop:1 #059669);
-                color: white; border: none; border-radius: 8px;
-                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #34d399, stop:1 #10b981); }}
-            QPushButton:disabled {{ background: #334155; color: #64748b; }}
-        """)
-        self.split_btn.clicked.connect(self.start_split)
-        self.split_btn.setEnabled(False)
-        button_layout.addWidget(self.split_btn)
-
-        self.cancel_btn = AnimatedButton("取消")
-        self.cancel_btn.setMinimumHeight(48)
-        self.cancel_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #ef4444, stop:1 #dc2626);
-                color: white; border: none; border-radius: 8px;
-                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #f87171, stop:1 #ef4444); }}
-            QPushButton:disabled {{ background: #334155; color: #64748b; }}
-        """)
-        self.cancel_btn.clicked.connect(self.cancel_split)
-        self.cancel_btn.setEnabled(False)
-        button_layout.addWidget(self.cancel_btn)
-
-        action_card.content_layout.addLayout(button_layout)
-
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        action_card.content_layout.addWidget(self.progress_bar)
-
-        self.status_label = QLabel("请选择PDF文件")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        action_card.content_layout.addWidget(self.status_label)
-
-        layout.addWidget(action_card)
         layout.addStretch()
 
         # 应用初始主题
@@ -314,120 +275,75 @@ class PDFSplitterWidget(QWidget):
 
     def apply_theme(self, theme):
         """应用主题到所有组件"""
-        self.file_display.setStyleSheet(f"""
-            QLineEdit {{
-                background-color: {theme['bg']};
-                border: 2px dashed {theme['surface']};
-                border-radius: 8px;
-                padding: 8px;
-                color: {theme['text_secondary']};
-            }}
-            QLineEdit:hover {{
-                border-color: {theme['text_secondary']};
-            }}
-        """)
-        self.file_info_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_12};")
-        self.pdf_radio.setStyleSheet(f"color: {theme['text']};")
-        self.image_radio.setStyleSheet(f"color: {theme['text']};")
-        self.image_format_combo.setStyleSheet(f"""
-            QComboBox {{
-                background-color: {theme['bg']};
-                border: 1px solid {theme['surface']};
-                border-radius: 6px;
-                padding: 6px;
-                color: {theme['text']};
-            }}
-            QComboBox::drop-down {{
-                border: none;
-            }}
-            QComboBox QAbstractItemView {{
-                background-color: {theme['bg_secondary']};
-                color: {theme['text']};
-                selection-background-color: {theme['primary']};
-                selection-color: {theme['text']};
-                padding: 4px;
-                border: none;
-            }}
-        """)
-        self.pages_spin.setStyleSheet(f"""
-            QSpinBox {{
-                background-color: {theme['bg']};
-                border: 1px solid {theme['surface']};
-                border-radius: 6px;
-                padding: 4px;
-                color: {theme['text']};
-            }}
-        """)
-        self.quality_combo.setStyleSheet(f"""
-            QComboBox {{
-                background-color: {theme['bg']};
-                border: 1px solid {theme['surface']};
-                border-radius: 6px;
-                padding: 6px;
-                color: {theme['text']};
-            }}
-            QComboBox::drop-down {{
-                border: none;
-            }}
-            QComboBox QAbstractItemView {{
-                background-color: {theme['bg_secondary']};
-                color: {theme['text']};
-                selection-background-color: {theme['primary']};
-                selection-color: {theme['text']};
-                padding: 4px;
-                border: none;
-            }}
-        """)
-        self.output_path.setStyleSheet(f"""
-            QLineEdit {{
-                background-color: {theme['bg']};
-                border: 1px solid {theme['surface']};
-                border-radius: 6px;
-                padding: 6px;
-                color: {theme['text']};
-            }}
-        """)
-        self.split_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 {theme['success']}, stop:1 {theme.get('success_gradient_end', theme['success'])});
-                color: {theme['text']};
-                border: none;
-                border-radius: 8px;
-                font-size: {FONT_SIZE_16};
-                font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 {theme['success_hover']}, stop:1 {theme.get('success_gradient_end', theme['success'])}); }}
-            QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
-        """)
-        self.cancel_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 {theme['error']}, stop:1 {theme.get('error_gradient_end', theme['error'])});
-                color: {theme['text']};
-                border: none;
-                border-radius: 8px;
-                font-size: {FONT_SIZE_16};
-                font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 {theme['error_hover']}, stop:1 {theme.get('error_gradient_end', theme['error'])}); }}
-            QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
-        """)
-        self.progress_bar.setStyleSheet(f"""
-            QProgressBar {{
-                background-color: {theme['bg']};
-                border-radius: 6px;
-                text-align: center;
-                color: {theme['text']};
-            }}
-            QProgressBar::chunk {{
-                background-color: {theme['success']};
-                border-radius: 6px;
-            }}
-        """)
-        self.status_label.setStyleSheet(f"color: {theme['text_secondary']};")
+        if hasattr(self, 'file_panel'):
+            self.file_panel.update_theme(theme)
+        if hasattr(self, 'output_path'):
+            self.output_path.setStyleSheet(f"""
+                QLineEdit {{
+                    background-color: {theme['bg']};
+                    border: 1px solid {theme['surface']};
+                    border-radius: 6px;
+                    padding: 6px;
+                    color: {theme['text']};
+                }}
+            """)
+        if hasattr(self, 'pdf_radio'):
+            self.pdf_radio.setStyleSheet(f"color: {theme['text']};")
+            self.image_radio.setStyleSheet(f"color: {theme['text']};")
+        if hasattr(self, 'image_format_combo'):
+            self.image_format_combo.setStyleSheet(f"""
+                QComboBox {{
+                    background-color: {theme['bg']};
+                    border: 1px solid {theme['surface']};
+                    border-radius: 6px;
+                    padding: 6px;
+                    color: {theme['text']};
+                }}
+                QComboBox::drop-down {{
+                    border: none;
+                }}
+                QComboBox QAbstractItemView {{
+                    background-color: {theme['bg_secondary']};
+                    color: {theme['text']};
+                    selection-background-color: {theme['primary']};
+                    selection-color: {theme['text']};
+                    padding: 4px;
+                    border: none;
+                }}
+            """)
+        if hasattr(self, 'pages_spin'):
+            self.pages_spin.setStyleSheet(f"""
+                QSpinBox {{
+                    background-color: {theme['bg']};
+                    border: 1px solid {theme['surface']};
+                    border-radius: 6px;
+                    padding: 4px;
+                    color: {theme['text']};
+                }}
+            """)
+        if hasattr(self, 'quality_combo'):
+            self.quality_combo.setStyleSheet(f"""
+                QComboBox {{
+                    background-color: {theme['bg']};
+                    border: 1px solid {theme['surface']};
+                    border-radius: 6px;
+                    padding: 6px;
+                    color: {theme['text']};
+                }}
+                QComboBox::drop-down {{
+                    border: none;
+                }}
+                QComboBox QAbstractItemView {{
+                    background-color: {theme['bg_secondary']};
+                    color: {theme['text']};
+                    selection-background-color: {theme['primary']};
+                    selection-color: {theme['text']};
+                    padding: 4px;
+                    border: none;
+                }}
+            """)
+        if hasattr(self, 'action_panel'):
+            self.action_panel.update_theme(theme)
 
     def on_format_changed(self):
         """输出格式改变时更新UI"""
@@ -438,91 +354,29 @@ class PDFSplitterWidget(QWidget):
         if not self.pdf_radio.isChecked():
             self.pages_spin.setValue(1)
 
-    def drag_enter_event(self, event):
-        """拖拽进入事件"""
-        if event.mimeData().hasUrls():
-            urls = event.mimeData().urls()
-            for url in urls:
-                if url.isLocalFile():
-                    file_path = url.toLocalFile()
-                    if file_path.lower().endswith('.pdf'):
-                        event.acceptProposedAction()
-                        return
-        event.ignore()
-
-    def drop_event(self, event):
-        """拖放下事件"""
-        if event.mimeData().hasUrls():
-            urls = event.mimeData().urls()
-            for url in urls:
-                if url.isLocalFile():
-                    file_path = url.toLocalFile()
-                    if file_path.lower().endswith('.pdf'):
-                        self.set_input_file(file_path)
-                        break
-            event.acceptProposedAction()
-        else:
-            event.ignore()
-
-    def select_file(self):
-        """选择PDF文件"""
-        file, _ = QFileDialog.getOpenFileName(
-            self,
-            "选择PDF文件",
-            "",
-            "PDF文件 (*.pdf);;所有文件 (*.*)"
-        )
-        if file:
-            self.set_input_file(file)
-
-    def set_input_file(self, file_path):
-        """设置输入文件"""
-        self.input_file = file_path
-        self.file_display.setText(file_path)
-
-        try:
-            if FITZ_AVAILABLE:
-                doc = fitz.open(file_path)
-                page_count = len(doc)
-                doc.close()
-                size_kb = os.path.getsize(file_path) / 1024
-                self.file_info_label.setText(
-                    f"文件: {os.path.basename(file_path)} | 页数: {page_count} | 大小: {size_kb:.1f} KB"
-                )
-                if not self.output_path.text():
-                    self.output_path.setText(os.path.dirname(file_path))
-                self.pages_spin.setMaximum(page_count)
-            else:
-                self.file_info_label.setText(f"文件: {os.path.basename(file_path)}")
-        except Exception as e:
-            self.file_info_label.setText(f"无法读取PDF信息: {e}")
-
-        self.split_btn.setEnabled(bool(self.output_path.text()))
-
-    def clear_file(self):
-        """清空文件"""
-        self.input_file = ""
-        self.file_display.clear()
-        self.file_info_label.setText("未选择文件")
-        self.split_btn.setEnabled(False)
-
     def browse_output(self):
         """选择输出目录"""
+        files = self.file_panel.get_files()
+        default_dir = os.path.dirname(files[0]) if files else ""
         dir_path = QFileDialog.getExistingDirectory(
             self,
             "选择输出目录",
-            os.path.dirname(self.input_file) if self.input_file else ""
+            default_dir
         )
         if dir_path:
             self.output_path.setText(dir_path)
-            if self.input_file:
-                self.split_btn.setEnabled(True)
 
     def start_split(self):
         """开始拆分"""
-        if not self.input_file:
-            show_warning(self, "警告", "请先选择PDF文件！")
+        files = self.file_panel.get_files()
+        if not files:
+            show_warning(self, "警告", "请先添加PDF文件！")
             return
+        if len(files) > 1:
+            show_warning(self, "警告", "拆分功能仅支持一个PDF文件！")
+            return
+
+        input_file = files[0]
 
         if not self.output_path.text():
             show_warning(self, "警告", "请选择输出目录！")
@@ -542,66 +396,40 @@ class PDFSplitterWidget(QWidget):
         quality_str = self.quality_combo.currentText()
         quality = int(quality_str.split("(")[1].split(")")[0])
 
-        self.split_btn.setEnabled(False)
-        self.cancel_btn.setEnabled(True)
-        self.progress_bar.setVisible(True)
-
+        # 计算总任务数
         try:
-            doc = fitz.open(self.input_file)
+            doc = fitz.open(input_file)
             total = len(doc)
             doc.close()
             if output_format == "pdf":
                 total = (total + pages_per_split - 1) // pages_per_split
-            self.progress_bar.setMaximum(total)
-            self.progress_bar.setValue(0)
         except Exception:
-            self.progress_bar.setMaximum(100)
+            total = 100
 
-        self.status_label.setText("正在拆分...")
+        # 启动任务
+        self.action_panel.start_task(total, status="正在拆分...")
 
         self.worker = PDFSplitWorker(
-            self.input_file,
+            input_file,
             self.output_path.text(),
             output_format,
             pages_per_split,
             image_format,
             quality
         )
-        self.worker.progress.connect(self.update_progress)
-        self.worker.status.connect(self.update_status)
+        self.worker.progress.connect(self.action_panel.update_progress)
+        self.worker.status.connect(self.action_panel.update_status)
         self.worker.finished.connect(self.split_finished)
         self.worker.start()
 
-    def cancel_split(self):
-        """取消拆分"""
-        if self.worker and self.worker.isRunning():
-            self.worker.terminate()
-            self.worker.wait()
-            self.status_label.setText("已取消")
-            self.split_btn.setEnabled(True)
-            self.cancel_btn.setEnabled(False)
-            self.progress_bar.setVisible(False)
-
-    def update_progress(self, value):
-        """更新进度条"""
-        self.progress_bar.setValue(value)
-
-    def update_status(self, message):
-        """更新状态标签"""
-        self.status_label.setText(message)
-
     def split_finished(self, success, message):
         """拆分完成回调"""
-        self.progress_bar.setVisible(False)
-        self.split_btn.setEnabled(True)
-        self.cancel_btn.setEnabled(False)
+        self.action_panel.finish_task(message)
 
         if success:
             show_info(self, "完成", message)
-            self.status_label.setText("拆分完成")
         else:
             show_error(self, "错误", message)
-            self.status_label.setText("拆分失败")
 
 
 class PDFSplitter(ToolPlugin):
