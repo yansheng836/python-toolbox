@@ -42,6 +42,7 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 from common.file_list_panel import FileListPanel
 from common.utils import IMAGE_COLUMNS
+from common.action_panel import ActionPanel
 
 
 class ScalingWorker(QThread):
@@ -301,50 +302,18 @@ class ImageScalerWidget(QWidget):
 
         layout.addWidget(settings_card)
 
-        # 操作区
-        action_card = Card()
-        button_layout = QHBoxLayout()
+        # 操作面板（按钮 + 进度条 + 状态标签）
+        self.action_panel = ActionPanel(
+            button_text="开始缩放",
+            use_gradient=True,
+            gradient_colors=("#10b981", "#059669"),
+            gradient_hover_colors=("#34d399", "#10b981"),
+            progress_chunk_color='#8b5cf6',
+            status_text=""
+        )
+        self.action_panel.clicked.connect(self.start_scaling)
+        layout.addWidget(self.action_panel)
 
-        self.start_btn = AnimatedButton("开始缩放")
-        self.start_btn.setMinimumHeight(40)
-        self.start_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #10b981, stop:1 #059669);
-                color: white; border: none; border-radius: 8px;
-                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #34d399, stop:1 #10b981); }}
-            QPushButton:disabled {{ background: #334155; color: #64748b; }}
-        """)
-        self.start_btn.clicked.connect(self.start_scaling)
-        button_layout.addWidget(self.start_btn)
-
-        action_card.content_layout.addLayout(button_layout)
-
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        self.progress_bar.setStyleSheet("""
-            QProgressBar {
-                background-color: #0f172a;
-                border-radius: 6px;
-                text-align: center;
-                color: white;
-            }
-            QProgressBar::chunk {
-                background-color: #10b981;
-                border-radius: 6px;
-            }
-        """)
-        action_card.content_layout.addWidget(self.progress_bar)
-
-        self.status_label = QLabel("就绪")
-        self.status_label.setStyleSheet("color: #94a3b8;")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        action_card.content_layout.addWidget(self.status_label)
-
-        layout.addWidget(action_card)
         layout.addStretch()
 
         # 初始状态
@@ -420,28 +389,24 @@ class ImageScalerWidget(QWidget):
             height=self.height_input.value() if scale_type in ["指定宽度", "指定高度"] else None
         )
 
-        self.worker.progress_updated.connect(self.update_progress)
+        self.worker.progress_updated.connect(self.on_progress_updated)
         self.worker.finished.connect(self.on_scaling_finished)
         self.worker.image_processed.connect(self.on_image_processed)
 
-        self.start_btn.setEnabled(False)
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setValue(0)
-        self.status_label.setText("正在处理...")
+        self.action_panel.start_task(len(files), status="正在处理...")
 
         self.worker.start()
 
-    def update_progress(self, value, current):
-        self.progress_bar.setValue(value)
-        self.status_label.setText(f"正在处理... {current}/{len(self.file_panel.get_files())}")
+    def on_progress_updated(self, progress, current):
+        self.action_panel.update_progress(progress)
+        total = len(self.file_panel.get_files())
+        self.action_panel.update_status(f"正在处理... {current}/{total}")
 
     def on_image_processed(self, input_file, output_file):
         pass
 
     def on_scaling_finished(self, success, message):
-        self.progress_bar.setVisible(False)
-        self.status_label.setText(message)
-        self.start_btn.setEnabled(True)
+        self.action_panel.finish_task(message)
 
         if success:
             show_info(self, "完成", message)
@@ -452,6 +417,8 @@ class ImageScalerWidget(QWidget):
         """应用主题到所有组件"""
         if hasattr(self, 'file_panel'):
             self.file_panel.update_theme(theme)
+        if hasattr(self, 'action_panel'):
+            self.action_panel.update_theme(theme)
         combo_style = f"""
             QComboBox {{
                 background-color: {theme['bg']};
@@ -497,33 +464,6 @@ class ImageScalerWidget(QWidget):
                 color: {theme['text']};
             }}
         """)
-        self.start_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 {theme['success']}, stop:1 {theme.get('success_gradient_end', theme['success'])});
-                color: {theme['text']};
-                border: none;
-                border-radius: 8px;
-                font-size: {FONT_SIZE_16};
-                font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 {theme['success_hover']}, stop:1 {theme.get('success_gradient_end', theme['success'])}); }}
-            QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
-        """)
-        self.progress_bar.setStyleSheet(f"""
-            QProgressBar {{
-                background-color: {theme['bg']};
-                border-radius: 6px;
-                text-align: center;
-                color: {theme['text']};
-            }}
-            QProgressBar::chunk {{
-                background-color: {theme['success']};
-                border-radius: 6px;
-            }}
-        """)
-        self.status_label.setStyleSheet(f"color: {theme['text_secondary']};")
 
 
 class ImageScaler(ToolPlugin):

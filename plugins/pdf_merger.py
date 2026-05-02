@@ -46,7 +46,7 @@ except ImportError:
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
-    QProgressBar, QLineEdit
+    QLineEdit
 )
 
 from common.message_utils import show_info, show_error, show_warning
@@ -54,6 +54,7 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 from common.file_list_panel import FileListPanel
 from common.utils import get_create_time, get_file_size
+from common.action_panel import ActionPanel
 
 
 PDF_COLUMNS = [
@@ -149,13 +150,13 @@ class PDFMergerWidget(QWidget):
             button_class=AnimatedButton,
             show_buttons=["add", "remove", "clear", "up", "down", "sort_name", "sort_time"]
         )
-        file_layout.addWidget(self.file_panel)
 
         # 调整"创建时间"列宽（完整显示 "YYYY-MM-DD HH:MM" 需要约 140px）
         header = self.file_panel.table.horizontalHeader()
         create_time_col = len(PDF_COLUMNS) - 1  # "创建时间"列索引
         header.resizeSection(create_time_col, 140)
 
+        file_layout.addWidget(self.file_panel)
         layout.addWidget(file_card)
 
         # 输出设置
@@ -181,50 +182,18 @@ class PDFMergerWidget(QWidget):
         output_card.content_layout.addLayout(output_layout)
         layout.addWidget(output_card)
 
-        # 操作区
-        action_card = Card()
-        button_layout = QHBoxLayout()
+        # 操作面板（按钮 + 进度条 + 状态标签）
+        self.action_panel = ActionPanel(
+            button_text="开始合并",
+            use_gradient=True,
+            gradient_colors=("#10b981", "#059669"),
+            gradient_hover_colors=("#34d399", "#10b981"),
+            progress_chunk_color='#10b981',
+            status_text=""
+        )
+        self.action_panel.clicked.connect(self.start_merge)
+        layout.addWidget(self.action_panel)
 
-        self.merge_btn = AnimatedButton("开始合并")
-        self.merge_btn.setMinimumHeight(48)
-        self.merge_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #10b981, stop:1 #059669);
-                color: white; border: none; border-radius: 8px;
-                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #34d399, stop:1 #10b981); }}
-            QPushButton:disabled {{ background: #334155; color: #64748b; }}
-        """)
-        self.merge_btn.clicked.connect(self.start_merge)
-        button_layout.addWidget(self.merge_btn)
-
-        action_card.content_layout.addLayout(button_layout)
-
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        self.progress_bar.setStyleSheet("""
-            QProgressBar {
-                background-color: #0f172a;
-                border-radius: 6px;
-                text-align: center;
-                color: white;
-            }
-            QProgressBar::chunk {
-                background-color: #10b981;
-                border-radius: 6px;
-            }
-        """)
-        action_card.content_layout.addWidget(self.progress_bar)
-
-        self.status_label = QLabel("就绪")
-        self.status_label.setStyleSheet("color: #94a3b8;")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        action_card.content_layout.addWidget(self.status_label)
-
-        layout.addWidget(action_card)
         layout.addStretch()
 
         # 应用初始主题
@@ -272,35 +241,24 @@ class PDFMergerWidget(QWidget):
             show_error(self, "错误", "请先安装 PyMuPDF: pip install PyMuPDF")
             return
 
-        # 禁用按钮，显示进度条
-        self.merge_btn.setEnabled(False)
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setMaximum(len(files))
-        self.progress_bar.setValue(0)
-        self.status_label.setText("正在合并...")
+        # 开始任务
+        self.action_panel.start_task(len(files), status="正在合并...")
 
         # 创建工作线程
         self.worker = PDFMergeWorker(files, output)
-        self.worker.progress.connect(self.progress_bar.setValue)
-        self.worker.status.connect(self.update_status)
+        self.worker.progress.connect(self.action_panel.update_progress)
+        self.worker.status.connect(self.action_panel.update_status)
         self.worker.finished.connect(self.merge_finished)
         self.worker.start()
 
-    def update_status(self, message):
-        """更新状态标签"""
-        self.status_label.setText(message)
-
     def merge_finished(self, success, message):
         """合并完成回调"""
-        self.progress_bar.setVisible(False)
-        self.merge_btn.setEnabled(True)
+        self.action_panel.finish_task(message)
 
         if success:
             show_info(self, "完成", message)
-            self.status_label.setText("合并完成")
         else:
             show_error(self, "错误", message)
-            self.status_label.setText("合并失败")
 
     def apply_theme(self, theme):
         """应用主题到所有组件"""
@@ -316,36 +274,8 @@ class PDFMergerWidget(QWidget):
                     color: {theme['text']};
                 }}
             """)
-        if hasattr(self, 'merge_btn'):
-            self.merge_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                        stop:0 {theme['success']}, stop:1 {theme.get('success_gradient_end', theme['success'])});
-                    color: {theme['text']};
-                    border: none;
-                    border-radius: 8px;
-                    font-size: {FONT_SIZE_16};
-                    font-weight: {FONT_WEIGHT_600};
-                }}
-                QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 {theme['success_hover']}, stop:1 {theme.get('success_gradient_end', theme['success'])}); }}
-                QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
-            """)
-        if hasattr(self, 'progress_bar'):
-            self.progress_bar.setStyleSheet(f"""
-                QProgressBar {{
-                    background-color: {theme['bg']};
-                    border-radius: 6px;
-                    text-align: center;
-                    color: {theme['text']};
-                }}
-                QProgressBar::chunk {{
-                    background-color: {theme['success']};
-                    border-radius: 6px;
-                }}
-            """)
-        if hasattr(self, 'status_label'):
-            self.status_label.setStyleSheet(f"color: {theme['text_secondary']};")
+        if hasattr(self, 'action_panel'):
+            self.action_panel.update_theme(theme)
 
 
 class PDFMerger(ToolPlugin):
