@@ -321,23 +321,6 @@ class ImageScalerWidget(QWidget):
         self.start_btn.clicked.connect(self.start_scaling)
         button_layout.addWidget(self.start_btn)
 
-        self.cancel_btn = AnimatedButton("取消")
-        self.cancel_btn.setMinimumHeight(40)
-        self.cancel_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #ef4444, stop:1 #dc2626);
-                color: white; border: none; border-radius: 8px;
-                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #f87171, stop:1 #ef4444); }}
-            QPushButton:disabled {{ background: #334155; color: #64748b; }}
-        """)
-        self.cancel_btn.clicked.connect(self.cancel_scaling)
-        self.cancel_btn.setEnabled(False)
-        button_layout.addWidget(self.cancel_btn)
-
         action_card.content_layout.addLayout(button_layout)
 
         self.progress_bar = QProgressBar()
@@ -434,20 +417,11 @@ class ImageScalerWidget(QWidget):
         self.worker.image_processed.connect(self.on_image_processed)
 
         self.start_btn.setEnabled(False)
-        self.cancel_btn.setEnabled(True)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
         self.status_label.setText("正在处理...")
 
         self.worker.start()
-
-    def cancel_scaling(self):
-        if self.worker and self.worker.isRunning():
-            self.worker.terminate()
-            self.worker.wait()
-            self.status_label.setText("已取消")
-            self.start_btn.setEnabled(True)
-            self.cancel_btn.setEnabled(False)
 
     def update_progress(self, value, current):
         self.progress_bar.setValue(value)
@@ -460,7 +434,6 @@ class ImageScalerWidget(QWidget):
         self.progress_bar.setVisible(False)
         self.status_label.setText(message)
         self.start_btn.setEnabled(True)
-        self.cancel_btn.setEnabled(False)
 
         if success:
             show_info(self, "完成", message)
@@ -528,20 +501,6 @@ class ImageScalerWidget(QWidget):
             }}
             QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                 stop:0 {theme['success_hover']}, stop:1 {theme.get('success_gradient_end', theme['success'])}); }}
-            QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
-        """)
-        self.cancel_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 {theme['error']}, stop:1 {theme.get('error_gradient_end', theme['error'])});
-                color: {theme['text']};
-                border: none;
-                border-radius: 8px;
-                font-size: {FONT_SIZE_16};
-                font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 {theme['error_hover']}, stop:1 {theme.get('error_gradient_end', theme['error'])}); }}
             QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
         """)
         self.progress_bar.setStyleSheet(f"""
