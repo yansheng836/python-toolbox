@@ -55,7 +55,7 @@ except ImportError:
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QLineEdit,
-    QComboBox, QSpinBox,
+    QComboBox, QSpinBox, QSlider,
     QRadioButton, QButtonGroup, QFormLayout
 )
 
@@ -223,22 +223,34 @@ class PDFSplitterWidget(QWidget):
         self.pdf_radio.toggled.connect(self.on_format_changed)
         settings_layout.addRow("输出格式:", format_layout)
 
-        self.image_format_combo = QComboBox()
-        self.image_format_combo.addItems(["PNG", "JPEG", "WebP"])
-        self.image_format_combo.setVisible(False)
-        settings_layout.addRow("图片格式:", self.image_format_combo)
-
         self.pages_spin = QSpinBox()
         self.pages_spin.setRange(1, 1000)
         self.pages_spin.setValue(1)
         self.pages_spin.setSuffix(" 页/文件")
         settings_layout.addRow("拆分页数:", self.pages_spin)
 
-        self.quality_combo = QComboBox()
-        self.quality_combo.addItems(["高质量 (95)", "标准 (85)", "较小文件 (75)", "最小文件 (50)"])
-        self.quality_combo.setCurrentIndex(1)
-        self.quality_combo.setVisible(False)
-        settings_layout.addRow("图片质量:", self.quality_combo)
+        self.image_format_combo = QComboBox()
+        self.image_format_combo.addItems(["PNG", "JPEG", "WebP"])
+        self.image_format_combo.setVisible(False)
+        settings_layout.addRow("图片格式:", self.image_format_combo)
+
+        # 图片质量：滚动条 + 百分比标签（参考图片压缩功能）
+        from PyQt6.QtWidgets import QWidget
+        quality_widget = QWidget()
+        quality_h_layout = QHBoxLayout(quality_widget)
+        quality_h_layout.setContentsMargins(0, 0, 0, 0)
+        self.quality_slider = QSlider(Qt.Orientation.Horizontal)
+        self.quality_slider.setRange(1, 100)
+        self.quality_slider.setValue(85)
+        self.quality_label = QLabel("85%")
+        self.quality_slider.valueChanged.connect(
+            lambda v: self.quality_label.setText(f"{v}%")
+        )
+        quality_h_layout.addWidget(self.quality_slider)
+        quality_h_layout.addWidget(self.quality_label)
+        self.quality_widget = quality_widget
+        settings_layout.addRow("图片质量:", self.quality_widget)
+        self.quality_widget.setVisible(False)
 
         settings_card.content_layout.addLayout(settings_layout)
         layout.addWidget(settings_card)
@@ -321,27 +333,8 @@ class PDFSplitterWidget(QWidget):
                     color: {theme['text']};
                 }}
             """)
-        if hasattr(self, 'quality_combo'):
-            self.quality_combo.setStyleSheet(f"""
-                QComboBox {{
-                    background-color: {theme['bg']};
-                    border: 1px solid {theme['surface']};
-                    border-radius: 6px;
-                    padding: 6px;
-                    color: {theme['text']};
-                }}
-                QComboBox::drop-down {{
-                    border: none;
-                }}
-                QComboBox QAbstractItemView {{
-                    background-color: {theme['bg_secondary']};
-                    color: {theme['text']};
-                    selection-background-color: {theme['primary']};
-                    selection-color: {theme['text']};
-                    padding: 4px;
-                    border: none;
-                }}
-            """)
+        if hasattr(self, 'quality_label'):
+            self.quality_label.setStyleSheet(f"color: {theme['text']};")
         if hasattr(self, 'action_panel'):
             self.action_panel.update_theme(theme)
 
@@ -349,7 +342,7 @@ class PDFSplitterWidget(QWidget):
         """输出格式改变时更新UI"""
         is_image = self.image_radio.isChecked()
         self.image_format_combo.setVisible(is_image)
-        self.quality_combo.setVisible(is_image)
+        self.quality_widget.setVisible(is_image)
         self.pages_spin.setEnabled(self.pdf_radio.isChecked())
         if not self.pdf_radio.isChecked():
             self.pages_spin.setValue(1)
@@ -393,8 +386,7 @@ class PDFSplitterWidget(QWidget):
         output_format = "pdf" if self.pdf_radio.isChecked() else "image"
         pages_per_split = self.pages_spin.value() if output_format == "pdf" else 1
         image_format = self.image_format_combo.currentText()
-        quality_str = self.quality_combo.currentText()
-        quality = int(quality_str.split("(")[1].split(")")[0])
+        quality = self.quality_slider.value()
 
         # 计算总任务数
         try:
