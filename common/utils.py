@@ -42,7 +42,7 @@ def get_create_time(file_path):
     try:
         import time
         t = os.path.getctime(file_path)
-        return time.strftime("%Y-%m-%d %H:%M", time.localtime(t))
+        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t))
     except Exception:
         return "未知"
 

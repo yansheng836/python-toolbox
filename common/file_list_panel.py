@@ -29,8 +29,8 @@ class FileListPanel(QWidget):
         "大小": 80,
         "页数": 50,
         "尺寸": 100,
-        "创建时间": 140,
-        "修改时间": 140,
+        "创建时间": 150,
+        "修改时间": 150,
     }
 
     def __init__(self, parent=None, *,

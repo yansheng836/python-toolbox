@@ -18,7 +18,8 @@ from common.message_utils import show_info, show_error, show_warning, show_quest
 from common.action_panel import ActionPanel
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QColor, QBrush
+from PyQt6.QtWidgets import QSizePolicy
 
 
 class FileDeduplicationWorker(QThread):
@@ -100,6 +101,7 @@ class FileDeduplicatorWidget(QWidget):
         self.setup_ui()
 
     def setup_ui(self):
+        self.group_bg_color = QColor('#334155')  # 默认分组背景色，apply_theme 会覆盖
         layout = QVBoxLayout(self)
         layout.setSpacing(16)
 
@@ -142,9 +144,11 @@ class FileDeduplicatorWidget(QWidget):
         results_card = Card(title="重复文件列表")
         self.results_tree = QTreeWidget()
         self.results_tree.setHeaderLabels(["文件信息", "大小", "修改时间"])
-        self.results_tree.setColumnWidth(0, 400)
-        self.results_tree.setColumnWidth(1, 100)
-        self.results_tree.setColumnWidth(2, 200)
+        self.results_tree.setColumnWidth(0, 580)
+        self.results_tree.setColumnWidth(1, 80)
+        self.results_tree.setColumnWidth(2, 140)
+        self.results_tree.setMinimumHeight(400)
+        self.results_tree.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         results_card.content_layout.addWidget(self.results_tree)
 
         # 统计标签
@@ -228,14 +232,37 @@ class FileDeduplicatorWidget(QWidget):
                 }}
                 QTreeWidget::item {{
                     padding: 6px;
+                    color: {theme['text']};
                 }}
                 QTreeWidget::item:selected {{
                     background-color: {theme['primary']};
+                    color: {theme['text']};
                 }}
                 QTreeWidget::item:hover {{
                     background-color: {theme['surface']};
+                    color: {theme['text']};
+                }}
+                QScrollBar:horizontal {{
+                    background: {theme['bg_secondary']};
+                    height: 10px;
+                    margin: 0;
+                    border-radius: 5px;
+                    border: 1px solid {theme['border']};
+                }}
+                QScrollBar::handle:horizontal {{
+                    background: {theme['text_secondary']};
+                    min-width: 20px;
+                    border-radius: 4px;
+                }}
+                QScrollBar::handle:horizontal:hover {{
+                    background: {theme['text']};
+                }}
+                QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+                    width: 0;
                 }}
             """)
+            # 同步更新分组背景色，确保文字可读
+            self.group_bg_color = QColor(theme['bg_secondary'])
 
         # 统计标签
         if hasattr(self, 'stats_label'):
@@ -261,11 +288,17 @@ class FileDeduplicatorWidget(QWidget):
                 }}
             """)
 
+        # 存储当前主题供 show_duplicates 使用
+        self.current_theme = theme
+
         # 删除操作面板——使用主题错误色更新渐变
         if hasattr(self, 'delete_panel'):
             self.delete_panel.gradient_colors = (theme['error'], theme.get('error_gradient_end', theme['error']))
             self.delete_panel.gradient_hover_colors = (theme['error_hover'], theme.get('error_gradient_end', theme['error']))
             self.delete_panel.update_theme(theme)
+
+        # 记录重复分组的背景色，供 show_duplicates 使用
+        self.group_bg_color = QColor(theme['surface'])
 
     def browse_folder(self):
         """选择文件夹"""
@@ -319,12 +352,16 @@ class FileDeduplicatorWidget(QWidget):
         total_duplicates = 0
         total_savings = 0
 
+        # 获取当前主题的文字颜色
+        text_color = self.current_theme['text'] if hasattr(self, 'current_theme') else '#f1f5f9'
+
         for file_hash, file_list in duplicates.items():
             # 创建重复组顶级项
             group_item = QTreeWidgetItem(self.results_tree)
             group_item.setText(0, f"重复组: {file_hash[:8]}... (共 {len(file_list)} 个文件)")
             group_item.setFont(0, QFont("Arial", 10, QFont.Weight.Bold))
-            group_item.setBackground(0, Qt.GlobalColor.darkBlue)
+            group_item.setBackground(0, self.group_bg_color)
+            group_item.setForeground(0, QBrush(QColor(text_color)))
 
             # 计算该组可节省空间
             if file_list:
@@ -337,10 +374,12 @@ class FileDeduplicatorWidget(QWidget):
             for file_path in file_list:
                 file_item = QTreeWidgetItem(group_item)
                 file_item.setText(0, file_path)
+                file_item.setForeground(0, QBrush(QColor(text_color)))
                 # 文件大小
                 try:
                     size = os.path.getsize(file_path)
                     file_item.setText(1, self.format_size(size))
+                    file_item.setForeground(1, QBrush(QColor(text_color)))
                 except:
                     file_item.setText(1, "未知")
                 # 修改时间
@@ -348,6 +387,7 @@ class FileDeduplicatorWidget(QWidget):
                     mtime = os.path.getmtime(file_path)
                     time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime))
                     file_item.setText(2, time_str)
+                    file_item.setForeground(2, QBrush(QColor(text_color)))
                 except:
                     file_item.setText(2, "未知")
                 total_duplicates += 1
