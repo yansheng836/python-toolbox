@@ -10,7 +10,7 @@ try:
     from config import (
         APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_COPYRIGHT,
         APP_WEBSITE_URL, APP_WEBSITE_LINK_TEXT,
-        FEATURE_MODULES, UI_CONFIG, THEME_CONFIG, WELCOME_CONFIG,
+        FEATURE_MODULES, PLUGIN_MODULES, UI_CONFIG, THEME_CONFIG, WELCOME_CONFIG,
         TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_20,
         FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800,
         SPACING_SMALL, SPACING_MEDIUM
@@ -23,6 +23,7 @@ except ImportError:
     APP_WEBSITE_URL = "https://www.example.com"
     APP_WEBSITE_LINK_TEXT = "🌐 访问官方网站"
     FEATURE_MODULES = []
+    PLUGIN_MODULES = []
     UI_CONFIG = {}
     THEME_CONFIG = {}
     WELCOME_CONFIG = {}
@@ -469,12 +470,6 @@ class WelcomePage(QWidget):
 class SettingsPlugin(ToolPlugin):
     """设置插件 - 包含通用设置和关于信息"""
 
-    name = "设置"
-    description = "应用程序设置和关于信息"
-    icon = "⚙️"
-    version = "1.0.0"
-    order = 999  # 设置始终放在最后
-
     def update_theme(self, theme):
         if hasattr(self, 'title_label'):
             self.title_label.setStyleSheet(
@@ -819,34 +814,24 @@ class ToolboxWindow(QMainWindow):
             print(f"注册插件失败 {plugin_class.name}: {e}")
 
     def load_plugins(self):
-        """从plugins目录加载外部插件，按order排序后注册"""
-        if getattr(sys, 'frozen', False):
-            base_path = Path(sys._MEIPASS)
-        else:
-            base_path = Path(__file__).parent
-
-        plugins_dir = base_path / "plugins"
+        """从PLUGIN_MODULES配置加载插件，按order排序后注册"""
         plugin_classes = []
 
-        # 收集外部插件类
-        if plugins_dir.exists():
-            for file in plugins_dir.glob("*.py"):
-                try:
-                    spec = importlib.util.spec_from_file_location(file.stem, file)
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
-
-                    for attr_name in dir(module):
-                        attr = getattr(module, attr_name)
-                        if (isinstance(attr, type) and
-                                attr.__name__ != 'ToolPlugin' and
-                                any(c.__name__ == 'ToolPlugin' for c in attr.__mro__)):
-                            plugin_classes.append(attr)
-                except Exception as e:
-                    print(f"加载插件失败 {file}: {e}")
-
-        # 添加设置插件
-        plugin_classes.append(SettingsPlugin)
+        for plugin_config in PLUGIN_MODULES:
+            try:
+                # 动态导入模块
+                module = importlib.import_module(plugin_config["module"])
+                # 获取插件类
+                plugin_class = getattr(module, plugin_config["class"])
+                # 动态设置属性（与配置保持一致，单一数据源）
+                plugin_class.name = plugin_config["name"]
+                plugin_class.icon = plugin_config["icon"]
+                plugin_class.order = plugin_config["order"]
+                if "description" in plugin_config:
+                    plugin_class.description = plugin_config["description"]
+                plugin_classes.append(plugin_class)
+            except Exception as e:
+                print(f"加载插件失败 {plugin_config.get('name', 'unknown')}: {e}")
 
         # 按 order 排序（数值越小排在越前面）
         plugin_classes.sort(key=lambda x: getattr(x, 'order', 999))

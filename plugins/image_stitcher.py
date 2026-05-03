@@ -183,10 +183,6 @@ class ImageStitchWorker(QThread):
 
 class ImageStitcher(ToolPlugin):
     """图片拼接工具"""
-    name = "图片拼接"
-    description = "多图横向/纵向合并为一张"
-    icon = "📐"
-    order = 15
 
     def update_theme(self, theme):
         """更新主题"""

@@ -573,9 +573,6 @@ class FileDeduplicatorWidget(QWidget):
 
 class FileDeduplicator(ToolPlugin):
     """文件去重插件"""
-    icon = "🗑️"
-    name = "文件去重"
-    order = 200
 
     def update_theme(self, theme):
         """更新主题"""

@@ -252,10 +252,6 @@ class PDFWorker(QThread):
 
 class ImageToPDF(ToolPlugin):
     """图片转PDF工具"""
-    name = "图片转PDF"
-    description = "将多张图片合并为一个PDF文件"
-    icon = "📄"
-    order = 20
 
     def update_theme(self, theme):
         """更新主题"""

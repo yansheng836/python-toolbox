@@ -11,16 +11,89 @@ APP_COPYRIGHT = "© 2026 yansheng836"
 APP_WEBSITE_URL = "https://github.com/yansheng836/python-toolbox"  # 官方网站URL
 APP_WEBSITE_LINK_TEXT = "🌐 访问官方网站"
 
-# 功能模块信息
+# 功能模块信息（插件配置，单一数据源）
+# 首页展示和插件加载均从此配置读取，避免维护多份
+# order: 排序权重，数值越小排在越前面
+PLUGIN_MODULES = [
+    {
+        "name": "图片压缩",
+        "icon": "🖼️",
+        "description": "支持JPG、PNG、WebP格式，可批量处理并调整压缩质量",
+        "order": 5,
+        "module": "plugins.image_compressor",
+        "class": "ImageCompressor",
+    },
+    {
+        "name": "图片格式转换",
+        "icon": "🔄",
+        "description": "纯格式转换，保持原始质量，支持JPEG/PNG/WebP/BMP/TIFF/GIF",
+        "order": 10,
+        "module": "plugins.image_format_converter",
+        "class": "FormatConverter",
+    },
+    {
+        "name": "图片拼接",
+        "icon": "📐",
+        "description": "多图合并，自由拼接，支持横向和纵向合并",
+        "order": 15,
+        "module": "plugins.image_stitcher",
+        "class": "ImageStitcher",
+    },
+    {
+        "name": "图片转PDF",
+        "icon": "📄",
+        "description": "将多张图片合并为一个PDF文件，支持拖拽排序",
+        "order": 20,
+        "module": "plugins.image_to_pdf",
+        "class": "ImageToPDF",
+    },
+    {
+        "name": "图片缩放",
+        "icon": "📏",
+        "description": "批量缩放，精确控制，支持多种缩放模式",
+        "order": 25,
+        "module": "plugins.image_scaler",
+        "class": "ImageScaler",
+    },
+    {
+        "name": "PDF合并",
+        "icon": "📑",
+        "description": "将多个PDF文件合并为一个，支持拖拽和顺序调整",
+        "order": 100,
+        "module": "plugins.pdf_merger",
+        "class": "PDFMerger",
+    },
+    {
+        "name": "PDF拆分",
+        "icon": "📐",
+        "description": "将PDF拆分为图片或单页PDF，支持设置拆分页数",
+        "order": 105,
+        "module": "plugins.pdf_splitter",
+        "class": "PDFSplitter",
+    },
+    {
+        "name": "文件去重",
+        "icon": "🗑️",
+        "description": "按内容Hash查找重复文件，支持预览后选择规则删除",
+        "order": 200,
+        "module": "plugins.file_deduplicator",
+        "class": "FileDeduplicator",
+    },
+    # 设置插件（内置，在 toolbox.py 中定义）
+    {
+        "name": "设置",
+        "icon": "⚙️",
+        "description": "应用程序设置和关于信息",
+        "order": 999,
+        "module": "toolbox",
+        "class": "SettingsPlugin",
+    },
+]
+
+# 兼容旧代码：FEATURE_MODULES 从 PLUGIN_MODULES 派生，排除设置插件（不显示在首页）
 FEATURE_MODULES = [
-    ("🖼️", "图片压缩", "支持JPG、PNG、WebP格式，可批量处理并调整压缩质量"),
-    ("🔄", "图片格式转换", "纯格式转换，保持原始质量，支持JPEG/PNG/WebP/BMP/TIFF/GIF"),
-    ("📐", "图片拼接", "多图合并，自由拼接，支持横向和纵向合并"),
-    ("📄", "图片转PDF", "将多张图片合并为一个PDF文件，支持拖拽排序"),
-    ("📏", "图片缩放", "批量缩放，精确控制，支持多种缩放模式"),
-    ("📑", "PDF合并", "将多个PDF文件合并为一个，支持拖拽和顺序调整"),
-    ("📐", "PDF拆分", "将PDF拆分为图片或单页PDF，支持设置拆分页数"),
-    ("📐", "文件去重", "将PDF拆分为图片或单页PDF，支持设置拆分页数"),
+    (p["icon"], p["name"], p["description"])
+    for p in PLUGIN_MODULES if p["order"] < 999
 ]
 
 # 欢迎页面配置

@@ -120,11 +120,6 @@ class FormatConvertWorker(QThread):
 
 class FormatConverter(ToolPlugin):
     """图片格式批量转换工具"""
-    name = "图片格式转换"
-    description = "批量转换图片格式，支持 JPEG/PNG/WebP/BMP/TIFF/GIF"
-    icon = "🔄"
-    order = 10
-
     FORMATS = ["JPEG", "PNG", "WebP", "BMP", "TIFF", "GIF"]
 
     def update_theme(self, theme):
