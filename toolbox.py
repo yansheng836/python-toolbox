@@ -501,7 +501,7 @@ class SettingsPlugin(ToolPlugin):
         layout.setContentsMargins(40, 40, 40, 40)
         layout.setSpacing(24)
 
-        self.title_label = QLabel("⚙️ 设置")
+        self.title_label = QLabel(f"{self.icon} {self.name}")
         self.title_label.setStyleSheet(
             f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};")
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -582,7 +582,7 @@ class SettingsPlugin(ToolPlugin):
         self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.version_label)
 
-        self.desc_label = QLabel(APP_DESCRIPTION)
+        self.desc_label = QLabel(self.description)
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_16};")
         self.desc_label.setWordWrap(True)
         self.desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)

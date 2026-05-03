@@ -218,15 +218,15 @@ class ImageCompressor(ToolPlugin):
         layout = QVBoxLayout(widget)
         layout.setSpacing(10)
 
-        # 标题
-        self.title_label = QLabel("🖼️ 图片压缩工具")
+        # 标题（使用 PLUGIN_MODULES 配置中的 icon + name）
+        self.title_label = QLabel(f"{self.icon} {self.name}")
         self.title_label.setStyleSheet(
             f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};"
         )
         layout.addWidget(self.title_label)
 
-        # 说明
-        self.desc_label = QLabel("支持 JPG、JPEG、PNG、WebP 格式，可调整图片压缩质量")
+        # 说明（使用 PLUGIN_MODULES 配置中的 description）
+        self.desc_label = QLabel(self.description)
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 

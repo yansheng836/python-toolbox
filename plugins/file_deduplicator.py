@@ -94,8 +94,11 @@ class FileDeduplicationWorker(QThread):
 class FileDeduplicatorWidget(QWidget):
     """文件去重工具主界面"""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, icon="", name="", description=""):
         super().__init__(parent)
+        self.icon = icon
+        self.name = name
+        self.description = description
         self.selected_folder = ""
         self.worker = None
         self.duplicates = {}  # {hash: [file_paths]}
@@ -106,13 +109,13 @@ class FileDeduplicatorWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setSpacing(16)
 
-        # 标题
-        self.title_label = QLabel("🗑️ 文件去重工具")
+        # 标题（使用 PLUGIN_MODULES 配置中的 icon + name）
+        self.title_label = QLabel(f"{self.icon} {self.name}")
         self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700};")
         layout.addWidget(self.title_label)
 
-        # 描述
-        self.desc_label = QLabel("按内容Hash查找重复文件，支持预览后选择规则删除")
+        # 描述（使用 PLUGIN_MODULES 配置中的 description）
+        self.desc_label = QLabel(self.description)
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
@@ -581,5 +584,8 @@ class FileDeduplicator(ToolPlugin):
 
     def create_ui(self):
         """创建UI"""
-        self.widget = FileDeduplicatorWidget()
+        self.widget = FileDeduplicatorWidget(icon=self.icon, name=self.name, description=self.description)
+        # 将 Widget 的标签属性复制到插件实例，统一访问入口
+        self.title_label = self.widget.title_label
+        self.desc_label = self.widget.desc_label
         return self.widget

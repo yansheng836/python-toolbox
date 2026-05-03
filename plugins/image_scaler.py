@@ -125,8 +125,11 @@ class ScalingWorker(QThread):
 
 
 class ImageScalerWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, icon="", name="", description=""):
         super().__init__(parent)
+        self.icon = icon
+        self.name = name
+        self.description = description
         self.worker = None
         self.setup_ui()
 
@@ -138,13 +141,13 @@ class ImageScalerWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
 
-        # 标题
-        self.title_label = QLabel("📏 图片缩放工具")
+        # 标题（使用 PLUGIN_MODULES 配置中的 icon + name）
+        self.title_label = QLabel(f"{self.icon} {self.name}")
         self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700};")
         layout.addWidget(self.title_label)
 
-        # 说明
-        self.desc_label = QLabel("支持按百分比或指定尺寸缩放图片，支持保持宽高比和质量设置")
+        # 说明（使用 PLUGIN_MODULES 配置中的 description）
+        self.desc_label = QLabel(self.description)
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
@@ -467,4 +470,8 @@ class ImageScaler(ToolPlugin):
             self.widget.apply_theme(theme)
 
     def create_ui(self):
-        return ImageScalerWidget()
+        widget = ImageScalerWidget(icon=self.icon, name=self.name, description=self.description)
+        # 将 Widget 的标签属性复制到插件实例，统一访问入口
+        self.title_label = widget.title_label
+        self.desc_label = widget.desc_label
+        return widget

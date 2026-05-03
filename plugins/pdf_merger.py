@@ -185,8 +185,11 @@ class PDFMergeWorker(QThread):
 class PDFMergerWidget(QWidget):
     """PDF合并工具主界面"""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, icon="", name="", description=""):
         super().__init__(parent)
+        self.icon = icon
+        self.name = name
+        self.description = description
         self.worker = None
         self.setup_ui()
 
@@ -199,13 +202,13 @@ class PDFMergerWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setSpacing(16)
 
-        # 标题
-        self.title_label = QLabel("📑 PDF合并工具")
+        # 标题（使用 PLUGIN_MODULES 配置中的 icon + name）
+        self.title_label = QLabel(f"{self.icon} {self.name}")
         self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700};")
         layout.addWidget(self.title_label)
 
-        # 说明
-        self.desc_label = QLabel("将多个PDF文件合并为一个，支持拖拽排序")
+        # 说明（使用 PLUGIN_MODULES 配置中的 description）
+        self.desc_label = QLabel(self.description)
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
@@ -346,5 +349,8 @@ class PDFMerger(ToolPlugin):
 
     def create_ui(self):
         """创建UI"""
-        self.widget = PDFMergerWidget()
+        self.widget = PDFMergerWidget(icon=self.icon, name=self.name, description=self.description)
+        # 将 Widget 的标签属性复制到插件实例，统一访问入口
+        self.title_label = self.widget.title_label
+        self.desc_label = self.widget.desc_label
         return self.widget

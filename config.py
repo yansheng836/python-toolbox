@@ -18,7 +18,7 @@ PLUGIN_MODULES = [
     {
         "name": "图片压缩",
         "icon": "🖼️",
-        "description": "支持JPG、PNG、WebP格式，可批量处理并调整压缩质量",
+        "description": "批量压缩JPG/PNG/WebP图片，可调整质量以减小文件体积",
         "order": 5,
         "module": "plugins.image_compressor",
         "class": "ImageCompressor",
@@ -26,7 +26,7 @@ PLUGIN_MODULES = [
     {
         "name": "图片格式转换",
         "icon": "🔄",
-        "description": "纯格式转换，保持原始质量，支持JPEG/PNG/WebP/BMP/TIFF/GIF",
+        "description": "批量转换图片格式，支持JPEG/PNG/WebP/BMP/TIFF/GIF",
         "order": 10,
         "module": "plugins.image_format_converter",
         "class": "FormatConverter",
@@ -34,7 +34,7 @@ PLUGIN_MODULES = [
     {
         "name": "图片拼接",
         "icon": "📐",
-        "description": "多图合并，自由拼接，支持横向和纵向合并",
+        "description": "多张图片横向或纵向拼接合并为一张，支持自定义对齐",
         "order": 15,
         "module": "plugins.image_stitcher",
         "class": "ImageStitcher",
@@ -50,7 +50,7 @@ PLUGIN_MODULES = [
     {
         "name": "图片缩放",
         "icon": "📏",
-        "description": "批量缩放，精确控制，支持多种缩放模式",
+        "description": "批量缩放图片尺寸，支持按比例或指定宽高，保持画质",
         "order": 25,
         "module": "plugins.image_scaler",
         "class": "ImageScaler",
@@ -58,7 +58,7 @@ PLUGIN_MODULES = [
     {
         "name": "PDF合并",
         "icon": "📑",
-        "description": "将多个PDF文件合并为一个，支持拖拽和顺序调整",
+        "description": "将多个PDF文件合并为一个，支持拖拽排序和调整顺序",
         "order": 100,
         "module": "plugins.pdf_merger",
         "class": "PDFMerger",
@@ -66,7 +66,7 @@ PLUGIN_MODULES = [
     {
         "name": "PDF拆分",
         "icon": "📐",
-        "description": "将PDF拆分为图片或单页PDF，支持设置拆分页数",
+        "description": "将PDF拆分为图片或单页PDF文件，支持自定义页数",
         "order": 105,
         "module": "plugins.pdf_splitter",
         "class": "PDFSplitter",
@@ -74,7 +74,7 @@ PLUGIN_MODULES = [
     {
         "name": "文件去重",
         "icon": "🗑️",
-        "description": "按内容Hash查找重复文件，支持预览后选择规则删除",
+        "description": "按内容Hash查找重复文件，预览后按需删除释放空间",
         "order": 200,
         "module": "plugins.file_deduplicator",
         "class": "FileDeduplicator",
@@ -83,7 +83,7 @@ PLUGIN_MODULES = [
     {
         "name": "设置",
         "icon": "⚙️",
-        "description": "应用程序设置和关于信息",
+        "description": "切换深浅主题、查看版本和关于信息",
         "order": 999,
         "module": "toolbox",
         "class": "SettingsPlugin",

@@ -269,13 +269,13 @@ class ImageStitcher(ToolPlugin):
         layout = QVBoxLayout(widget)
         layout.setSpacing(10)
 
-        self.title_label = QLabel(self.icon + " " + self.name + "工具")
+        self.title_label = QLabel(f"{self.icon} {self.name}")
         self.title_label.setStyleSheet(
             f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};"
         )
         layout.addWidget(self.title_label)
 
-        self.desc_label = QLabel("将多张图片横向或纵向合并为一张，支持对齐方式和背景色设置（最大支持20张图片，因图片尺寸限制，大尺寸图片数量会更少）")
+        self.desc_label = QLabel(self.description)
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 

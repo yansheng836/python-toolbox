@@ -307,13 +307,13 @@ class ImageToPDF(ToolPlugin):
         layout = QVBoxLayout(widget)
         layout.setSpacing(10)
 
-        self.title_label = QLabel("📄 图片转PDF工具")
+        self.title_label = QLabel(f"{self.icon} {self.name}")
         self.title_label.setStyleSheet(
             f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};"
         )
         layout.addWidget(self.title_label)
 
-        self.desc_label = QLabel("将多张图片合并为一个PDF文件，不限图片数量，支持批量排序")
+        self.desc_label = QLabel(self.description)
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
