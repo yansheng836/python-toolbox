@@ -294,11 +294,6 @@ class ImageStitcher(ToolPlugin):
         file_card.content_layout.addWidget(self.file_panel)
         layout.addWidget(file_card)
 
-        # 调整"创建时间"列宽（默认可能太窄，完整显示 "YYYY-MM-DD HH:MM" 需要约 130px）
-        header = self.file_panel.table.horizontalHeader()
-        create_time_col = len(IMAGE_COLUMNS)  # "创建时间"是第4列，索引为3
-        header.resizeSection(create_time_col, 140)
-
         # 拼接设置
         settings_card = Card(title="拼接设置")
         grid = QGridLayout()

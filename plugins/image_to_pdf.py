@@ -332,11 +332,6 @@ class ImageToPDF(ToolPlugin):
         list_card.content_layout.addWidget(self.file_panel)
         layout.addWidget(list_card)
 
-        # 调整"创建时间"列宽（完整显示 "YYYY-MM-DD HH:MM" 需要约 140px）
-        header = self.file_panel.table.horizontalHeader()
-        create_time_col = len(IMAGE_COLUMNS)  # "创建时间"列索引
-        header.resizeSection(create_time_col, 140)
-
         # 设置
         settings_card = Card(title="PDF设置")
         settings_layout = QGridLayout()

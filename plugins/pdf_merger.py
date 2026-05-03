@@ -218,12 +218,6 @@ class PDFMergerWidget(QWidget):
             button_class=AnimatedButton,
             show_buttons=["add", "remove", "clear", "up", "down", "sort_name", "sort_time"]
         )
-
-        # 调整"创建时间"列宽（完整显示 "YYYY-MM-DD HH:MM" 需要约 140px）
-        header = self.file_panel.table.horizontalHeader()
-        create_time_col = len(PDF_COLUMNS) - 1  # "创建时间"列索引
-        header.resizeSection(create_time_col, 140)
-
         file_layout.addWidget(self.file_panel)
         layout.addWidget(file_card)
 

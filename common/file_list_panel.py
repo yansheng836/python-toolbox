@@ -23,11 +23,21 @@ class FileListPanel(QWidget):
 
     files_changed = pyqtSignal()
 
+    # 默认列宽映射：列名 -> 宽度（px），None 表示使用 Stretch
+    DEFAULT_COLUMN_WIDTHS = {
+        "文件名": None,  # Stretch
+        "大小": 80,
+        "尺寸": 100,
+        "创建时间": 140,
+        "修改时间": 140,
+    }
+
     def __init__(self, parent=None, *,
                  columns=None,
                  file_filter="所有文件 (*.*)",
                  button_class=None,
-                 show_buttons=None):
+                 show_buttons=None,
+                 column_widths=None):
         """
         Args:
             parent: 父组件
@@ -35,6 +45,9 @@ class FileListPanel(QWidget):
             file_filter: 文件选择对话框的过滤器
             button_class: 按钮类（如 AnimatedButton 或 QPushButton）
             show_buttons: 显示的按钮列表，可选值 ["add", "remove", "up", "down", "clear"]
+            column_widths: 列宽设置，格式 {列名: 宽度} 或 [(列索引, 宽度), ...]
+                          宽度为 None 表示 Stretch，否则为固定宽度（px）
+                          未指定的列使用 DEFAULT_COLUMN_WIDTHS 中的默认值
         """
         super().__init__(parent)
         self.files = []
@@ -42,6 +55,7 @@ class FileListPanel(QWidget):
         self.file_filter = file_filter
         self.button_class = button_class
         self.show_buttons = show_buttons if show_buttons is not None else ["add", "remove", "up", "down"]
+        self.column_widths = column_widths
         # 从 file_filter 解析允许的文件扩展名，用于拖拽过滤
         self._allowed_extensions = self._parse_filter_extensions(file_filter)
         self._setup_ui()
@@ -55,7 +69,10 @@ class FileListPanel(QWidget):
         self.table.setColumnCount(len(self.columns))
         self.table.setHorizontalHeaderLabels([col[0] for col in self.columns])
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+
+        # 应用列宽设置
+        self._apply_column_widths(header)
+
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setMinimumHeight(200)
         # 启用拖拽支持
@@ -89,6 +106,49 @@ class FileListPanel(QWidget):
                 btn_layout.addWidget(self.sort_time_btn)
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
+
+    def _apply_column_widths(self, header):
+        """应用列宽设置
+
+        优先级：用户指定 > DEFAULT_COLUMN_WIDTHS > 默认（第0列Stretch，其余Interactive）
+        """
+        # 构建列名到索引的映射
+        col_name_to_idx = {col[0]: idx for idx, col in enumerate(self.columns)}
+
+        # 初始化每列的设置为 None（表示未设置）
+        col_settings = [None] * len(self.columns)
+
+        # 1. 先应用默认值
+        for col_name, default_width in self.DEFAULT_COLUMN_WIDTHS.items():
+            if col_name in col_name_to_idx:
+                col_settings[col_name_to_idx[col_name]] = default_width
+
+        # 2. 再应用用户指定的设置（覆盖默认值）
+        if self.column_widths is not None:
+            if isinstance(self.column_widths, dict):
+                # 格式: {"列名": 宽度, ...}
+                for col_name, width in self.column_widths.items():
+                    if col_name in col_name_to_idx:
+                        col_settings[col_name_to_idx[col_name]] = width
+            else:
+                # 格式: [(列索引, 宽度), ...] 或 [宽度1, 宽度2, ...]
+                for item in self.column_widths:
+                    if isinstance(item, (list, tuple)) and len(item) == 2:
+                        col_idx, width = item
+                    else:
+                        col_idx, width = item, item
+                    if 0 <= col_idx < len(col_settings):
+                        col_settings[col_idx] = width
+
+        # 3. 应用设置到 header
+        for col_idx, width in enumerate(col_settings):
+            if width is None:
+                # None 表示 Stretch
+                header.setSectionResizeMode(col_idx, QHeaderView.ResizeMode.Stretch)
+            else:
+                # 固定宽度
+                header.setSectionResizeMode(col_idx, QHeaderView.ResizeMode.Fixed)
+                header.resizeSection(col_idx, width)
 
     def _create_btn(self, text, action):
         """创建按钮并连接信号"""
