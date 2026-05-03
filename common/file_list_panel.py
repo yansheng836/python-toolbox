@@ -27,6 +27,7 @@ class FileListPanel(QWidget):
     DEFAULT_COLUMN_WIDTHS = {
         "文件名": None,  # Stretch
         "大小": 80,
+        "页数": 50,
         "尺寸": 100,
         "创建时间": 140,
         "修改时间": 140,
@@ -37,7 +38,8 @@ class FileListPanel(QWidget):
                  file_filter="所有文件 (*.*)",
                  button_class=None,
                  show_buttons=None,
-                 column_widths=None):
+                 column_widths=None,
+                 table_min_height=200):
         """
         Args:
             parent: 父组件
@@ -48,6 +50,7 @@ class FileListPanel(QWidget):
             column_widths: 列宽设置，格式 {列名: 宽度} 或 [(列索引, 宽度), ...]
                           宽度为 None 表示 Stretch，否则为固定宽度（px）
                           未指定的列使用 DEFAULT_COLUMN_WIDTHS 中的默认值
+            table_min_height: 表格最小高度（px），默认 200
         """
         super().__init__(parent)
         self.files = []
@@ -56,6 +59,7 @@ class FileListPanel(QWidget):
         self.button_class = button_class
         self.show_buttons = show_buttons if show_buttons is not None else ["add", "remove", "up", "down"]
         self.column_widths = column_widths
+        self.table_min_height = table_min_height
         # 从 file_filter 解析允许的文件扩展名，用于拖拽过滤
         self._allowed_extensions = self._parse_filter_extensions(file_filter)
         self._setup_ui()
@@ -74,7 +78,7 @@ class FileListPanel(QWidget):
         self._apply_column_widths(header)
 
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.table.setMinimumHeight(200)
+        self.table.setMinimumHeight(self.table_min_height)
         # 启用拖拽支持
         self.table.setAcceptDrops(True)
         self.table.installEventFilter(self)

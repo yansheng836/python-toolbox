@@ -62,7 +62,7 @@ from PyQt6.QtWidgets import (
 from common.message_utils import show_info, show_error, show_warning
 from common.file_list_panel import FileListPanel
 from common.action_panel import ActionPanel
-from common.utils import get_file_size, get_create_time
+from common.utils import get_file_size, get_create_time, get_pdf_pages
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 
@@ -194,6 +194,7 @@ class PDFSplitterWidget(QWidget):
         PDF_COLUMNS = [
             ("文件名", lambda f: os.path.basename(f)),
             ("大小", get_file_size),
+            ("页数", get_pdf_pages),
             ("创建时间", get_create_time)
         ]
 
@@ -201,7 +202,8 @@ class PDFSplitterWidget(QWidget):
             columns=PDF_COLUMNS,
             file_filter="PDF文件 (*.pdf);;所有文件 (*.*)",
             button_class=AnimatedButton,
-            show_buttons=["add", "remove", "clear"]
+            show_buttons=["add", "remove", "clear"],
+            table_min_height=100
         )
         self.file_panel.files_changed.connect(self.auto_set_output_dir)
         file_layout.addWidget(self.file_panel)
