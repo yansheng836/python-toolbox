@@ -11,6 +11,7 @@
       "Bash(mkdir *)",
       "Bash(iconv -f gbk -t utf-8)",
       "Bash(grep *)",
+      "Bash(sed -n *)",
       "Bash(pip list:*)",
       "Bash(pip install:*)",
       "Bash(pyflakes toolbox.py plugins/ test/ *.py)",
@@ -18,8 +19,9 @@
       "Bash(pyflakes toolbox.py plugins/*.py test/*.py menu_system.py settings_page.py)",
       "Bash(python:*)",
       "Bash(python -c:*)",
-      "Bash(python -c :*)",
+      "Bash(python -c*)",
       "Bash(cd * && python:*)",
+      "Bash(cd*python:*)",
       "Bash(gh run:*)",
       "Bash(git status:*)",
       "Bash(git add:*)",
@@ -28,7 +30,11 @@
       "Bash(git log*)",
       "Bash(git tag *)",
       "Bash(git show *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash(python3 *)",
+      "Bash(xxd)"
     ]
   }
 }

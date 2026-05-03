@@ -122,34 +122,42 @@ class PDFSplitWorker(QThread):
                 self.finished.emit(True, f"成功拆分PDF为 {output_count} 个文件！\n保存位置: {self.output_dir}")
 
             else:
-                if not PIL_AVAILABLE:
+                fmt = self.image_format.upper()
+
+                # PNG and WebP need PIL for compression control
+                if fmt in ("PNG", "WEBP") and not PIL_AVAILABLE:
                     doc.close()
-                    self.finished.emit(False, "错误: 输出图片需要Pillow库，请运行: pip install Pillow")
+                    self.finished.emit(False, f"错误: 输出{fmt}需要Pillow库，请运行: pip install Pillow")
                     return
+
+                # Zoom proportional to quality: 1.0x at quality=50, 2.0x at quality=100
+                zoom = max(1.0, self.image_quality / 50.0)
+                mat = fitz.Matrix(zoom, zoom)
+
+                # Map image_quality to PNG compress_level: quality 100->level 9, quality 1->level 1
+                # Avoid level 0 (no compression, huge files)
+                png_compress_level = max(1, min(9, int(self.image_quality / 100.0 * 9)))
 
                 for page_num in range(total_pages):
                     page = doc[page_num]
-
-                    zoom = 2.0
-                    mat = fitz.Matrix(zoom, zoom)
                     pix = page.get_pixmap(matrix=mat)
-
-                    img_data = pix.tobytes("ppm")
-                    img = Image.open(io.BytesIO(img_data))
 
                     output_file = os.path.join(
                         self.output_dir,
-                        f"{base_name}_page{page_num + 1}.{self.image_format.lower()}"
+                        f"{base_name}_page_{page_num + 1}.{self.image_format.lower()}"
                     )
 
-                    if self.image_format.upper() in ("JPEG", "JPG"):
-                        img.save(output_file, "JPEG", quality=self.image_quality, optimize=True)
-                    elif self.image_format.upper() == "PNG":
-                        img.save(output_file, "PNG", optimize=True)
-                    elif self.image_format.upper() == "WEBP":
-                        img.save(output_file, "WEBP", quality=self.image_quality)
-                    else:
-                        img.save(output_file)
+                    if fmt == "PNG":
+                        # Use PIL to control compress_level for smaller files
+                        img = Image.open(io.BytesIO(pix.tobytes("ppm")))
+                        img.save(output_file, "PNG", compress_level=png_compress_level, optimize=True)
+                    elif fmt in ("JPEG", "JPG"):
+                        pix.save(output_file, output="JPEG", jpg_quality=self.image_quality)
+                    elif fmt == "WEBP":
+                        img = Image.open(io.BytesIO(pix.tobytes("ppm")))
+                        if img.mode not in ("RGB", "L"):
+                            img = img.convert("RGB")
+                        img.save(output_file, "WEBP", quality=self.image_quality, method=4, optimize=True)
 
                     output_count += 1
                     self.progress.emit(output_count)
@@ -233,7 +241,7 @@ class PDFSplitterWidget(QWidget):
         settings_layout.addRow("拆分页数:", self.pages_spin)
 
         self.image_format_combo = QComboBox()
-        self.image_format_combo.addItems(["PNG", "JPEG", "WebP"])
+        self.image_format_combo.addItems(["JPG", "JPEG", "PNG", "WebP"])
         self.image_format_combo.setVisible(False)
         settings_layout.addRow("图片格式:", self.image_format_combo)
 
@@ -273,12 +281,10 @@ class PDFSplitterWidget(QWidget):
         layout.addWidget(output_card)
 
         # 操作面板（按钮 + 进度条 + 状态标签，参考PDF合并）
+        # 使用Theme中定义的统一action渐变颜色
         self.action_panel = ActionPanel(
             button_text="开始拆分",
             use_gradient=True,
-            gradient_colors=("#8b5cf6", "#7c3aed"),
-            gradient_hover_colors=("#a78bfa", "#8b5cf6"),
-            progress_chunk_color='#8b5cf6',
             status_text=""
         )
         self.action_panel.clicked.connect(self.start_split)

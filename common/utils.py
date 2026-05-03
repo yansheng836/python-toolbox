@@ -47,6 +47,18 @@ def get_create_time(file_path):
         return "未知"
 
 
+def get_pdf_pages(file_path):
+    """获取PDF页数"""
+    try:
+        import fitz
+        doc = fitz.open(file_path)
+        pages = len(doc)
+        doc.close()
+        return str(pages)
+    except Exception:
+        return "N/A"
+
+
 # 图片类插件通用的表格列定义
 IMAGE_COLUMNS = [
     ("文件名", lambda f: os.path.basename(f)),

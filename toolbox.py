@@ -61,6 +61,10 @@ class Theme:
         'error': '#ef4444',
         'error_hover': '#f87171',
         'error_gradient_end': '#dc2626',
+        'action_gradient_start': '#10b981',
+        'action_gradient_end': '#059669',
+        'action_gradient_hover_start': '#34d399',
+        'action_gradient_hover_end': '#10b981',
         'shadow': 'rgba(0, 0, 0, 0.3)'
     }
 
@@ -82,6 +86,10 @@ class Theme:
         'error': '#dc2626',
         'error_hover': '#ef4444',
         'error_gradient_end': '#b91c1c',
+        'action_gradient_start': '#10b981',
+        'action_gradient_end': '#059669',
+        'action_gradient_hover_start': '#34d399',
+        'action_gradient_hover_end': '#10b981',
         'shadow': 'rgba(0, 0, 0, 0.1)'
     }
 
