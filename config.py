@@ -99,7 +99,7 @@ FEATURE_MODULES = [
 # 欢迎页面配置
 WELCOME_CONFIG = {
     "title": "工具箱",
-    "subtitle": "高效、美观、可扩展的桌面工具集合",
+    "subtitle": "离线、高效、美观的桌面工具集合",
     "hint": "👈 从左侧菜单选择工具开始使用",
     "feature_title": "功能特色",
 }
