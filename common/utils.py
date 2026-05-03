@@ -47,6 +47,16 @@ def get_create_time(file_path):
         return "未知"
 
 
+def get_modify_time(file_path):
+    """获取文件修改时间文本"""
+    try:
+        import time
+        t = os.path.getmtime(file_path)
+        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t))
+    except Exception:
+        return "未知"
+
+
 def get_pdf_pages(file_path):
     """获取PDF页数"""
     try:

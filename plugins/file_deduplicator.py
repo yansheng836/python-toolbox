@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
 from common.message_utils import show_info, show_error, show_warning, show_question
 from common.action_panel import ActionPanel
+from common.utils import get_create_time, get_modify_time
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QBrush
@@ -143,10 +144,11 @@ class FileDeduplicatorWidget(QWidget):
         # 结果卡片
         results_card = Card(title="重复文件列表")
         self.results_tree = QTreeWidget()
-        self.results_tree.setHeaderLabels(["文件信息", "大小", "修改时间"])
+        self.results_tree.setHeaderLabels(["文件信息", "大小", "创建时间", "修改时间"])
         self.results_tree.setColumnWidth(0, 580)
         self.results_tree.setColumnWidth(1, 80)
         self.results_tree.setColumnWidth(2, 140)
+        self.results_tree.setColumnWidth(3, 140)
         self.results_tree.setMinimumHeight(400)
         self.results_tree.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         results_card.content_layout.addWidget(self.results_tree)
@@ -332,6 +334,7 @@ class FileDeduplicatorWidget(QWidget):
                         child.setBackground(0, highlight)
                         child.setBackground(1, highlight)
                         child.setBackground(2, highlight)
+                        child.setBackground(3, highlight)
 
     def browse_folder(self):
         """选择文件夹"""
@@ -421,14 +424,12 @@ class FileDeduplicatorWidget(QWidget):
                     file_item.setForeground(1, QBrush(QColor(text_color)))
                 except:
                     file_item.setText(1, "未知")
+                # 创建时间
+                file_item.setText(2, get_create_time(file_path))
+                file_item.setForeground(2, QBrush(QColor(text_color)))
                 # 修改时间
-                try:
-                    mtime = os.path.getmtime(file_path)
-                    time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime))
-                    file_item.setText(2, time_str)
-                    file_item.setForeground(2, QBrush(QColor(text_color)))
-                except:
-                    file_item.setText(2, "未知")
+                file_item.setText(3, get_modify_time(file_path))
+                file_item.setForeground(3, QBrush(QColor(text_color)))
                 total_duplicates += 1
 
         self.stats_label.setText(
@@ -454,6 +455,7 @@ class FileDeduplicatorWidget(QWidget):
             child.setBackground(0, highlight)
             child.setBackground(1, highlight)
             child.setBackground(2, highlight)
+            child.setBackground(3, highlight)
 
     def _select_all(self):
         """全选所有父节点"""
