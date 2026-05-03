@@ -170,6 +170,22 @@ class FileDeduplicatorWidget(QWidget):
         deletion_layout.addWidget(self.rule_combo, 1)
         deletion_card.content_layout.addLayout(deletion_layout)
 
+        # 全选/取消全选按钮
+        select_btn_layout = QHBoxLayout()
+        self.select_all_btn = AnimatedButton("全选")
+        self.select_all_btn.setMaximumWidth(80)
+        self.select_all_btn.clicked.connect(self._select_all)
+        select_btn_layout.addWidget(self.select_all_btn)
+        self.deselect_all_btn = AnimatedButton("取消全选")
+        self.deselect_all_btn.setMaximumWidth(80)
+        self.deselect_all_btn.clicked.connect(self._deselect_all)
+        select_btn_layout.addWidget(self.deselect_all_btn)
+        select_btn_layout.addStretch()
+        deletion_card.content_layout.addLayout(select_btn_layout)
+
+        # 连接父节点勾选变化信号
+        self.results_tree.itemChanged.connect(self._on_parent_checked)
+
         # 删除操作面板
         self.delete_panel = ActionPanel(
             button_text="删除重复文件",
@@ -300,6 +316,23 @@ class FileDeduplicatorWidget(QWidget):
         # 记录重复分组的背景色，供 show_duplicates 使用
         self.group_bg_color = QColor(theme['surface'])
 
+        # 存储子节点高亮/普通背景色，供 _on_parent_checked 使用
+        self.child_highlight_color = QColor(theme['surface'])
+        self.child_normal_color = QColor(theme['bg'])
+
+        # 更新已勾选的父节点下子节点的背景色
+        if hasattr(self, 'results_tree'):
+            from PyQt6.QtGui import QBrush
+            for i in range(self.results_tree.topLevelItemCount()):
+                parent = self.results_tree.topLevelItem(i)
+                if parent.checkState(0) == Qt.CheckState.Checked:
+                    highlight = self.child_highlight_color
+                    for j in range(parent.childCount()):
+                        child = parent.child(j)
+                        child.setBackground(0, highlight)
+                        child.setBackground(1, highlight)
+                        child.setBackground(2, highlight)
+
     def browse_folder(self):
         """选择文件夹"""
         dir_path = QFileDialog.getExistingDirectory(
@@ -356,12 +389,17 @@ class FileDeduplicatorWidget(QWidget):
         text_color = self.current_theme['text'] if hasattr(self, 'current_theme') else '#f1f5f9'
 
         for file_hash, file_list in duplicates.items():
-            # 创建重复组顶级项
+            # 创建重复组顶级项（父节点，可勾选）
             group_item = QTreeWidgetItem(self.results_tree)
             group_item.setText(0, f"重复组: {file_hash[:8]}... (共 {len(file_list)} 个文件)")
             group_item.setFont(0, QFont("Arial", 10, QFont.Weight.Bold))
             group_item.setBackground(0, self.group_bg_color)
             group_item.setForeground(0, QBrush(QColor(text_color)))
+            # 设置父节点可勾选
+            group_item.setFlags(group_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            group_item.setCheckState(0, Qt.CheckState.Unchecked)
+            # 存储hash到item中，方便删除时查找
+            group_item.setData(0, Qt.ItemDataRole.UserRole, file_hash)
 
             # 计算该组可节省空间
             if file_list:
@@ -375,6 +413,7 @@ class FileDeduplicatorWidget(QWidget):
                 file_item = QTreeWidgetItem(group_item)
                 file_item.setText(0, file_path)
                 file_item.setForeground(0, QBrush(QColor(text_color)))
+                # 子节点不可勾选（不设置 ItemIsUserCheckable）
                 # 文件大小
                 try:
                     size = os.path.getsize(file_path)
@@ -397,6 +436,38 @@ class FileDeduplicatorWidget(QWidget):
         )
         # 扫描完成后，启用删除按钮
         self.delete_panel.btn.setEnabled(bool(duplicates))
+
+    def _on_parent_checked(self, item, column):
+        """父节点勾选状态变化，联动子节点背景色"""
+        # 只处理父节点（顶级项），忽略子节点变化
+        if item.parent() is not None:
+            return
+        # 只处理第0列（复选框所在列）
+        if column != 0:
+            return
+
+        from PyQt6.QtGui import QBrush
+        checked = item.checkState(0) == Qt.CheckState.Checked
+        highlight = self.child_highlight_color if checked else self.child_normal_color
+        for i in range(item.childCount()):
+            child = item.child(i)
+            child.setBackground(0, highlight)
+            child.setBackground(1, highlight)
+            child.setBackground(2, highlight)
+
+    def _select_all(self):
+        """全选所有父节点"""
+        for i in range(self.results_tree.topLevelItemCount()):
+            parent = self.results_tree.topLevelItem(i)
+            parent.setCheckState(0, Qt.CheckState.Checked)
+            parent.setExpanded(True)
+
+    def _deselect_all(self):
+        """取消全选所有父节点"""
+        for i in range(self.results_tree.topLevelItemCount()):
+            parent = self.results_tree.topLevelItem(i)
+            parent.setCheckState(0, Qt.CheckState.Unchecked)
+            parent.setExpanded(False)
 
     def format_size(self, bytes):
         """格式化文件大小"""
@@ -421,16 +492,25 @@ class FileDeduplicatorWidget(QWidget):
         self.scan_panel.update_status(error_msg)
 
     def delete_duplicates(self):
-        """删除重复文件"""
+        """删除重复文件（只处理勾选的组）"""
         if not self.duplicates:
             show_warning(self, "警告", "没有可删除的重复文件！")
             return
 
-        # 根据规则收集待删除文件
+        # 收集待删除文件（只处理勾选的父节点）
         rule = self.rule_combo.currentIndex()
         files_to_delete = []
 
-        for file_hash, file_list in self.duplicates.items():
+        for i in range(self.results_tree.topLevelItemCount()):
+            parent = self.results_tree.topLevelItem(i)
+            # 跳过未勾选的组
+            if parent.checkState(0) != Qt.CheckState.Checked:
+                continue
+            # 从item的UserRole数据中获取hash
+            file_hash = parent.data(0, Qt.ItemDataRole.UserRole)
+            if file_hash not in self.duplicates:
+                continue
+            file_list = self.duplicates[file_hash]
             if len(file_list) <= 1:
                 continue
             # 按规则排序
