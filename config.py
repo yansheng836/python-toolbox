@@ -17,7 +17,7 @@ APP_WEBSITE_LINK_TEXT = "🌐 访问官方网站"
 PLUGIN_MODULES = [
     {
         "name": "图片压缩",
-        "icon": "🖼️",
+        "icon": "🗜️",
         "description": "批量压缩JPG/PNG/WebP图片，可调整质量以减小文件体积",
         "order": 5,
         "module": "plugins.image_compressor",
@@ -25,7 +25,7 @@ PLUGIN_MODULES = [
     },
     {
         "name": "图片格式转换",
-        "icon": "🔄",
+        "icon": "🔁",
         "description": "批量转换图片格式，支持JPEG/PNG/WebP/BMP/TIFF/GIF",
         "order": 10,
         "module": "plugins.image_format_converter",
@@ -33,7 +33,7 @@ PLUGIN_MODULES = [
     },
     {
         "name": "图片拼接",
-        "icon": "📐",
+        "icon": "🧩",
         "description": "多张图片横向或纵向拼接合并为一张，支持自定义对齐",
         "order": 15,
         "module": "plugins.image_stitcher",
@@ -41,7 +41,7 @@ PLUGIN_MODULES = [
     },
     {
         "name": "图片转PDF",
-        "icon": "📄",
+        "icon": "🖨️",
         "description": "将多张图片合并为一个PDF文件，支持拖拽排序",
         "order": 20,
         "module": "plugins.image_to_pdf",
@@ -49,7 +49,7 @@ PLUGIN_MODULES = [
     },
     {
         "name": "图片缩放",
-        "icon": "📏",
+        "icon": "🔍",
         "description": "批量缩放图片尺寸，支持按比例或指定宽高，保持画质",
         "order": 25,
         "module": "plugins.image_scaler",
@@ -57,7 +57,7 @@ PLUGIN_MODULES = [
     },
     {
         "name": "PDF合并",
-        "icon": "📑",
+        "icon": "📚",
         "description": "将多个PDF文件合并为一个，支持拖拽排序和调整顺序",
         "order": 100,
         "module": "plugins.pdf_merger",
@@ -65,7 +65,7 @@ PLUGIN_MODULES = [
     },
     {
         "name": "PDF拆分",
-        "icon": "📐",
+        "icon": "✂️",
         "description": "将PDF拆分为图片或单页PDF文件，支持自定义页数",
         "order": 105,
         "module": "plugins.pdf_splitter",
@@ -73,7 +73,7 @@ PLUGIN_MODULES = [
     },
     {
         "name": "文件去重",
-        "icon": "🗑️",
+        "icon": "🧹",
         "description": "按内容Hash查找重复文件，预览后按需删除释放空间",
         "order": 200,
         "module": "plugins.file_deduplicator",
