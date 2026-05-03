@@ -726,6 +726,12 @@ class ToolboxWindow(QMainWindow):
         line.setMaximumHeight(1)
         sidebar_layout.addWidget(line)
 
+        # 首页按钮
+        self.home_btn = SidebarButton("首页", "🏠")
+        self.home_btn.setChecked(True)
+        self.home_btn.clicked.connect(self.switch_to_welcome)
+        sidebar_layout.addWidget(self.home_btn)
+
         self.nav_widget = QWidget()
         self.nav_layout = QVBoxLayout(self.nav_widget)
         self.nav_layout.setContentsMargins(0, 8, 0, 0)
@@ -860,11 +866,26 @@ class ToolboxWindow(QMainWindow):
             # 像素值：直接使用
             return w, h
 
+    def switch_to_welcome(self):
+        """切换到首页"""
+        self.content.setCurrentIndex(0)
+        self.current_plugin = None
+        # 取消所有导航按钮的选中状态
+        for i in range(self.nav_layout.count()):
+            widget = self.nav_layout.itemAt(i).widget()
+            if isinstance(widget, SidebarButton):
+                widget.setChecked(False)
+        # 选中首页按钮
+        self.home_btn.setChecked(True)
+
     def switch_plugin(self, name):
         for i in range(self.nav_layout.count()):
             widget = self.nav_layout.itemAt(i).widget()
             if isinstance(widget, SidebarButton):
                 widget.setChecked(name in widget.text())
+
+        # 取消首页按钮选中
+        self.home_btn.setChecked(False)
 
         if name in self.plugins:
             plugin = self.plugins[name]
