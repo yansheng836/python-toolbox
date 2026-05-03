@@ -376,12 +376,7 @@ class ImageToPDF(ToolPlugin):
 
         # 操作面板（按钮 + 进度条 + 状态标签）
         self.action_panel = ActionPanel(
-            button_text="开始转换",
-            use_gradient=True,
-            gradient_colors=("#10b981", "#059669"),
-            gradient_hover_colors=("#34d399", "#10b981"),
-            progress_chunk_color='#8b5cf6',
-            status_text=""
+            button_text="开始转换"
         )
         self.action_panel.clicked.connect(self.start_conversion)
         layout.addWidget(self.action_panel)

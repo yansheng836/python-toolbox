@@ -24,7 +24,7 @@ class ActionPanel(Card):
 
     def __init__(self, parent=None, *,
                  button_text="开始",
-                 use_gradient=False,
+                 use_gradient=True,
                  gradient_colors=None,
                  gradient_hover_colors=None,
                  status_text="",
@@ -34,6 +34,7 @@ class ActionPanel(Card):
         self.use_gradient = use_gradient
         self._user_gradient_colors = gradient_colors  # 用户指定的渐变颜色（优先）
         self._user_gradient_hover_colors = gradient_hover_colors
+        self._user_progress_chunk_color = progress_chunk_color  # 用户指定的进度条颜色
         self.gradient_colors = gradient_colors or (Theme.DARK['action_gradient_start'], Theme.DARK['action_gradient_end'])
         self.gradient_hover_colors = gradient_hover_colors or (Theme.DARK['action_gradient_hover_start'], Theme.DARK['action_gradient_hover_end'])
         self.progress_chunk_color = progress_chunk_color or Theme.DARK['secondary']
@@ -62,7 +63,7 @@ class ActionPanel(Card):
                 QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 {self.gradient_hover_colors[0]},
                     stop:1 {self.gradient_hover_colors[1]}); }}
-                QPushButton:disabled {{ background: #334155; color: #64748b; }}
+                QPushButton:disabled {{ background: {Theme.DARK['surface']}; color: white; }}
             """)
 
         self.btn.clicked.connect(self.clicked.emit)
@@ -128,12 +129,13 @@ class ActionPanel(Card):
             else:
                 g_start, g_end = theme['action_gradient_start'], theme['action_gradient_end']
                 g_hover_start, g_hover_end = theme['action_gradient_hover_start'], theme['action_gradient_hover_end']
+            # 渐变按钮背景较深，文字始终使用白色确保可读性
             self.btn.setStyleSheet(f"""
                 QPushButton {{
                     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                         stop:0 {g_start},
                         stop:1 {g_end});
-                    color: {theme['text']};
+                    color: white;
                     border: none;
                     border-radius: 8px;
                     font-size: {FONT_SIZE_14};
@@ -145,8 +147,8 @@ class ActionPanel(Card):
                 QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
             """)
 
-        # 更新进度条样式
-        chunk_color = self._user_gradient_colors[0] if self._user_gradient_colors else theme['secondary']
+        # 更新进度条样式：使用用户指定颜色或主题secondary色
+        chunk_color = self._user_progress_chunk_color if self._user_progress_chunk_color else theme['secondary']
         self.progress.setStyleSheet(f"""
             QProgressBar {{
                 background-color: {theme['bg']};

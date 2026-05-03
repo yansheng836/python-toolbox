@@ -283,9 +283,7 @@ class PDFSplitterWidget(QWidget):
         # 操作面板（按钮 + 进度条 + 状态标签，参考PDF合并）
         # 使用Theme中定义的统一action渐变颜色
         self.action_panel = ActionPanel(
-            button_text="开始拆分",
-            use_gradient=True,
-            status_text=""
+            button_text="开始拆分"
         )
         self.action_panel.clicked.connect(self.start_split)
         layout.addWidget(self.action_panel)
