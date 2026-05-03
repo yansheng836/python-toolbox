@@ -165,9 +165,10 @@ class FileDeduplicatorWidget(QWidget):
         deletion_layout.addWidget(QLabel("删除规则:"))
         self.rule_combo = QComboBox()
         self.rule_combo.addItems([
+            "按创建时间升序排序（旧→新，保留首个，删除后续）",
+            "按创建时间降序排序（新→旧，保留首个，删除后续）",
             "按文件名升序排序（A→Z，保留首个，删除后续）",
-            "按修改时间升序排序（旧→新，保留首个，删除后续）",
-            "按修改时间降序排序（新→旧，保留首个，删除后续）"
+            "按文件名降序排序（Z→A，保留首个，删除后续）"
         ])
         deletion_layout.addWidget(self.rule_combo, 1)
         deletion_card.content_layout.addLayout(deletion_layout)
@@ -516,12 +517,14 @@ class FileDeduplicatorWidget(QWidget):
             if len(file_list) <= 1:
                 continue
             # 按规则排序
-            if rule == 0:  # 文件名升序
+            if rule == 0:  # 创建时间升序（旧→新）
+                sorted_files = sorted(file_list, key=lambda x: os.path.getctime(x))
+            elif rule == 1:  # 创建时间降序（新→旧）
+                sorted_files = sorted(file_list, key=lambda x: os.path.getctime(x), reverse=True)
+            elif rule == 2:  # 文件名升序
                 sorted_files = sorted(file_list, key=lambda x: os.path.basename(x).lower())
-            elif rule == 1:  # 修改时间升序（旧→新）
-                sorted_files = sorted(file_list, key=lambda x: os.path.getmtime(x))
-            else:  # 修改时间降序（新→旧）
-                sorted_files = sorted(file_list, key=lambda x: os.path.getmtime(x), reverse=True)
+            else:  # 文件名降序
+                sorted_files = sorted(file_list, key=lambda x: os.path.basename(x).lower(), reverse=True)
             # 保留第一个，删除后续
             files_to_delete.extend(sorted_files[1:])
 
