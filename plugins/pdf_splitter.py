@@ -203,6 +203,7 @@ class PDFSplitterWidget(QWidget):
             button_class=AnimatedButton,
             show_buttons=["add", "remove", "clear"]
         )
+        self.file_panel.files_changed.connect(self.auto_set_output_dir)
         file_layout.addWidget(self.file_panel)
         layout.addWidget(file_card)
 
@@ -257,11 +258,13 @@ class PDFSplitterWidget(QWidget):
 
         output_card = Card(title="输出设置")
         output_layout = QHBoxLayout()
+        self.output_label = QLabel("输出目录:")
         self.output_path = QLineEdit()
-        self.output_path.setPlaceholderText("选择输出目录...")
+        self.output_path.setPlaceholderText("默认原文件目录")
         self.browse_btn = AnimatedButton("浏览")
         self.browse_btn.setMaximumWidth(80)
         self.browse_btn.clicked.connect(self.browse_output)
+        output_layout.addWidget(self.output_label)
         output_layout.addWidget(self.output_path)
         output_layout.addWidget(self.browse_btn)
         output_card.content_layout.addLayout(output_layout)
@@ -299,6 +302,8 @@ class PDFSplitterWidget(QWidget):
                     color: {theme['text']};
                 }}
             """)
+        if hasattr(self, 'output_label'):
+            self.output_label.setStyleSheet(f"color: {theme['text']};")
         if hasattr(self, 'pdf_radio'):
             self.pdf_radio.setStyleSheet(f"color: {theme['text']};")
             self.image_radio.setStyleSheet(f"color: {theme['text']};")
@@ -349,8 +354,10 @@ class PDFSplitterWidget(QWidget):
 
     def browse_output(self):
         """选择输出目录"""
-        files = self.file_panel.get_files()
-        default_dir = os.path.dirname(files[0]) if files else ""
+        default_dir = self.output_path.text() or (
+            os.path.dirname(self.file_panel.get_files()[0])
+            if self.file_panel.get_files() else ""
+        )
         dir_path = QFileDialog.getExistingDirectory(
             self,
             "选择输出目录",
@@ -358,6 +365,14 @@ class PDFSplitterWidget(QWidget):
         )
         if dir_path:
             self.output_path.setText(dir_path)
+
+    def auto_set_output_dir(self):
+        """自动设置输出目录为PDF原文件目录"""
+        if self.output_path.text():
+            return
+        files = self.file_panel.get_files()
+        if files:
+            self.output_path.setText(os.path.dirname(files[0]))
 
     def start_split(self):
         """开始拆分"""
