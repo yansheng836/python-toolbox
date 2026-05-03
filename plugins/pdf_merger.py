@@ -53,13 +53,14 @@ from common.message_utils import show_info, show_error, show_warning
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 from common.file_list_panel import FileListPanel
-from common.utils import get_create_time, get_file_size
+from common.utils import get_create_time, get_file_size, get_pdf_pages
 from common.action_panel import ActionPanel
 
 
 PDF_COLUMNS = [
     ("文件名", lambda f: os.path.basename(f)),
     ("大小", get_file_size),
+    ("页数", get_pdf_pages),
     ("创建时间", get_create_time)
 ]
 
