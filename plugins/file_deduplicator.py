@@ -9,45 +9,16 @@ import time
 from collections import defaultdict
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
-    QProgressBar, QComboBox, QTreeWidget, QTreeWidgetItem,
-    QLineEdit
+    QWidget, QVBoxLayout, QLabel, QComboBox, QTreeWidget, QTreeWidgetItem,
+    QFileDialog, QLineEdit, QHBoxLayout
 )
 
+from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
 from common.message_utils import show_info, show_error, show_warning, show_question
+from common.action_panel import ActionPanel
+
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont
-
-# 导入主程序中的ToolPlugin基类和相关组件
-try:
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
-except ImportError:
-    # 如果导入失败，定义简化的基类
-    Theme = None
-    class ToolPlugin:
-        name = "Base Tool"
-        icon = "🔧"
-
-        def __init__(self, parent=None):
-            self.parent = parent
-            self.widget = None
-
-        def create_ui(self):
-            raise NotImplementedError("Subclasses must implement create_ui()")
-
-        def get_widget(self):
-            if self.widget is None:
-                self.widget = self.create_ui()
-            return self.widget
-
-    class Card:
-        def __init__(self, parent=None, title=""):
-            self.content_layout = QVBoxLayout()
-
-    class AnimatedButton:
-        def __init__(self, *args, **kwargs):
-            pass
 
 
 class FileDeduplicationWorker(QThread):
@@ -147,81 +118,25 @@ class FileDeduplicatorWidget(QWidget):
         folder_layout = QHBoxLayout()
         self.folder_display = QLineEdit()
         self.folder_display.setPlaceholderText("选择要扫描的文件夹...")
-        self.folder_display.setStyleSheet("""
-            QLineEdit {
-                background-color: #0f172a;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 6px;
-                color: #f1f5f9;
-            }
-        """)
+        folder_layout.addWidget(self.folder_display)
+
         self.browse_btn = AnimatedButton("浏览")
         self.browse_btn.setMaximumWidth(80)
         self.browse_btn.clicked.connect(self.browse_folder)
-        folder_layout.addWidget(self.folder_display)
         folder_layout.addWidget(self.browse_btn)
         folder_card.content_layout.addLayout(folder_layout)
 
-        # 扫描按钮
-        self.scan_btn = AnimatedButton("开始扫描")
-        self.scan_btn.setMinimumHeight(48)
-        self.scan_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #3b82f6, stop:1 #2563eb);
-                color: white; border: none; border-radius: 8px;
-                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #60a5fa, stop:1 #3b82f6);
-            }}
-            QPushButton:disabled {{ background: #334155; color: #64748b; }}
-        """)
-        self.scan_btn.clicked.connect(self.start_scan)
-        self.scan_btn.setEnabled(False)
-        folder_card.content_layout.addWidget(self.scan_btn)
+        # 扫描操作面板（按钮 + 进度条 + 状态）
+        self.scan_panel = ActionPanel(
+            button_text="开始扫描",
+            use_gradient=True,
+            status_text="请选择文件夹开始扫描"
+        )
+        self.scan_panel.clicked.connect(self.start_scan)
+        self.scan_panel.btn.setEnabled(False)
+        folder_card.content_layout.addWidget(self.scan_panel)
+
         layout.addWidget(folder_card)
-
-        # 进度卡片
-        progress_card = Card(title="扫描进度")
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        self.progress_bar.setStyleSheet("""
-            QProgressBar {
-                background-color: #0f172a;
-                border-radius: 6px;
-                text-align: center;
-                color: white;
-            }
-            QProgressBar::chunk {
-                background-color: #3b82f6;
-                border-radius: 6px;
-            }
-        """)
-        progress_card.content_layout.addWidget(self.progress_bar)
-
-        self.status_label = QLabel("请选择文件夹开始扫描")
-        self.status_label.setStyleSheet("color: #94a3b8;")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        progress_card.content_layout.addWidget(self.status_label)
-
-        self.cancel_btn = AnimatedButton("取消扫描")
-        self.cancel_btn.setMinimumHeight(36)
-        self.cancel_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: #ef4444;
-                color: white; border: none; border-radius: 8px;
-                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{ background: #f87171; }}
-            QPushButton:disabled {{ background: #334155; color: #64748b; }}
-        """)
-        self.cancel_btn.clicked.connect(self.cancel_scan)
-        self.cancel_btn.setVisible(False)
-        progress_card.content_layout.addWidget(self.cancel_btn)
-        layout.addWidget(progress_card)
 
         # 结果卡片
         results_card = Card(title="重复文件列表")
@@ -230,26 +145,11 @@ class FileDeduplicatorWidget(QWidget):
         self.results_tree.setColumnWidth(0, 400)
         self.results_tree.setColumnWidth(1, 100)
         self.results_tree.setColumnWidth(2, 200)
-        self.results_tree.setStyleSheet("""
-            QTreeWidget {
-                background-color: #0f172a;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                color: #f1f5f9;
-                padding: 4px;
-            }
-            QTreeWidget::item {
-                padding: 6px;
-            }
-            QTreeWidget::item:selected {
-                background-color: #3b82f6;
-            }
-        """)
         results_card.content_layout.addWidget(self.results_tree)
 
         # 统计标签
         self.stats_label = QLabel("未扫描")
-        self.stats_label.setStyleSheet(f"color: #94a3b8; font-size: {FONT_SIZE_12};")
+        self.stats_label.setStyleSheet(f"color: #94a3b8; font-size: {FONT_SIZE_14};")
         results_card.content_layout.addWidget(self.stats_label)
         layout.addWidget(results_card)
 
@@ -263,38 +163,20 @@ class FileDeduplicatorWidget(QWidget):
             "按修改时间升序排序（旧→新，保留首个，删除后续）",
             "按修改时间降序排序（新→旧，保留首个，删除后续）"
         ])
-        self.rule_combo.setStyleSheet("""
-            QComboBox {
-                background-color: #0f172a;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 6px;
-                color: #f1f5f9;
-            }
-        """)
-        deletion_layout.addWidget(self.rule_combo)
-        deletion_layout.addStretch()
+        deletion_layout.addWidget(self.rule_combo, 1)
         deletion_card.content_layout.addLayout(deletion_layout)
 
-        # 删除按钮
-        self.delete_btn = AnimatedButton("删除重复文件")
-        self.delete_btn.setMinimumHeight(48)
-        self.delete_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #ef4444, stop:1 #dc2626);
-                color: white; border: none; border-radius: 8px;
-                font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-            }}
-            QPushButton:hover {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #f87171, stop:1 #ef4444);
-            }}
-            QPushButton:disabled {{ background: #334155; color: #64748b; }}
-        """)
-        self.delete_btn.clicked.connect(self.delete_duplicates)
-        self.delete_btn.setEnabled(False)
-        deletion_card.content_layout.addWidget(self.delete_btn)
+        # 删除操作面板
+        self.delete_panel = ActionPanel(
+            button_text="删除重复文件",
+            use_gradient=True,
+            gradient_colors=(Theme.DARK['error'], Theme.DARK['error_gradient_end']),
+            gradient_hover_colors=(Theme.DARK['error_hover'], Theme.DARK['error_gradient_end']),
+        )
+        self.delete_panel.clicked.connect(self.delete_duplicates)
+        self.delete_panel.btn.setEnabled(False)
+        deletion_card.content_layout.addWidget(self.delete_panel)
+
         layout.addWidget(deletion_card)
 
         layout.addStretch()
@@ -330,54 +212,9 @@ class FileDeduplicatorWidget(QWidget):
                 }}
             """)
 
-        # 扫描按钮
-        if hasattr(self, 'scan_btn'):
-            self.scan_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                        stop:0 {theme['primary']}, stop:1 {theme['primary_hover']});
-                    color: {theme['text']};
-                    border: none; border-radius: 8px;
-                    font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-                }}
-                QPushButton:hover {{
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                        stop:0 {theme['primary_hover']}, stop:1 {theme['primary']});
-                }}
-                QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
-            """)
-
-        # 进度条
-        if hasattr(self, 'progress_bar'):
-            self.progress_bar.setStyleSheet(f"""
-                QProgressBar {{
-                    background-color: {theme['bg']};
-                    border-radius: 6px;
-                    text-align: center;
-                    color: {theme['text']};
-                }}
-                QProgressBar::chunk {{
-                    background-color: {theme['primary']};
-                    border-radius: 6px;
-                }}
-            """)
-
-        # 状态标签
-        if hasattr(self, 'status_label'):
-            self.status_label.setStyleSheet(f"color: {theme['text_secondary']};")
-            self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # 取消按钮
-        if hasattr(self, 'cancel_btn'):
-            self.cancel_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background: {theme['error']};
-                    color: {theme['text']}; border: none; border-radius: 8px;
-                    font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-                }}
-                QPushButton:hover {{ background: {theme['error_hover']}; }}
-                QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
-            """)
+        # 扫描操作面板
+        if hasattr(self, 'scan_panel'):
+            self.scan_panel.update_theme(theme)
 
         # 结果树状列表
         if hasattr(self, 'results_tree'):
@@ -402,7 +239,7 @@ class FileDeduplicatorWidget(QWidget):
 
         # 统计标签
         if hasattr(self, 'stats_label'):
-            self.stats_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_12};")
+            self.stats_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};")
 
         # 下拉框
         if hasattr(self, 'rule_combo'):
@@ -424,22 +261,11 @@ class FileDeduplicatorWidget(QWidget):
                 }}
             """)
 
-        # 删除按钮
-        if hasattr(self, 'delete_btn'):
-            self.delete_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                        stop:0 {theme['error']}, stop:1 {theme.get('error_gradient_end', theme['error'])});
-                    color: {theme['text']};
-                    border: none; border-radius: 8px;
-                    font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};
-                }}
-                QPushButton:hover {{
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                        stop:0 {theme['error_hover']}, stop:1 {theme.get('error_gradient_end', theme['error'])});
-                }}
-                QPushButton:disabled {{ background: {theme['surface']}; color: {theme['text_secondary']}; }}
-            """)
+        # 删除操作面板——使用主题错误色更新渐变
+        if hasattr(self, 'delete_panel'):
+            self.delete_panel.gradient_colors = (theme['error'], theme.get('error_gradient_end', theme['error']))
+            self.delete_panel.gradient_hover_colors = (theme['error_hover'], theme.get('error_gradient_end', theme['error']))
+            self.delete_panel.update_theme(theme)
 
     def browse_folder(self):
         """选择文件夹"""
@@ -451,8 +277,8 @@ class FileDeduplicatorWidget(QWidget):
         if dir_path:
             self.selected_folder = dir_path
             self.folder_display.setText(dir_path)
-            self.scan_btn.setEnabled(True)
-            self.status_label.setText(f"已选择文件夹: {dir_path}")
+            self.scan_panel.btn.setEnabled(True)
+            self.scan_panel.update_status(f"已选择文件夹: {dir_path}")
 
     def start_scan(self):
         """开始扫描"""
@@ -460,15 +286,11 @@ class FileDeduplicatorWidget(QWidget):
             show_warning(self, "警告", "请先选择有效的文件夹！")
             return
 
-        self.scan_btn.setEnabled(False)
-        self.cancel_btn.setVisible(True)
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setRange(0, 100)
-        self.progress_bar.setValue(0)
-        self.status_label.setText("正在扫描...")
+        self.scan_panel.btn.setEnabled(False)
+        self.scan_panel.start_task(maximum=0, status="正在扫描...")
         self.results_tree.clear()
         self.stats_label.setText("扫描中...")
-        self.delete_btn.setEnabled(False)
+        self.delete_panel.btn.setEnabled(False)
         self.duplicates = {}
 
         self.worker = FileDeduplicationWorker(self.selected_folder)
@@ -479,26 +301,16 @@ class FileDeduplicatorWidget(QWidget):
         self.worker.error.connect(self.show_error)
         self.worker.start()
 
-    def cancel_scan(self):
-        """取消扫描"""
-        if self.worker and self.worker.isRunning():
-            self.worker.cancel()
-            self.worker.wait()
-            self.status_label.setText("扫描已取消")
-            self.scan_btn.setEnabled(True)
-            self.cancel_btn.setVisible(False)
-            self.progress_bar.setVisible(False)
-
     def update_progress(self, scanned, total):
         """更新进度条"""
         if total > 0:
-            self.progress_bar.setRange(0, total)
-            self.progress_bar.setValue(scanned)
-            self.status_label.setText(f"已扫描 {scanned}/{total} 个文件...")
+            self.scan_panel.progress.setMaximum(total)
+            self.scan_panel.progress.setValue(scanned)
+            self.scan_panel.update_status(f"已扫描 {scanned}/{total} 个文件...")
 
     def update_status(self, message):
         """更新状态标签"""
-        self.status_label.setText(message)
+        self.scan_panel.update_status(message)
 
     def show_duplicates(self, duplicates):
         """显示重复文件"""
@@ -543,7 +355,8 @@ class FileDeduplicatorWidget(QWidget):
         self.stats_label.setText(
             f"找到 {len(duplicates)} 组重复文件，共 {total_duplicates} 个重复文件，可节省空间: {self.format_size(total_savings)}"
         )
-        self.delete_btn.setEnabled(True)
+        # 扫描完成后，启用删除按钮
+        self.delete_panel.btn.setEnabled(bool(duplicates))
 
     def format_size(self, bytes):
         """格式化文件大小"""
@@ -555,20 +368,17 @@ class FileDeduplicatorWidget(QWidget):
 
     def scan_finished(self, success, message):
         """扫描完成回调"""
-        self.progress_bar.setVisible(False)
-        self.cancel_btn.setVisible(False)
-        self.scan_btn.setEnabled(True)
+        self.scan_panel.finish_task(message)
+        self.scan_panel.btn.setEnabled(True)
         if success:
-            self.status_label.setText(message)
             if not self.duplicates:
                 show_info(self, "完成", "未找到重复文件")
         else:
-            self.status_label.setText("扫描失败")
             show_error(self, "错误", message)
 
     def show_error(self, error_msg):
         """显示错误"""
-        self.status_label.setText(error_msg)
+        self.scan_panel.update_status(error_msg)
 
     def delete_duplicates(self):
         """删除重复文件"""
@@ -611,16 +421,18 @@ class FileDeduplicatorWidget(QWidget):
 
         if reply:
             # 执行删除
+            self.delete_panel.start_task(maximum=len(files_to_delete), status="正在删除...")
             deleted = 0
             failed = 0
             failed_files = []
-            for file_path in files_to_delete:
+            for i, file_path in enumerate(files_to_delete):
                 try:
                     os.remove(file_path)
                     deleted += 1
                 except Exception as e:
                     failed += 1
                     failed_files.append(f"{file_path}: {str(e)}")
+                self.delete_panel.update_progress(i + 1)
 
             # 显示结果
             result_msg = f"删除完成: 成功 {deleted} 个，失败 {failed} 个"
@@ -628,6 +440,7 @@ class FileDeduplicatorWidget(QWidget):
                 result_msg += "\n\n失败文件:\n" + "\n".join(failed_files[:5])
                 if len(failed_files) > 5:
                     result_msg += f"\n... 还有 {len(failed_files)-5} 个失败文件"
+            self.delete_panel.finish_task(result_msg)
             show_info(self, "删除结果", result_msg)
             # 重新扫描刷新结果
             self.start_scan()
