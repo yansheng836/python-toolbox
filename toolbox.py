@@ -311,7 +311,38 @@ class WelcomePage(QWidget):
         self.plugins = plugins or {}
         self.favicon_path = self._get_favicon_path()
         self.separators = []
+        self.title = None
+        self.subtitle = None
+        self.hint = None
+        self.text_labels = []
+        self.desc_labels = []
         self.setup_ui()
+
+    def update_theme(self, theme):
+        """更新欢迎页主题"""
+        if self.title:
+            self.title.setStyleSheet(f"""
+                font-size: 36px;
+                font-weight: {FONT_WEIGHT_800};
+                color: {theme['text']};
+            """)
+        if self.subtitle:
+            self.subtitle.setStyleSheet(f"""
+                font-size: {FONT_SIZE_16};
+                color: {theme['text_secondary']};
+            """)
+        if self.hint:
+            self.hint.setStyleSheet(f"""
+                font-size: {FONT_SIZE_16};
+                color: {theme['primary']};
+                margin-top: 20px;
+            """)
+        for sep in self.separators:
+            sep.setStyleSheet(f"background-color: {theme['surface']}; max-height: 1px;")
+        for label in self.text_labels:
+            label.setStyleSheet(f"color: {theme['text']};")
+        for label in self.desc_labels:
+            label.setStyleSheet(f"color: {theme['text_secondary']};")
 
     @staticmethod
     def _get_favicon_path():
@@ -344,22 +375,22 @@ class WelcomePage(QWidget):
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(logo)
 
-        title = QLabel(APP_NAME)
-        title.setStyleSheet(f"""
+        self.title = QLabel(APP_NAME)
+        self.title.setStyleSheet(f"""
             font-size: 36px;
             font-weight: {FONT_WEIGHT_800};
-            color: #f1f5f9;
+            color: {Theme.DARK['text']};
         """)
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(title)
+        self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.title)
 
-        subtitle = QLabel(WELCOME_CONFIG.get("subtitle", ""))
-        subtitle.setStyleSheet(f"""
+        self.subtitle = QLabel(WELCOME_CONFIG.get("subtitle", ""))
+        self.subtitle.setStyleSheet(f"""
             font-size: {FONT_SIZE_16};
-            color: #94a3b8;
+            color: {Theme.DARK['text_secondary']};
         """)
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(subtitle)
+        self.subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.subtitle)
 
         # 功能卡片区域 - 使用横向滚动
         scroll_area = QScrollArea()
@@ -421,7 +452,7 @@ class WelcomePage(QWidget):
             # 分隔线
             line1 = QFrame()
             line1.setFrameShape(QFrame.Shape.HLine)
-            line1.setStyleSheet("background-color: #334155; max-height: 1px;")
+            line1.setStyleSheet(f"background-color: {Theme.DARK['surface']}; max-height: 1px;")
             self.separators.append(line1)
             card_layout.addWidget(line1)
 
@@ -430,25 +461,27 @@ class WelcomePage(QWidget):
             font.setPointSize(14)
             font.setBold(True)
             text_label.setFont(font)
-            text_label.setStyleSheet("color: #f1f5f9;")
+            text_label.setStyleSheet(f"color: {Theme.DARK['text']};")
             text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.text_labels.append(text_label)
             card_layout.addWidget(text_label)
 
             # 分隔线
             line2 = QFrame()
             line2.setFrameShape(QFrame.Shape.HLine)
-            line2.setStyleSheet("background-color: #334155; max-height: 1px;")
+            line2.setStyleSheet(f"background-color: {Theme.DARK['surface']}; max-height: 1px;")
             self.separators.append(line2)
             card_layout.addWidget(line2)
 
-            desc_text = desc[:30] + "..." if len(desc) > 30 else desc
+            desc_text = desc[:40] + "..." if len(desc) > 40 else desc
             desc_label = QLabel(desc_text)
             desc_font = desc_label.font()
             desc_font.setPointSize(10)
             desc_label.setFont(desc_font)
             desc_label.setWordWrap(True)
-            desc_label.setStyleSheet("color: #94a3b8;")
+            desc_label.setStyleSheet(f"color: {Theme.DARK['text_secondary']};")
             desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.desc_labels.append(desc_label)
             card_layout.addWidget(desc_label)
 
             features_layout.addWidget(card)
@@ -456,14 +489,14 @@ class WelcomePage(QWidget):
         scroll_area.setWidget(features)
         layout.addWidget(scroll_area)
 
-        hint = QLabel(WELCOME_CONFIG.get("hint", ""))
-        hint.setStyleSheet(f"""
+        self.hint = QLabel(WELCOME_CONFIG.get("hint", ""))
+        self.hint.setStyleSheet(f"""
             font-size: {FONT_SIZE_16};
-            color: #6366f1;
+            color: {Theme.DARK['primary']};
             margin-top: 20px;
         """)
-        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(hint)
+        self.hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.hint)
 
         layout.addStretch()
 
@@ -1029,6 +1062,10 @@ class ToolboxWindow(QMainWindow):
                 plugin.scroll_area.viewport().setStyleSheet(viewport_style)
             if hasattr(plugin, 'update_theme'):
                 plugin.update_theme(theme)
+
+        # 更新欢迎页主题
+        if hasattr(self, 'welcome_page') and hasattr(self.welcome_page, 'update_theme'):
+            self.welcome_page.update_theme(theme)
 
     def setup_tray(self):
         if QSystemTrayIcon.isSystemTrayAvailable():
