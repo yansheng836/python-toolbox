@@ -1,3 +1,8 @@
+# -*- encoding: utf-8 -*-
+"""
+test_button.py - Module for toolbox
+"""
+
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

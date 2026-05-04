@@ -1,3 +1,8 @@
+# -*- encoding: utf-8 -*-
+"""
+toolbox2.py - Module for toolbox
+"""
+
 import sys
 import os
 
@@ -556,6 +561,7 @@ class CompressWorker(QThread):
             self.finished.emit(True, f"Compressed {len(self.files)} images!")
 
         except Exception as e:
+            print(f"Error in toolbox2: {e}")
             self.finished.emit(False, f"Error: {str(e)}")
 
 
@@ -674,7 +680,8 @@ class ImageToPDFWidget(QWidget):
                 from PIL import Image
                 img = Image.open(f)
                 size = f"{img.width}×{img.height}"
-            except:
+            except Exception as e:
+                print(f"get_image_size error: {e}")
                 size = "?"
 
             self.table.setItem(i, 0, QTableWidgetItem(os.path.basename(f)))
@@ -725,19 +732,22 @@ class ImageToPDFWidget(QWidget):
     def _check_img2pdf(self):
         try:
             return True
-        except:
+        except ImportError as e:
+            print(f"Warning: {e}")
             return False
 
     def _check_fitz(self):
         try:
             return True
-        except:
+        except ImportError as e:
+            print(f"Warning: {e}")
             return False
 
     def _check_pil(self):
         try:
             return True
-        except:
+        except ImportError as e:
+            print(f"Warning: {e}")
             return False
 
     def conversion_done(self, success, msg):
@@ -811,6 +821,7 @@ class PDFWorker(QThread):
             self.finished.emit(True, f"PDF saved:\n{self.output}")
 
         except Exception as e:
+            print(f"Error in toolbox2: {e}")
             self.finished.emit(False, f"Error: {str(e)}")
 
 

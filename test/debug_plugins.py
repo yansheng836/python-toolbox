@@ -1,3 +1,8 @@
+# -*- encoding: utf-8 -*-
+"""
+debug_plugins.py - Module for toolbox
+"""
+
 import sys
 
 # 添加当前目录到路径

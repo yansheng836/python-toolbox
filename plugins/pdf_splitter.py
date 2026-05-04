@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 """
 PDF拆分工具插件
 将PDF文件拆分为多张图片或单页PDF，支持设置拆分页数
@@ -6,169 +7,22 @@ import os
 import sys
 import io
 
-# 导入PyMuPDF用于PDF拆分
-try:
-    import fitz
+from common.utils import FITZ_AVAILABLE, PIL_AVAILABLE
 
-    FITZ_AVAILABLE = True
-except ImportError:
-    FITZ_AVAILABLE = False
-
-# 导入PIL用于图片处理
-try:
-    from PIL import Image
-
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
-
-# 导入主程序中的ToolPlugin基类和相关组件
-try:
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
-except ImportError:
-    # 如果导入失败，定义简化的基类
-    Theme = None
-    class ToolPlugin:
-        name = "Base Tool"
-        icon = "🔧"
-
-        def __init__(self, parent=None):
-            self.parent = parent
-            self.widget = None
-
-        def create_ui(self):
-            raise NotImplementedError("Subclasses must implement create_ui()")
-
-        def get_widget(self):
-            if self.widget is None:
-                self.widget = self.create_ui()
-            return self.widget
-
-    class Card:
-        def __init__(self, parent=None, title=""):
-            pass
-
-    class AnimatedButton:
-        def __init__(self, *args, **kwargs):
-            pass
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QLineEdit,
-    QComboBox, QSpinBox, QSlider,
-    QRadioButton, QButtonGroup, QFormLayout
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QListWidget, QAbstractItemView, QMessageBox, QFileDialog,
+    QComboBox, QSpinBox, QSlider, QRadioButton, QButtonGroup, QFormLayout,QWidget, QSizePolicy
 )
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 from common.message_utils import show_info, show_error, show_warning
 from common.file_list_panel import FileListPanel
 from common.action_panel import ActionPanel
-from common.utils import get_file_size, get_create_time, get_pdf_pages
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
-
-
-class PDFSplitWorker(QThread):
-    """PDF拆分工作线程"""
-    progress = pyqtSignal(int)
-    status = pyqtSignal(str)
-    finished = pyqtSignal(bool, str)
-
-    def __init__(self, input_file, output_dir,
-                 output_format="pdf", pages_per_split=1,
-                 image_format="PNG", image_quality=95):
-        super().__init__()
-        self.input_file = input_file
-        self.output_dir = output_dir
-        self.output_format = output_format
-        self.pages_per_split = pages_per_split
-        self.image_format = image_format
-        self.image_quality = image_quality
-
-    def run(self):
-        try:
-            if not FITZ_AVAILABLE:
-                self.finished.emit(False, "错误: 未安装PyMuPDF库，请运行: pip install PyMuPDF")
-                return
-
-            self.status.emit("正在打开PDF文件...")
-
-            doc = fitz.open(self.input_file)
-
-            total_pages = len(doc)
-            self.status.emit(f"PDF共 {total_pages} 页，开始拆分...")
-
-            os.makedirs(self.output_dir, exist_ok=True)
-
-            base_name = os.path.splitext(os.path.basename(self.input_file))[0]
-            output_count = 0
-
-            if self.output_format == "pdf":
-                for i in range(0, total_pages, self.pages_per_split):
-                    end_page = min(i + self.pages_per_split, total_pages)
-
-                    new_doc = fitz.open()
-                    new_doc.insert_pdf(doc, from_page=i, to_page=end_page - 1)
-
-                    output_file = os.path.join(
-                        self.output_dir,
-                        f"{base_name}_part{output_count + 1}_pages_{i + 1}-{end_page}.pdf"
-                    )
-                    new_doc.save(output_file, garbage=0, deflate=False)
-                    new_doc.close()
-
-                    output_count += 1
-                    self.progress.emit(output_count)
-
-                doc.close()
-                self.finished.emit(True, f"成功拆分PDF为 {output_count} 个文件！\n保存位置: {self.output_dir}")
-
-            else:
-                fmt = self.image_format.upper()
-
-                # PNG and WebP need PIL for compression control
-                if fmt in ("PNG", "WEBP") and not PIL_AVAILABLE:
-                    doc.close()
-                    self.finished.emit(False, f"错误: 输出{fmt}需要Pillow库，请运行: pip install Pillow")
-                    return
-
-                # Zoom proportional to quality: 1.0x at quality=50, 2.0x at quality=100
-                zoom = max(1.0, self.image_quality / 50.0)
-                mat = fitz.Matrix(zoom, zoom)
-
-                # Map image_quality to PNG compress_level: quality 100->level 9, quality 1->level 1
-                # Avoid level 0 (no compression, huge files)
-                png_compress_level = max(1, min(9, int(self.image_quality / 100.0 * 9)))
-
-                for page_num in range(total_pages):
-                    page = doc[page_num]
-                    pix = page.get_pixmap(matrix=mat)
-
-                    output_file = os.path.join(
-                        self.output_dir,
-                        f"{base_name}_page_{page_num + 1}.{self.image_format.lower()}"
-                    )
-
-                    if fmt == "PNG":
-                        # Use PIL to control compress_level for smaller files
-                        img = Image.open(io.BytesIO(pix.tobytes("ppm")))
-                        img.save(output_file, "PNG", compress_level=png_compress_level, optimize=True)
-                    elif fmt in ("JPEG", "JPG"):
-                        pix.save(output_file, output="JPEG", jpg_quality=self.image_quality)
-                    elif fmt == "WEBP":
-                        img = Image.open(io.BytesIO(pix.tobytes("ppm")))
-                        if img.mode not in ("RGB", "L"):
-                            img = img.convert("RGB")
-                        img.save(output_file, "WEBP", quality=self.image_quality, method=4, optimize=True)
-
-                    output_count += 1
-                    self.progress.emit(output_count)
-
-                doc.close()
-                self.finished.emit(True, f"成功转换 {output_count} 页为图片！\n保存位置: {self.output_dir}")
-
-        except Exception as e:
-            import traceback
-            self.finished.emit(False, f"拆分失败: {str(e)}\n{traceback.format_exc()}")
-
+from common.utils import get_file_size, get_pdf_pages
 
 class PDFSplitterWidget(QWidget):
     """PDF拆分工具主界面"""
@@ -249,7 +103,6 @@ class PDFSplitterWidget(QWidget):
         settings_layout.addRow("图片格式:", self.image_format_combo)
 
         # 图片质量：滚动条 + 百分比标签（参考图片压缩功能）
-        from PyQt6.QtWidgets import QWidget
         quality_widget = QWidget()
         quality_h_layout = QHBoxLayout(quality_widget)
         quality_h_layout.setContentsMargins(0, 0, 0, 0)

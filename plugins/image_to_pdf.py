@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 """
 图片转PDF插件
 将多张图片合并为一个PDF文件
@@ -15,35 +16,12 @@ from PyQt6.QtWidgets import (
 from common.message_utils import show_info, show_error, show_warning
 from common.dialog_utils import get_save_file_name
 from common.action_panel import ActionPanel
+from common.utils import PIL_AVAILABLE, IMG2PDF_AVAILABLE, FITZ_AVAILABLE
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
-try:
-    from PIL import Image
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
-
-try:
-    import img2pdf
-    IMG2PDF_AVAILABLE = True
-except ImportError:
-    IMG2PDF_AVAILABLE = False
-
-try:
-    import fitz
-    FITZ_AVAILABLE = True
-except ImportError:
-    FITZ_AVAILABLE = False
-
 # 导入主程序中的基类和组件
-try:
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
-except ImportError:
-    ToolPlugin = object
-    Card = None
-    AnimatedButton = None
-    Theme = None
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
 
 from common.file_list_panel import FileListPanel
 from common.utils import IMAGE_COLUMNS, get_create_time
@@ -80,7 +58,8 @@ class PDFWorker(QThread):
                         img = Image.open(f)
                         if max_width is None or img.width > max_width:
                             max_width = img.width
-                    except Exception:
+                    except Exception as e:
+                        print(f"Error in image_to_pdf: {e}")
                         skipped += 1
                 if max_width is None:
                     self.finished.emit(False, "没有成功读取任何图片，请检查图片文件是否损坏。")
@@ -108,7 +87,8 @@ class PDFWorker(QThread):
                         batch_imgs.append(img)
                         processed_count += 1
                         self.progress.emit(processed_count)
-                    except Exception:
+                    except Exception as e:
+                        print(f"Error in image_to_pdf: {e}")
                         skipped += 1
                         processed_count += 1
                         self.progress.emit(processed_count)
@@ -196,7 +176,8 @@ class PDFWorker(QThread):
                     try:
                         os.remove(jpg_file)
                         temp_files.remove(jpg_file)
-                    except OSError:
+                    except OSError as e:
+                        print(f"Error in image_to_pdf: {e}")
                         pass
 
             if not temp_pdfs:
@@ -228,7 +209,8 @@ class PDFWorker(QThread):
                 try:
                     os.remove(tpdf)
                     temp_files.remove(tpdf)
-                except OSError:
+                except OSError as e:
+                    print(f"Error in image_to_pdf: {e}")
                     pass
 
             msg = f"PDF已保存至:\n{self.output}"
@@ -240,13 +222,15 @@ class PDFWorker(QThread):
                 raise Exception(f"输出PDF为空（0字节）: {self.output}")
             self.finished.emit(True, msg)
         except Exception as e:
+            print(f"Error in image_to_pdf: {e}")
             self.finished.emit(False, f"转换失败: {str(e)}")
         finally:
             # 异常或正常结束时，清理所有未删除的临时文件
             for tf in list(temp_files):
                 try:
                     os.remove(tf)
-                except OSError:
+                except OSError as e:
+                    print(f"Error in image_to_pdf: {e}")
                     pass
 
 

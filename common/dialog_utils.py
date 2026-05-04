@@ -1,14 +1,53 @@
+# -*- encoding: utf-8 -*-
 """
 统一的文件对话框工具
-所有插件使用此模块弹出文件对话框，保证风格一致（白色背景）
+所有插件使用此模块弹出文件对话框，保证风格一致
 """
 
 from PyQt6.QtWidgets import QFileDialog
+from toolbox import Theme
 
 
-def get_save_file_name(parent, title, directory="", filter_str="", options=None):
+def _get_dialog_style(theme=None):
+    """返回文件对话框的统一样式"""
+    if theme is None:
+        theme = Theme.LIGHT
+    return f"""
+        QFileDialog {{
+            background-color: {theme['bg_secondary']};
+        }}
+        QFileDialog QWidget {{
+            background-color: {theme['bg_secondary']};
+            color: {theme['text']};
+        }}
+        QFileDialog QLineEdit {{
+            background-color: {theme['bg']};
+            color: {theme['text']};
+            border: 1px solid {theme['border']};
+            border-radius: 4px;
+            padding: 4px 8px;
+        }}
+        QFileDialog QPushButton {{
+            background-color: {theme['primary']};
+            color: {theme['text']};
+            border: none;
+            border-radius: 6px;
+            padding: 6px 20px;
+            font-weight: 600;
+        }}
+        QFileDialog QPushButton:hover {{
+            background-color: {theme['primary_hover']};
+        }}
+        QFileDialog QListView, QFileDialog QTreeView {{
+            background-color: {theme['bg_secondary']};
+            color: {theme['text']};
+        }}
     """
-    弹出"保存文件"对话框，带白色背景样式
+
+
+def get_save_file_name(parent, title, directory="", filter_str="", options=None, theme=None):
+    """
+    弹出"保存文件"对话框
     参数与 QFileDialog.getSaveFileName 类似，返回选中的文件路径（为空则用户取消）
     """
     file_dialog = QFileDialog(parent)
@@ -20,37 +59,7 @@ def get_save_file_name(parent, title, directory="", filter_str="", options=None)
         file_dialog.setDirectory(directory)
     if options:
         file_dialog.setOptions(options)
-    file_dialog.setStyleSheet("""
-        QFileDialog {
-            background-color: #ffffff;
-        }
-        QFileDialog QWidget {
-            background-color: #ffffff;
-            color: #1f2937;
-        }
-        QFileDialog QLineEdit {
-            background-color: #ffffff;
-            color: #1f2937;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            padding: 4px 8px;
-        }
-        QFileDialog QPushButton {
-            background-color: #4f46e5;
-            color: #ffffff;
-            border: none;
-            border-radius: 6px;
-            padding: 6px 20px;
-            font-weight: 600;
-        }
-        QFileDialog QPushButton:hover {
-            background-color: #4338ca;
-        }
-        QFileDialog QListView, QFileDialog QTreeView {
-            background-color: #ffffff;
-            color: #1f2937;
-        }
-    """)
+    file_dialog.setStyleSheet(_get_dialog_style(theme))
     if file_dialog.exec():
         selected_files = file_dialog.selectedFiles()
         if selected_files:
@@ -58,9 +67,9 @@ def get_save_file_name(parent, title, directory="", filter_str="", options=None)
     return ""
 
 
-def get_existing_directory(parent, title, directory="", options=None):
+def get_existing_directory(parent, title, directory="", options=None, theme=None):
     """
-    弹出"选择目录"对话框，带白色背景样式
+    弹出"选择目录"对话框
     参数与 QFileDialog.getExistingDirectory 类似，返回选中的目录路径（为空则用户取消）
     """
     file_dialog = QFileDialog(parent)
@@ -71,37 +80,7 @@ def get_existing_directory(parent, title, directory="", options=None):
         file_dialog.setDirectory(directory)
     if options:
         file_dialog.setOptions(options)
-    file_dialog.setStyleSheet("""
-        QFileDialog {
-            background-color: #ffffff;
-        }
-        QFileDialog QWidget {
-            background-color: #ffffff;
-            color: #1f2937;
-        }
-        QFileDialog QLineEdit {
-            background-color: #ffffff;
-            color: #1f2937;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            padding: 4px 8px;
-        }
-        QFileDialog QPushButton {
-            background-color: #4f46e5;
-            color: #ffffff;
-            border: none;
-            border-radius: 6px;
-            padding: 6px 20px;
-            font-weight: 600;
-        }
-        QFileDialog QPushButton:hover {
-            background-color: #4338ca;
-        }
-        QFileDialog QListView, QFileDialog QTreeView {
-            background-color: #ffffff;
-            color: #1f2937;
-        }
-    """)
+    file_dialog.setStyleSheet(_get_dialog_style(theme))
     if file_dialog.exec():
         selected_files = file_dialog.selectedFiles()
         if selected_files:
@@ -109,9 +88,9 @@ def get_existing_directory(parent, title, directory="", options=None):
     return ""
 
 
-def get_open_file_names(parent, title, directory="", filter_str="", options=None):
+def get_open_file_names(parent, title, directory="", filter_str="", options=None, theme=None):
     """
-    弹出"打开文件"对话框（多选），带白色背景样式
+    弹出"打开文件"对话框（多选）
     返回选中的文件路径列表（为空则用户取消）
     """
     file_dialog = QFileDialog(parent)
@@ -123,37 +102,7 @@ def get_open_file_names(parent, title, directory="", filter_str="", options=None
         file_dialog.setDirectory(directory)
     if options:
         file_dialog.setOptions(options)
-    file_dialog.setStyleSheet("""
-        QFileDialog {
-            background-color: #ffffff;
-        }
-        QFileDialog QWidget {
-            background-color: #ffffff;
-            color: #1f2937;
-        }
-        QFileDialog QLineEdit {
-            background-color: #ffffff;
-            color: #1f2937;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            padding: 4px 8px;
-        }
-        QFileDialog QPushButton {
-            background-color: #4f46e5;
-            color: #ffffff;
-            border: none;
-            border-radius: 6px;
-            padding: 6px 20px;
-            font-weight: 600;
-        }
-        QFileDialog QPushButton:hover {
-            background-color: #4338ca;
-        }
-        QFileDialog QListView, QFileDialog QTreeView {
-            background-color: #ffffff;
-            color: #1f2937;
-        }
-    """)
+    file_dialog.setStyleSheet(_get_dialog_style(theme))
     if file_dialog.exec():
         return file_dialog.selectedFiles()
     return []

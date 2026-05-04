@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 """
 文件去重工具插件
 按内容Hash查找重复文件，支持预览后选择规则删除
@@ -63,6 +64,7 @@ class FileDeduplicationWorker(QThread):
                     if file_hash:
                         hash_to_files[file_hash].append(file_path)
                 except Exception as e:
+                    print(f"compute_file_hash error: {e}")
                     self.error.emit(f"无法读取文件 {file_path}: {str(e)}")
                 scanned += 1
                 self.progress.emit(scanned, total_files)
@@ -72,6 +74,7 @@ class FileDeduplicationWorker(QThread):
             self.duplicates_found.emit(duplicates)
             self.finished.emit(True, f"扫描完成，找到 {len(duplicates)} 组重复文件")
         except Exception as e:
+            print(f"Error in FileDeduplicator: {e}")
             self.finished.emit(False, f"扫描失败: {str(e)}")
 
     def compute_file_hash(self, file_path, chunk_size=65536):
@@ -94,18 +97,19 @@ class FileDeduplicationWorker(QThread):
 class FileDeduplicatorWidget(QWidget):
     """文件去重工具主界面"""
 
-    def __init__(self, parent=None, icon="", name="", description=""):
+    def __init__(self, parent=None, icon="", name="", description="", theme=None):
         super().__init__(parent)
         self.icon = icon
         self.name = name
         self.description = description
+        self.theme = theme or Theme.DARK
         self.selected_folder = ""
         self.worker = None
         self.duplicates = {}  # {hash: [file_paths]}
         self.setup_ui()
 
     def setup_ui(self):
-        self.group_bg_color = QColor('#334155')  # 默认分组背景色，apply_theme 会覆盖
+        self.group_bg_color = QColor(self.theme['surface'])  # 默认分组背景色，apply_theme 会覆盖
         layout = QVBoxLayout(self)
         layout.setSpacing(16)
 
@@ -158,7 +162,7 @@ class FileDeduplicatorWidget(QWidget):
 
         # 统计标签
         self.stats_label = QLabel("未扫描")
-        self.stats_label.setStyleSheet(f"color: #94a3b8; font-size: {FONT_SIZE_14};")
+        self.stats_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_14};")
         results_card.content_layout.addWidget(self.stats_label)
         layout.addWidget(results_card)
 
@@ -211,7 +215,7 @@ class FileDeduplicatorWidget(QWidget):
         if Theme is not None:
             self.apply_theme(Theme.DARK)
 
-    def apply_theme(self, theme):
+    def update_theme(self, theme):
         """应用主题到所有组件"""
         # 标题和描述
         if hasattr(self, 'title_label'):
@@ -393,7 +397,7 @@ class FileDeduplicatorWidget(QWidget):
         total_savings = 0
 
         # 获取当前主题的文字颜色
-        text_color = self.current_theme['text'] if hasattr(self, 'current_theme') else '#f1f5f9'
+        text_color = self.theme['text']
 
         for file_hash, file_list in duplicates.items():
             # 创建重复组顶级项（父节点，可勾选）
@@ -413,8 +417,8 @@ class FileDeduplicatorWidget(QWidget):
                 try:
                     file_size = os.path.getsize(file_list[0])
                     total_savings += file_size * (len(file_list) - 1)
-                except:
-                    pass
+                except OSError as e:
+                    print(f"getsize error: {e}")
 
             for file_path in file_list:
                 file_item = QTreeWidgetItem(group_item)
@@ -426,7 +430,8 @@ class FileDeduplicatorWidget(QWidget):
                     size = os.path.getsize(file_path)
                     file_item.setText(1, self.format_size(size))
                     file_item.setForeground(1, QBrush(QColor(text_color)))
-                except:
+                except OSError as e:
+                    print(f"getsize error: {e}")
                     file_item.setText(1, "未知")
                 # 创建时间
                 file_item.setText(2, get_create_time(file_path))
@@ -558,6 +563,7 @@ class FileDeduplicatorWidget(QWidget):
                     os.remove(file_path)
                     deleted += 1
                 except Exception as e:
+                    print(f"delete error: {e}")
                     failed += 1
                     failed_files.append(f"{file_path}: {str(e)}")
                 self.delete_panel.update_progress(i + 1)
@@ -584,7 +590,7 @@ class FileDeduplicator(ToolPlugin):
 
     def create_ui(self):
         """创建UI"""
-        self.widget = FileDeduplicatorWidget(icon=self.icon, name=self.name, description=self.description)
+        self.widget = FileDeduplicatorWidget(icon=self.icon, name=self.name, description=self.description, theme=Theme.DARK)
         # 将 Widget 的标签属性复制到插件实例，统一访问入口
         self.title_label = self.widget.title_label
         self.desc_label = self.widget.desc_label

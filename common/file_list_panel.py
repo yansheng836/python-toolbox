@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 """
 通用文件列表面板组件
 供多个插件复用，减少重复代码
@@ -280,7 +281,8 @@ class FileListPanel(QWidget):
             for col_idx, (col_name, col_func) in enumerate(self.columns):
                 try:
                     text = str(col_func(file_path))
-                except Exception:
+                except Exception as e:
+                    print(f"Error in file_list_panel: {e}")
                     text = "错误"
                 item = QTableWidgetItem(text)
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)

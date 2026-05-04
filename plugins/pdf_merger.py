@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 """
 PDF合并工具插件
 将多个PDF文件合并为一个PDF文件，支持拖拽和顺序调整
@@ -6,190 +7,32 @@ import os
 import sys
 from typing import List
 
-# 导入PyMuPDF用于PDF合并
-try:
-    import fitz
-    FITZ_AVAILABLE = True
-except ImportError:
-    FITZ_AVAILABLE = False
+from common.utils import FITZ_AVAILABLE
 
-# 导入主程序中的ToolPlugin基类和相关组件
-try:
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
-except ImportError:
-    # 如果导入失败，定义简化的基类
-    Theme = None
-    class ToolPlugin:
-        name = "Base Tool"
-        icon = "🔧"
-
-        def __init__(self, parent=None):
-            self.parent = parent
-            self.widget = None
-
-        def create_ui(self):
-            raise NotImplementedError("Subclasses must implement create_ui()")
-
-        def get_widget(self):
-            if self.widget is None:
-                self.widget = self.create_ui()
-            return self.widget
-
-    class Card:
-        def __init__(self, parent=None, title=""):
-            pass
-
-    class AnimatedButton:
-        def __init__(self, *args, **kwargs):
-            pass
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
+from config import SPACING_SMALL, SPACING_MEDIUM
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
-    QLineEdit
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QListWidget, QAbstractItemView, QMessageBox, QFileDialog,
+    QComboBox, QSpinBox, QGridLayout, QLineEdit, QSizePolicy
 )
-
-from common.message_utils import show_info, show_error, show_warning
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
+from common.message_utils import show_info, show_error, show_warning
 from common.file_list_panel import FileListPanel
-from common.utils import get_create_time, get_file_size, get_pdf_pages
-from common.action_panel import ActionPanel
-
-
-PDF_COLUMNS = [
-    ("文件名", lambda f: os.path.basename(f)),
-    ("大小", get_file_size),
-    ("页数", get_pdf_pages),
-    ("创建时间", get_create_time)
-]
-
-
-class PDFMergeWorker(QThread):
-    """PDF合并工作线程"""
-    progress = pyqtSignal(int)
-    status = pyqtSignal(str)
-    finished = pyqtSignal(bool, str)
-
-    def __init__(self, input_files: List[str], output_path: str):
-        super().__init__()
-        self.input_files = input_files
-        self.output_path = output_path
-
-    def _validate_files(self, input_files):
-        """预检文件：检查存在性和PDF完整性，返回 (valid_files, error_messages)"""
-        valid = []
-        errors = []
-        for pdf_path in input_files:
-            if not os.path.exists(pdf_path):
-                errors.append(f"文件不存在: {os.path.basename(pdf_path)}")
-            else:
-                try:
-                    doc = fitz.open(pdf_path)
-                    doc.close()
-                    valid.append(pdf_path)
-                except Exception as e:
-                    errors.append(f"无效或损坏的PDF: {os.path.basename(pdf_path)} - {str(e)}")
-        return valid, errors
-
-    def run(self):
-        try:
-            if not FITZ_AVAILABLE:
-                self.finished.emit(False, "错误: 未安装PyMuPDF库，请运行: pip install PyMuPDF")
-                return
-
-            self.status.emit("正在检查文件...")
-            valid_files, errors = self._validate_files(self.input_files)
-
-            if errors:
-                error_msg = "以下文件存在问题:\n" + "\n".join(errors)
-                if not valid_files:
-                    self.finished.emit(False, error_msg)
-                    return
-                self.finished.emit(False, error_msg + "\n\n请修复后重试。")
-                return
-
-            if not valid_files:
-                self.finished.emit(False, "没有有效的PDF文件可合并")
-                return
-
-            total = len(valid_files)
-            CHUNK_SIZE = 20  # 超过20个文件时分块合并，减少内存占用
-
-            if total <= CHUNK_SIZE:
-                # 文件较少，直接合并
-                self.status.emit("正在准备合并...")
-                merged_doc = fitz.open()
-                for i, pdf_path in enumerate(valid_files):
-                    self.status.emit(f"正在处理: {os.path.basename(pdf_path)}")
-                    src_doc = fitz.open(pdf_path)
-                    merged_doc.insert_pdf(src_doc)
-                    src_doc.close()
-                    self.progress.emit(i + 1)
-
-                self.status.emit("正在保存...")
-                merged_doc.save(self.output_path, garbage=0, deflate=False)
-                merged_doc.close()
-            else:
-                # 分块合并：每 CHUNK_SIZE 个文件保存一次，减少内存占用
-                self.status.emit("正在分块合并...")
-                import tempfile
-                temp_files = []
-                processed = 0
-
-                try:
-                    for chunk_start in range(0, total, CHUNK_SIZE):
-                        chunk = valid_files[chunk_start:chunk_start + CHUNK_SIZE]
-                        chunk_doc = fitz.open()
-                        for pdf_path in chunk:
-                            self.status.emit(f"正在处理: {os.path.basename(pdf_path)}")
-                            src_doc = fitz.open(pdf_path)
-                            chunk_doc.insert_pdf(src_doc)
-                            src_doc.close()
-                            processed += 1
-                            self.progress.emit(processed)
-
-                        # 保存当前块到临时文件
-                        temp_fd, temp_path = tempfile.mkstemp(suffix='.pdf')
-                        os.close(temp_fd)
-                        chunk_doc.save(temp_path, garbage=0, deflate=False)
-                        chunk_doc.close()
-                        temp_files.append(temp_path)
-
-                    # 合并所有临时文件
-                    self.status.emit("正在合并分块...")
-                    final_doc = fitz.open()
-                    for temp_path in temp_files:
-                        temp_doc = fitz.open(temp_path)
-                        final_doc.insert_pdf(temp_doc)
-                        temp_doc.close()
-
-                    self.status.emit("正在保存...")
-                    final_doc.save(self.output_path, garbage=0, deflate=False)
-                    final_doc.close()
-
-                finally:
-                    # 清理临时文件
-                    for temp_path in temp_files:
-                        try:
-                            os.remove(temp_path)
-                        except Exception:
-                            pass
-
-            self.finished.emit(True, f"成功合并 {total} 个PDF文件！\n保存位置: {self.output_path}")
-
-        except Exception as e:
-            self.finished.emit(False, f"合并失败: {str(e)}")
-
+from common.utils import get_file_size, get_pdf_pages
 
 class PDFMergerWidget(QWidget):
     """PDF合并工具主界面"""
 
-    def __init__(self, parent=None, icon="", name="", description=""):
+    def __init__(self, parent=None, icon="", name="", description="", theme=None):
         super().__init__(parent)
         self.icon = icon
         self.name = name
         self.description = description
+        self.theme = theme or Theme.DARK
         self.worker = None
         self.setup_ui()
 
@@ -231,14 +74,14 @@ class PDFMergerWidget(QWidget):
         output_layout.addWidget(QLabel("输出文件:"))
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("选择输出文件路径...")
-        self.output_path.setStyleSheet("""
-            QLineEdit {
-                background-color: #0f172a;
-                border: 1px solid #334155;
+        self.output_path.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {self.theme['bg']};
+                border: 1px solid {self.theme['surface']};
                 border-radius: 6px;
                 padding: 6px;
-                color: #f1f5f9;
-            }
+                color: {self.theme['text']};
+            }}
         """)
         browse_btn = AnimatedButton("浏览")
         browse_btn.setMaximumWidth(80)
@@ -349,8 +192,13 @@ class PDFMerger(ToolPlugin):
 
     def create_ui(self):
         """创建UI"""
-        self.widget = PDFMergerWidget(icon=self.icon, name=self.name, description=self.description)
+        self.widget = PDFMergerWidget(icon=self.icon, name=self.name, description=self.description, theme=Theme.DARK)
         # 将 Widget 的标签属性复制到插件实例，统一访问入口
         self.title_label = self.widget.title_label
         self.desc_label = self.widget.desc_label
         return self.widget
+
+    def update_theme(self, theme):
+        """更新主题"""
+        if hasattr(self, 'widget') and hasattr(self.widget, 'update_theme'):
+            self.widget.update_theme(theme)

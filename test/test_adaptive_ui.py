@@ -1,3 +1,8 @@
+# -*- encoding: utf-8 -*-
+"""
+test_adaptive_ui.py - Module for toolbox
+"""
+
 #!/usr/bin/env python3
 import sys
 import os

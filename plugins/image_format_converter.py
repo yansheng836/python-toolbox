@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 """
 图片格式转换插件
 批量转换图片格式，支持 JPEG/PNG/WebP/BMP/TIFF/GIF
@@ -13,30 +14,15 @@ from PyQt6.QtWidgets import (
 from common.message_utils import show_info, show_error, show_warning
 from common.dialog_utils import get_existing_directory
 from common.action_panel import ActionPanel
+from common.utils import PIL_AVAILABLE
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
-try:
-    from PIL import Image
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
-
-# 导入主程序中的基类和组件
-try:
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
-    from config import SPACING_SMALL, SPACING_MEDIUM
-except ImportError:
-    ToolPlugin = object
-    Card = None
-    AnimatedButton = None
-    Theme = None
-    SPACING_SMALL = 8
-    SPACING_MEDIUM = 20
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
+from config import SPACING_SMALL, SPACING_MEDIUM
 
 from common.file_list_panel import FileListPanel
 from common.utils import IMAGE_COLUMNS
-
 
 class FormatConvertWorker(QThread):
     """图片格式转换工作线程"""
@@ -94,6 +80,7 @@ class FormatConvertWorker(QThread):
                 self.progress.emit(i + 1)
             self.finished.emit(True, f"成功转换 {processed} 张图片！")
         except Exception as e:
+            print(f"Error in image_format_converter: {e}")
             self.finished.emit(False, f"转换失败: {str(e)}")
 
     def _prepare_image(self, img, pil_fmt):
@@ -190,6 +177,7 @@ class FormatConverter(ToolPlugin):
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setSpacing(10)
+        self.theme = Theme.DARK
 
         self.title_label = QLabel(f"{self.icon} {self.name}")
         self.title_label.setStyleSheet(
@@ -221,14 +209,14 @@ class FormatConverter(ToolPlugin):
         settings_layout.addWidget(QLabel("目标格式:"), 0, 0)
         self.fmt_combo = QComboBox()
         self.fmt_combo.addItems(self.FORMATS)
-        self.fmt_combo.setStyleSheet("""
-            QComboBox {
-                background-color: #0f172a;
-                border: 1px solid #334155;
+        self.fmt_combo.setStyleSheet(f"""
+            QComboBox {{
+                background-color: {self.theme['bg']};
+                border: 1px solid {self.theme['surface']};
                 border-radius: 6px;
                 padding: 6px;
-                color: #f1f5f9;
-            }
+                color: {self.theme['text']};
+            }}
         """)
         settings_layout.addWidget(self.fmt_combo, 0, 1)
 
@@ -236,14 +224,14 @@ class FormatConverter(ToolPlugin):
         out_row = QHBoxLayout()
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("默认保存到原图目录")
-        self.output_path.setStyleSheet("""
-            QLineEdit {
-                background-color: #0f172a;
-                border: 1px solid #334155;
+        self.output_path.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {self.theme['bg']};
+                border: 1px solid {self.theme['surface']};
                 border-radius: 6px;
                 padding: 6px;
-                color: #f1f5f9;
-            }
+                color: {self.theme['text']};
+            }}
         """)
         browse_btn = AnimatedButton("浏览")
         browse_btn.setMaximumWidth(80)

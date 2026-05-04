@@ -1,3 +1,8 @@
+# -*- encoding: utf-8 -*-
+"""
+create_test_images.py - Module for toolbox
+"""
+
 #!/usr/bin/env python3
 from PIL import Image
 import os

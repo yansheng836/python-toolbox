@@ -1,3 +1,8 @@
+# -*- encoding: utf-8 -*-
+"""
+my_tool.py - Module for toolbox
+"""
+
 from toolbox import ToolPlugin
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
 

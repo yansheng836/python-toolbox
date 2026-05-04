@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 """
 工具函数模块
 包含多个插件共用的辅助函数
@@ -5,11 +6,27 @@
 
 import os
 
+# ==================== 模块可用性检查 ====================
 try:
     from PIL import Image
     PIL_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print(f"Warning: {e}")
     PIL_AVAILABLE = False
+
+try:
+    import fitz
+    FITZ_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: {e}")
+    FITZ_AVAILABLE = False
+
+try:
+    import img2pdf
+    IMG2PDF_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: {e}")
+    IMG2PDF_AVAILABLE = False
 
 
 def get_image_size(file_path):
@@ -19,7 +36,8 @@ def get_image_size(file_path):
     try:
         with Image.open(file_path) as img:
             return f"{img.width} x {img.height}"
-    except Exception:
+    except Exception as e:
+        print(f"get_image_size error: {e}")
         return "读取失败"
 
 
@@ -33,7 +51,8 @@ def get_file_size(file_path):
             return f"{size / 1024:.1f} KB"
         else:
             return f"{size / (1024 * 1024):.1f} MB"
-    except Exception:
+    except OSError as e:
+        print(f"get_file_size error: {e}")
         return "未知"
 
 
@@ -43,7 +62,8 @@ def get_create_time(file_path):
         import time
         t = os.path.getctime(file_path)
         return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t))
-    except Exception:
+    except OSError as e:
+        print(f"get_create_time error: {e}")
         return "未知"
 
 
@@ -53,7 +73,8 @@ def get_modify_time(file_path):
         import time
         t = os.path.getmtime(file_path)
         return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t))
-    except Exception:
+    except OSError as e:
+        print(f"get_modify_time error: {e}")
         return "未知"
 
 
@@ -65,7 +86,8 @@ def get_pdf_pages(file_path):
         pages = len(doc)
         doc.close()
         return str(pages)
-    except Exception:
+    except Exception as e:
+        print(f"get_pdf_pages error: {e}")
         return "N/A"
 
 

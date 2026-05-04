@@ -1,3 +1,8 @@
+# -*- encoding: utf-8 -*-
+"""
+toolbox.py - Module for toolbox
+"""
+
 import sys
 import os
 import importlib
@@ -6,27 +11,14 @@ from pathlib import Path
 from typing import Dict
 
 # 从config.py导入全局配置
-try:
-    from config import (
-        APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_COPYRIGHT,
-        APP_WEBSITE_URL, APP_WEBSITE_LINK_TEXT,
-        FEATURE_MODULES, PLUGIN_MODULES, UI_CONFIG, THEME_CONFIG, WELCOME_CONFIG,
-        TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_20,
-        FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800,
-        SPACING_SMALL, SPACING_MEDIUM
-    )
-except ImportError:
-    __version__ = "1.0.0"
-    APP_NAME = "工具箱"
-    APP_DESCRIPTION = "批量处理工具，支持图片压缩、PDF转换、格式转换和拼接"
-    APP_COPYRIGHT = "© 2023 工具箱开发团队"
-    APP_WEBSITE_URL = "https://www.example.com"
-    APP_WEBSITE_LINK_TEXT = "🌐 访问官方网站"
-    FEATURE_MODULES = []
-    PLUGIN_MODULES = []
-    UI_CONFIG = {}
-    THEME_CONFIG = {}
-    WELCOME_CONFIG = {}
+from config import (
+    APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_COPYRIGHT,
+    APP_WEBSITE_URL, APP_WEBSITE_LINK_TEXT,
+    FEATURE_MODULES, PLUGIN_MODULES, UI_CONFIG, THEME_CONFIG, WELCOME_CONFIG,
+    TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_20,
+    FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800,
+    SPACING_SMALL, SPACING_MEDIUM
+)
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,

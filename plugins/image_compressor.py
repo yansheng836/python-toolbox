@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 """
 图片压缩插件
 批量压缩图片，支持JPG/PNG/WebP格式
@@ -14,27 +15,13 @@ from PyQt6.QtWidgets import (
 from common.message_utils import show_info, show_error, show_warning
 from common.dialog_utils import get_existing_directory
 from common.action_panel import ActionPanel
+from common.utils import PIL_AVAILABLE
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
 
-try:
-    from PIL import Image
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
-
 # 导入主程序中的基类和组件
-try:
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
-    from config import SPACING_SMALL, SPACING_MEDIUM
-except ImportError:
-    ToolPlugin = object
-    Card = None
-    AnimatedButton = None
-    DragDropHandler = None
-    Theme = None
-    SPACING_SMALL = 8
-    SPACING_MEDIUM = 20
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
+from config import SPACING_SMALL, SPACING_MEDIUM
 
 from common.file_list_panel import FileListPanel
 from common.utils import IMAGE_COLUMNS
@@ -128,6 +115,7 @@ class CompressionWorker(QThread):
 
             self.finished.emit(True, f"成功压缩 {processed} 张图片！")
         except Exception as e:
+            print(f"Error in image_compressor: {e}")
             self.finished.emit(False, f"压缩失败: {str(e)}")
 
 
@@ -217,6 +205,7 @@ class ImageCompressor(ToolPlugin):
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setSpacing(10)
+        self.theme = Theme.DARK
 
         # 标题（使用 PLUGIN_MODULES 配置中的 icon + name）
         self.title_label = QLabel(f"{self.icon} {self.name}")
@@ -250,14 +239,14 @@ class ImageCompressor(ToolPlugin):
         settings_layout.addWidget(QLabel("输出格式:"), 0, 0)
         self.format_combo = QComboBox()
         self.format_combo.addItems(["保持原格式", "JPG", "JPEG", "PNG", "WebP"])
-        self.format_combo.setStyleSheet("""
-            QComboBox {
-                background-color: #0f172a;
-                border: 1px solid #334155;
+        self.format_combo.setStyleSheet(f"""
+            QComboBox {{
+                background-color: {self.theme['bg']};
+                border: 1px solid {self.theme['surface']};
                 border-radius: 6px;
                 padding: 4px;
-                color: #f1f5f9;
-            }
+                color: {self.theme['text']};
+            }}
         """)
         settings_layout.addWidget(self.format_combo, 0, 1)
 
@@ -278,14 +267,14 @@ class ImageCompressor(ToolPlugin):
         output_layout = QHBoxLayout()
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("默认保存到原图目录（图片压缩后带 _compressed 后缀）")
-        self.output_path.setStyleSheet("""
-            QLineEdit {
-                background-color: #0f172a;
-                border: 1px solid #334155;
+        self.output_path.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {self.theme['bg']};
+                border: 1px solid {self.theme['surface']};
                 border-radius: 6px;
                 padding: 4px;
-                color: #f1f5f9;
-            }
+                color: {self.theme['text']};
+            }}
         """)
         self.browse_btn = AnimatedButton("浏览")
         self.browse_btn.clicked.connect(self.browse_output)

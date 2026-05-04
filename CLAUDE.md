@@ -31,7 +31,47 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **File Encoding**: All Python files (new or modified) MUST use UTF-8 encoding
 - **Line Endings**: All Python files (new or modified) MUST use LF (`\n`) line endings, not CRLF (`\r\n`)
+- **File Header**: All Python files MUST have `# -*- encoding: utf-8 -*-` as the first line, followed by a module docstring with brief description
 - Configure your editor to use UTF-8 and LF for this project
+
+Example:
+```python
+# -*- encoding: utf-8 -*-
+"""
+Brief description of this module
+"""
+```
+
+### Exception Handling (MANDATORY)
+
+**Rule: Only catch exceptions that are meaningful and necessary. Always provide error information when catching exceptions.**
+
+- **Avoid meaningless try-catch**: Do NOT wrap code in try-catch for exceptions that cannot reasonably occur or that provide no benefit to handle
+- **Catch and report**: When catching necessary exceptions, ALWAYS provide error information — printing to console (`print()`) is acceptable, logging is better
+- **No try-catch for project-internal imports**: Do NOT wrap imports of project-internal files (e.g., `config.py`, `toolbox.py`) in try-catch. If they fail to import, the error should be exposed, not masked with incomplete fallback values. Use try-catch only for optional external dependencies.
+- **No duplicate import checks**: Module availability checks (e.g., `PIL_AVAILABLE`, `FITZ_AVAILABLE`, `IMG2PDF_AVAILABLE`) must be centralized in `common/utils.py`. Plugins and other modules must import these flags from `common.utils` instead of re-declaring their own try-catch blocks.
+- **Examples**:
+
+  ```python
+  # GOOD: Catching an exception that can reasonably occur, with error info
+  try:
+      plugin_module = importlib.import_module(module_name)
+  except ImportError as e:
+      print(f"Failed to import {module_name}: {e}")
+      return None
+
+  # BAD: Catching an exception that cannot reasonably occur
+  try:
+      x = 1 + 2
+  except Exception as e:
+      print(e)  # Meaningless — addition never raises
+
+  # BAD: Catching an exception but not reporting it
+  try:
+      data = json.load(file)
+  except json.JSONDecodeError:
+      return None  # No error info — hard to debug
+  ```
 
 ## Project Structure
 

@@ -1,3 +1,8 @@
+# -*- encoding: utf-8 -*-
+"""
+settings_page.py - Module for toolbox
+"""
+
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFrame,
     QGraphicsDropShadowEffect
@@ -5,16 +10,18 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor
 
-from config import FONT_SIZE_12, FONT_SIZE_16, FONT_SIZE_18, FONT_WEIGHT_600, FONT_WEIGHT_700
+from config import FONT_SIZE_12, FONT_SIZE_16, FONT_SIZE_18, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
+from toolbox import Theme
 
 
 class Card(QFrame):
     """现代化卡片组件"""
 
-    def __init__(self, title="", parent=None):
+    def __init__(self, title="", parent=None, theme=None):
         super().__init__(parent)
         self.setObjectName("card")
         self.title = title
+        self.theme = theme or Theme.DARK
         self.setup_ui()
 
     def setup_ui(self):
@@ -28,7 +35,7 @@ class Card(QFrame):
             title_label.setStyleSheet(f"""
                 font-size: {FONT_SIZE_18};
                 font-weight: {FONT_WEIGHT_700};
-                color: #f1f5f9;
+                color: {self.theme['text']};
             """)
             layout.addWidget(title_label)
 
@@ -37,12 +44,12 @@ class Card(QFrame):
         self.content_layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.content)
 
-        self.setStyleSheet("""
-            QFrame#card {
-                background-color: #1e293b;
+        self.setStyleSheet(f"""
+            QFrame#card {{
+                background-color: {self.theme['bg_card']};
                 border-radius: 12px;
-                border: 1px solid #334155;
-            }
+                border: 1px solid {self.theme['border']};
+            }}
         """)
 
         # 阴影效果
@@ -51,6 +58,26 @@ class Card(QFrame):
         shadow.setColor(QColor(0, 0, 0, 60))
         shadow.setOffset(0, 4)
         self.setGraphicsEffect(shadow)
+
+    def update_theme(self, theme):
+        """更新卡片主题"""
+        self.theme = theme
+        # 更新标题颜色
+        title_label = self.findChild(QLabel, "cardTitle")
+        if title_label:
+            title_label.setStyleSheet(f"""
+                font-size: {FONT_SIZE_18};
+                font-weight: {FONT_WEIGHT_700};
+                color: {theme['text']};
+            """)
+        # 更新卡片样式
+        self.setStyleSheet(f"""
+            QFrame#card {{
+                background-color: {theme['bg_card']};
+                border-radius: 12px;
+                border: 1px solid {theme['border']};
+            }}
+        """)
 
 
 class SettingsPlugin:
@@ -63,8 +90,9 @@ class SettingsPlugin:
 
     theme_changed = pyqtSignal(dict)  # 主题更改信号
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, theme=None):
         self.parent = parent
+        self.theme = theme or Theme.DARK
         self.widget = None
 
     def create_ui(self) -> QWidget:
@@ -76,10 +104,10 @@ class SettingsPlugin:
 
         # 标题
         title = QLabel("⚙️ 设置")
-        title.setStyleSheet("""
+        title.setStyleSheet(f"""
             font-size: 32px;
             font-weight: {FONT_WEIGHT_800};
-            color: #f1f5f9;
+            color: {self.theme['text']};
         """)
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
@@ -87,53 +115,53 @@ class SettingsPlugin:
         # 分隔线
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("background-color: #334155;")
+        line.setStyleSheet(f"background-color: {self.theme['border']};")
         line.setMaximumHeight(1)
         layout.addWidget(line)
 
         # 通用设置卡片
-        general_card = Card("通用设置")
+        general_card = Card("通用设置", theme=self.theme)
 
         # 主题设置
         theme_label = QLabel("外观:")
-        theme_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600}; color: #f1f5f9;")
+        theme_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600}; color: {self.theme['text']};")
         general_card.content_layout.addWidget(theme_label)
 
         theme_btn_layout = QHBoxLayout()
 
         light_theme_btn = QPushButton("☀️ 浅色主题")
         light_theme_btn.setMinimumHeight(44)
-        light_theme_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #f1f5f9;
-                color: #0f172a;
+        light_theme_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {Theme.LIGHT['bg_secondary']};
+                color: {Theme.LIGHT['text']};
                 border: none;
                 border-radius: 8px;
                 padding: 10px 20px;
                 font-size: {FONT_SIZE_16};
                 font-weight: {FONT_WEIGHT_600};
-            }
-            QPushButton:hover {
-                background-color: #e2e8f0;
-            }
+            }}
+            QPushButton:hover {{
+                background-color: {Theme.LIGHT['surface']};
+            }}
         """)
         light_theme_btn.clicked.connect(lambda: self.set_theme("light"))
 
         dark_theme_btn = QPushButton("🌙 深色主题")
         dark_theme_btn.setMinimumHeight(44)
-        dark_theme_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #1e293b;
-                color: #f1f5f9;
-                border: 1px solid #334155;
+        dark_theme_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {Theme.DARK['bg_secondary']};
+                color: {Theme.DARK['text']};
+                border: 1px solid {Theme.DARK['border']};
                 border-radius: 8px;
                 padding: 10px 20px;
                 font-size: {FONT_SIZE_16};
                 font-weight: {FONT_WEIGHT_600};
-            }
-            QPushButton:hover {
-                background-color: #334155;
-            }
+            }}
+            QPushButton:hover {{
+                background-color: {Theme.DARK['surface']};
+            }}
         """)
         dark_theme_btn.clicked.connect(lambda: self.set_theme("dark"))
 
@@ -145,24 +173,24 @@ class SettingsPlugin:
         general_card.content_layout.addStretch()
 
         # 关于卡片
-        about_card = Card("关于")
+        about_card = Card("关于", theme=self.theme)
 
         # 版本信息
         version_label = QLabel(f"版本: v{self.version}")
-        version_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600}; color: #f1f5f9;")
+        version_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600}; color: {self.theme['text']};")
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(version_label)
 
         # 功能描述
         desc_label = QLabel("批量处理工具，支持图片压缩、PDF转换、格式转换和拼接")
-        desc_label.setStyleSheet(f"color: #94a3b8; font-size: {FONT_SIZE_16};")
+        desc_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_16};")
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(desc_label)
 
         # 官方网站
         website_label = QLabel(
-            "<a href='https://www.example.com' style='color: #6366f1; text-decoration: none;'>🌐 访问官方网站</a>")
+            f"<a href='https://www.example.com' style='color: {self.theme['primary']}; text-decoration: none;'>🌐 访问官方网站</a>")
         website_label.setOpenExternalLinks(True)
         website_label.setStyleSheet(f"""
             font-size: {FONT_SIZE_16};
@@ -174,7 +202,7 @@ class SettingsPlugin:
 
         # 版权信息
         copyright_label = QLabel("© 2023 工具箱开发团队")
-        copyright_label.setStyleSheet(f"color: #64748b; font-size: {FONT_SIZE_12};")
+        copyright_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_12};")
         copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(copyright_label)
 
@@ -195,18 +223,29 @@ class SettingsPlugin:
 
     def set_theme(self, theme_name):
         """设置主题"""
-        from toolbox import Theme
-
         if theme_name == "light":
             theme = Theme.LIGHT
         else:
             theme = Theme.DARK
+
+        self.theme = theme
+        self.update_theme(theme)
 
         # 发射主题更改信号
         self.theme_changed.emit(theme)
 
         # 保存主题设置
         self.save_theme_setting(theme_name)
+
+    def update_theme(self, theme):
+        """更新主题"""
+        # 更新所有子组件的主题
+        if self.widget:
+            for child in self.widget.findChildren(Card):
+                if hasattr(child, 'update_theme'):
+                    child.update_theme(theme)
+            # 注意：这里需要重新创建 UI 或手动更新所有组件的样式
+            # 为了简化，这里只更新 Card 组件
 
     def save_theme_setting(self, theme_name):
         """保存主题设置"""

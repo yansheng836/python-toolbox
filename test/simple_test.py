@@ -1,3 +1,8 @@
+# -*- encoding: utf-8 -*-
+"""
+simple_test.py - Module for toolbox
+"""
+
 import sys
 import os
 

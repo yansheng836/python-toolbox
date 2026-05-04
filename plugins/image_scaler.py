@@ -1,35 +1,19 @@
+# -*- encoding: utf-8 -*-
+"""
+image_scaler.py - Module for toolbox
+"""
+
 import os
 import sys
 from pathlib import Path
 from typing import List
 
-try:
-    from PIL import Image
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
+from common.utils import PIL_AVAILABLE
 
 # 导入主程序中的ToolPlugin基类
-try:
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
-    from config import SPACING_SMALL, SPACING_MEDIUM
-except ImportError:
-    Theme = None
-    SPACING_SMALL = 8
-    SPACING_MEDIUM = 20
-    class ToolPlugin:
-        name = "Base Tool"
-        icon = "🔧"
-        def __init__(self, parent=None):
-            self.parent = parent
-            self.widget = None
-        def create_ui(self):
-            raise NotImplementedError("Subclasses must implement create_ui()")
-        def get_widget(self):
-            if self.widget is None:
-                self.widget = self.create_ui()
-            return self.widget
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
+from config import SPACING_SMALL, SPACING_MEDIUM
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
@@ -121,15 +105,17 @@ class ScalingWorker(QThread):
             self.finished.emit(True, f"成功处理 {success_count}/{total} 张图片")
 
         except Exception as e:
+            print(f"Error in image_scaler: {e}")
             self.finished.emit(False, f"处理失败: {str(e)}")
 
 
 class ImageScalerWidget(QWidget):
-    def __init__(self, parent=None, icon="", name="", description=""):
+    def __init__(self, parent=None, icon="", name="", description="", theme=None):
         super().__init__(parent)
         self.icon = icon
         self.name = name
         self.description = description
+        self.theme = theme or Theme.DARK
         self.worker = None
         self.setup_ui()
 
@@ -169,25 +155,25 @@ class ImageScalerWidget(QWidget):
         grid.setVerticalSpacing(SPACING_SMALL)
         settings_card.content_layout.addLayout(grid)
 
-        combo_style = """
-            QComboBox {
-                background-color: #0f172a;
-                border: 1px solid #334155;
+        combo_style = f"""
+            QComboBox {{
+                background-color: {self.theme['bg']};
+                border: 1px solid {self.theme['surface']};
                 border-radius: 6px;
                 padding: 6px;
-                color: #f1f5f9;
-            }
+                color: {self.theme['text']};
+            }}
         """
 
-        spin_style = """
-            QSpinBox {
-                background-color: #0f172a;
-                border: 1px solid #334155;
+        spin_style = f"""
+            QSpinBox {{
+                background-color: {self.theme['bg']};
+                border: 1px solid {self.theme['surface']};
                 border-radius: 6px;
                 padding: 4px;
-                color: #f1f5f9;
+                color: {self.theme['text']};
                 text-align: left;
-            }
+            }}
         """
 
         # 第0行：缩放方式（跨两列）
@@ -260,7 +246,7 @@ class ImageScalerWidget(QWidget):
         aspect_layout.addStretch()
         self.maintain_aspect = QCheckBox("保持宽高比")
         self.maintain_aspect.setChecked(True)
-        self.maintain_aspect.setStyleSheet("color: #f1f5f9;")
+        self.maintain_aspect.setStyleSheet(f"color: {self.theme['text']};")
         self.maintain_aspect.stateChanged.connect(self.on_scale_type_changed)
         aspect_layout.addWidget(self.maintain_aspect)
         grid.addWidget(self.aspect_row_widget, 4, 0, 1, 2)
@@ -287,14 +273,14 @@ class ImageScalerWidget(QWidget):
         output_dir_layout.addWidget(QLabel("输出目录:"))
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("默认保存到原图目录（图片缩放后带 _scaled 后缀）")
-        self.output_path.setStyleSheet("""
-            QLineEdit {
-                background-color: #0f172a;
-                border: 1px solid #334155;
+        self.output_path.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {self.theme['bg']};
+                border: 1px solid {self.theme['surface']};
                 border-radius: 6px;
                 padding: 6px;
-                color: #f1f5f9;
-            }
+                color: {self.theme['text']};
+            }}
         """)
         self.browse_btn = AnimatedButton("浏览")
         self.browse_btn.setMaximumWidth(80)

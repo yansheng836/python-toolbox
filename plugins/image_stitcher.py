@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 """
 图片拼接插件
 多图横向/纵向合并为一张
@@ -14,29 +15,14 @@ from PyQt6.QtWidgets import (
 from common.message_utils import show_info, show_error, show_warning
 from common.dialog_utils import get_save_file_name
 from common.action_panel import ActionPanel
+from common.utils import PIL_AVAILABLE
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
-try:
-    from PIL import Image
-
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
-
 # 导入主程序中的基类和组件
-try:
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, \
-        Theme
-    from config import SPACING_SMALL, SPACING_MEDIUM
-except ImportError:
-    ToolPlugin = object
-    Card = None
-    AnimatedButton = None
-    DragDropHandler = None
-    Theme = None
-    SPACING_SMALL = 8
-    SPACING_MEDIUM = 20
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, \
+    Theme
+from config import SPACING_SMALL, SPACING_MEDIUM
 
 from common.file_list_panel import FileListPanel
 from common.utils import IMAGE_COLUMNS, get_create_time
@@ -66,6 +52,7 @@ class ImageStitchWorker(QThread):
                     img.load()  # 强制加载，提前发现损坏文件
                     images.append(img.convert("RGBA"))
                 except Exception as e:
+                    print(f"Error in image_stitcher: {e}")
                     skipped += 1
                     self.status.emit(f"跳过损坏图片: {os.path.basename(f)}")
                     continue
@@ -297,16 +284,6 @@ class ImageStitcher(ToolPlugin):
         grid.setVerticalSpacing(10)
         settings_card.content_layout.addLayout(grid)
 
-        combo_style = """
-            QComboBox {
-                background-color: #0f172a;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 6px;
-                color: #f1f5f9;
-            }
-        """
-
         # 第0行：拼接方向占左半边，对齐方式占右半边，两半紧贴无间距
         # 左半边：拼接方向（标签+下拉框，下拉框拉伸占满左半边）
         dir_widget = QWidget()
@@ -317,7 +294,6 @@ class ImageStitcher(ToolPlugin):
         self.dir_combo = QComboBox()
         self.dir_combo.addItems(["横向（左→右）", "纵向（上→下）"])
         self.dir_combo.setCurrentIndex(1)  # 默认竖向拼接
-        self.dir_combo.setStyleSheet(combo_style)
         dir_layout.addWidget(self.dir_combo, 1)  # 拉伸占满左半边
         grid.addWidget(dir_widget, 0, 0)
 
@@ -330,7 +306,6 @@ class ImageStitcher(ToolPlugin):
         self.align_combo = QComboBox()
         self.align_combo.addItems(["顶部/左侧对齐", "居中对齐", "底部/右侧对齐", "智能缩放"])
         self.align_combo.setCurrentIndex(3)  # 默认智能缩放
-        self.align_combo.setStyleSheet(combo_style)
         align_layout.addWidget(self.align_combo, 1)  # 拉伸占满右半边
         grid.addWidget(align_widget, 0, 1)
 
@@ -350,19 +325,8 @@ class ImageStitcher(ToolPlugin):
         self.bg_b = QSpinBox()
         self.bg_b.setRange(0, 255)
         self.bg_b.setValue(255)
-        spin_style = """
-            QSpinBox {
-                background-color: #0f172a;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 4px;
-                color: #f1f5f9;
-                max-width: 60px;
-            }
-        """
         for label, spin in (("R", self.bg_r), ("G", self.bg_g), ("B", self.bg_b)):
             bg_row.addWidget(QLabel(label))
-            spin.setStyleSheet(spin_style)
             bg_row.addWidget(spin)
         bg_row.addStretch()
         grid.addLayout(bg_row, 1, 0, 1, 2)  # 跨两列
@@ -373,22 +337,16 @@ class ImageStitcher(ToolPlugin):
         out_row.addWidget(QLabel("输出文件:"))
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("选择保存路径...")
-        self.output_path.setStyleSheet("""
-            QLineEdit {
-                background-color: #0f172a;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                padding: 6px;
-                color: #f1f5f9;
-            }
-        """)
+        out_row.addWidget(self.output_path)
         browse_btn = AnimatedButton("浏览")
         browse_btn.setMaximumWidth(80)
         browse_btn.clicked.connect(self.browse_output)
-        out_row.addWidget(self.output_path)
         out_row.addWidget(browse_btn)
         grid.addLayout(out_row, 2, 0, 1, 2)  # 跨两列
         layout.addWidget(settings_card)
+
+        # 应用初始主题
+        self.update_theme(Theme.DARK)
 
         # 操作面板（按钮 + 进度条 + 状态标签）
         self.action_panel = ActionPanel(

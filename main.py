@@ -1,3 +1,8 @@
+# -*- encoding: utf-8 -*-
+"""
+main.py - Module for toolbox
+"""
+
 import sys
 import os
 
