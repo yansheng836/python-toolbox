@@ -1,135 +1,77 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with code in this repository.
 
-## Development Standards
+## Quick Reference — Mandatory Rules
 
-### Code Reuse (MANDATORY)
+These rules MUST be followed. Violations will cause bugs or maintenance debt.
 
-**Rule: If identical or similar code appears 2+ times, you MUST abstract it into a shared class or method.**
+| # | Rule | Section |
+|---|------|---------|
+| 1 | After modifying any Python file, run syntax & import checks before marking complete | [Syntax Check](#syntax-check-after-modification-mandatory) |
+| 2 | If identical/similar code appears 2+ times, abstract it into a shared class/method | [Code Reuse](#code-reuse-mandatory) |
+| 3 | NEVER hardcode colors; use `Theme.*` constants; verify text readable in both themes | [Theme Compliance](#theme-system) |
+| 4 | All Python files MUST use UTF-8 encoding and LF (`\n`) line endings | [File Encoding](#file-encoding-and-line-endings) |
+| 5 | Only catch meaningful exceptions; always report errors; no try-catch for project-internal imports | [Exception Handling](#exception-handling-mandatory) |
+| 6 | Module availability flags (`PIL_AVAILABLE`, etc.) must be imported from `common/utils.py`, never re-declared | [Exception Handling](#exception-handling-mandatory) |
 
-- Before writing new code, check if similar logic already exists in `common/`, `toolbox.py`, or other plugins
-- Duplicated code increases maintenance burden exponentially — every bug fix must be applied in multiple places
-- Shared components should be placed in `common/` directory or the base class (`ToolPlugin`, `Theme`)
-- When refactoring, update ALL occurrences that use the duplicated pattern, not just new code
-
-### UI Styling and Theme Compliance (MANDATORY)
-
-**Rule: When designing styles (especially colors), you MUST consider the current background color to ensure text remains readable.**
-
-- **Dark theme background**: `#2d2d2d` (panels), `#1e1e1e` (window), `#3d3d3d` (sidebar)
-- **Light theme background**: `#f5f5f5` (panels), `#ffffff` (window), `#e8e8e8` (sidebar)
-- **Text colors**: Use `Theme.TEXT_PRIMARY`, `Theme.TEXT_SECONDARY` — NEVER hardcode text colors
-- **Contrast check**: After applying styles, verify text is readable in BOTH themes
-- **Common pitfalls**:
-  - Setting dark text on dark background (or light on light)
-  - Using `QMessageBox` with custom styles that don't adapt to theme
-  - Forgetting that `QPushButton` text inherits parent widget's color in some Qt styles
-  - Gradient buttons must define contrasting text colors for all states (normal, hover, pressed)
-
-### File Encoding and Line Endings
-
-- **File Encoding**: All Python files (new or modified) MUST use UTF-8 encoding
-- **Line Endings**: All Python files (new or modified) MUST use LF (`\n`) line endings, not CRLF (`\r\n`)
-- **File Header**: All Python files MUST have `# -*- encoding: utf-8 -*-` as the first line, followed by a module docstring with brief description
-- Configure your editor to use UTF-8 and LF for this project
-
-Example:
-```python
-# -*- encoding: utf-8 -*-
-"""
-Brief description of this module
-"""
-```
-
-### Syntax Check After Modification (MANDATORY)
-
-**Rule: After modifying any Python file, you MUST run syntax checking before marking the task as complete.**
-
-Required checks:
-- **Syntax validation**: Run `python -m py_compile <file.py>` to check for syntax errors
-- **Indentation check**: Ensure consistent indentation (4 spaces per level, no tabs)
-- **Import verification**: Verify all used classes, methods, and variables are properly imported
-- **Line ending check**: Confirm LF (`\n`) line endings, not CRLF (`\r\n`)
-
-Check command:
-```bash
-# Syntax check a file
-python -m py_compile <file.py>
-
-# Check all Python files in the project
-find . -name "*.py" -exec python -m py_compile {} \;
-```
-
-Common issues to catch:
-- `NameError` / `ImportError` - missing imports
-- `IndentationError` - mixed tabs/spaces or incorrect indent
-- `SyntaxError` - malformed Python code
-- `AttributeError` - using undefined attributes
-
-### Exception Handling (MANDATORY)
-
-**Rule: Only catch exceptions that are meaningful and necessary. Always provide error information when catching exceptions.**
-
-- **Avoid meaningless try-catch**: Do NOT wrap code in try-catch for exceptions that cannot reasonably occur or that provide no benefit to handle
-- **Catch and report**: When catching necessary exceptions, ALWAYS provide error information — printing to console (`print()`) is acceptable, logging is better
-- **No try-catch for project-internal imports**: Do NOT wrap imports of project-internal files (e.g., `config.py`, `toolbox.py`) in try-catch. If they fail to import, the error should be exposed, not masked with incomplete fallback values. Use try-catch only for optional external dependencies.
-- **No duplicate import checks**: Module availability checks (e.g., `PIL_AVAILABLE`, `FITZ_AVAILABLE`, `IMG2PDF_AVAILABLE`) must be centralized in `common/utils.py`. Plugins and other modules must import these flags from `common.utils` instead of re-declaring their own try-catch blocks.
-- **Examples**:
-
-  ```python
-  # GOOD: Catching an exception that can reasonably occur, with error info
-  try:
-      plugin_module = importlib.import_module(module_name)
-  except ImportError as e:
-      print(f"Failed to import {module_name}: {e}")
-      return None
-
-  # BAD: Catching an exception that cannot reasonably occur
-  try:
-      x = 1 + 2
-  except Exception as e:
-      print(e)  # Meaningless — addition never raises
-
-  # BAD: Catching an exception but not reporting it
-  try:
-      data = json.load(file)
-  except json.JSONDecodeError:
-      return None  # No error info — hard to debug
-  ```
+---
 
 ## Project Structure
 
 ```
 toolbox/
-├── main.py                 # Application entry point
-├── toolbox.py              # Main application file (ToolboxWindow class)
-├── config.py               # Global configuration (app info, UI, theme)
-├── menu_system.py          # Menu system (standalone, for reference)
-├── settings_page.py        # Settings page (standalone, for reference)
-├── requirements.txt        # Python dependencies
-├── favicon.ico             # Application icon
-├── plugins/                # Plugin directory
-│   ├── image_scaler.py     # Image batch scaling plugin
-│   ├── pdf_merger.py      # PDF merge plugin
-│   ├── pdf_splitter.py    # PDF split plugin
-│   └── file_deduplicator.py # File deduplication plugin (by content hash)
-└── test/                   # Test files directory
-    ├── test_button.py      # Button UI component tests
-    ├── test_icon.py        # Icon and theme tests  
-    ├── test_plugin.py      # Plugin system tests
-    ├── test_scaling.py     # Image scaling functionality tests
-    ├── test_scaling_complete.py  # Complete scaling workflow tests
-    ├── test_scaling_function.py  # Scaling function unit tests
-    ├── test_sidebar.py     # Sidebar navigation tests
+├── main.py                     # Application entry point
+├── toolbox.py                  # Main app (ToolboxWindow, ToolPlugin, Theme, UI components)
+├── config.py                   # Global config (app info, UI, theme, welcome page)
+├── requirements.txt            # Python dependencies
+├── toolbox.spec                # PyInstaller build spec
+├── generate_version_info.py    # Version info generator (pre-build)
+├── verify_packaging.py        # Packaging dependency verifier
+├── favicon.ico                # Application icon
+│
+├── common/                    # Shared components
+│   ├── __init__.py
+│   ├── base_worker.py         # BaseWorker — shared QThread worker base class
+│   ├── file_list_panel.py     # FileListPanel — reusable file list table
+│   ├── action_panel.py        # ActionPanel — button + progress bar + status label
+│   ├── dialog_utils.py        # Dialog helpers (get_save_file_name, etc.)
+│   ├── message_utils.py       # Themed message boxes (show_info, show_error, etc.)
+│   └── utils.py              # Helpers: get_image_size, get_file_size, get_pdf_pages,
+│                               get_create_time, get_modify_time, PDF_COLUMNS, IMAGE_COLUMNS,
+│                               PIL_AVAILABLE, FITZ_AVAILABLE, IMG2PDF_AVAILABLE
+│
+├── plugins/                   # Plugin directory (auto-discovered via importlib)
+│   ├── image_compressor.py    # Batch image compression (JPG/PNG/WebP)
+│   ├── image_scaler.py        # Batch image scaling (resize by width/height/percentage)
+│   ├── image_stitcher.py      # Image stitching (horizontal/vertical merge)
+│   ├── image_to_pdf.py        # Convert multiple images to a single PDF
+│   ├── image_format_converter.py  # Batch image format conversion
+│   ├── pdf_merger.py         # Merge multiple PDFs into one
+│   ├── pdf_splitter.py        # Split PDF into per-page PDFs or images
+│   └── file_deduplicator.py  # File deduplication by content hash
+│
+└── test/                      # Test files
+    ├── test_button.py          # Button UI component tests
+    ├── test_icon.py           # Icon and theme tests
+    ├── test_plugin.py         # Plugin system tests
+    ├── test_scaling.py        # Image scaling functionality tests
+    ├── test_scaling_complete.py
+    ├── test_scaling_function.py
+    ├── test_sidebar.py        # Sidebar navigation tests
+    ├── test_adaptive_ui.py
+    ├── test_plugins.py
+    ├── test_pdf_merger.py
     ├── create_test_images.py  # Test image generator
-    ├── check_plugins.py    # Plugin validation tests
-    ├── debug_plugins.py    # Plugin debugging utilities
-    ├── final_test.py       # End-to-end application tests
-    ├── simple_check.py     # Quick system checks
-    ├── simple_test.py      # Basic functionality tests
-    └── toolbox2.py        # Backup/alternative implementation
+    ├── check_plugins.py
+    ├── debug_plugins.py
+    ├── final_test.py
+    ├── simple_check.py
+    ├── simple_test.py
+    └── toolbox2.py            # Backup/alternative implementation (test only)
 ```
+
+---
 
 ## Commands
 
@@ -141,145 +83,187 @@ pip install -r requirements.txt
 python main.py
 
 # Run tests
-cd test/
-python -m unittest discover -v
+cd test/ && python -m unittest discover -v
 
-# Generate version info file (before building)
+# Pre-build steps
 python generate_version_info.py
-
-# Verify packaging dependencies (before building)
 python verify_packaging.py
 
 # Build executable (Windows, recommended)
 pyinstaller toolbox.spec
 
-# Build single-file EXE (Windows, quick - not recommended, use toolbox.spec instead)
-pyinstaller --onefile --windowed main.py
-
 # Build with UPX compression
 pyinstaller --upx-dir=/path/to/upx toolbox.spec
 ```
 
+---
+
 ## Architecture
 
-`toolbox.py` is a single-file PyQt6 desktop app (工具箱 - "Toolbox") with a plugin-based architecture.
+`toolbox.py` is a PyQt6 desktop app (工具箱 "Toolbox") with a plugin-based architecture.
 
 ### Core Structure
 
-- `ToolboxWindow` — main window; owns the sidebar (`QVBoxLayout`) and a `QStackedWidget` for tool pages
-- `Theme` — dark/light color palette constants; applied via Qt stylesheets
-- `ToolPlugin` (abstract base) — all tools inherit this; must implement `create_ui() -> QWidget`
-- Built-in tools: `ImageCompressor`, `ImageToPDF`, `FormatConverter`, `ImageStitcher`, `PDFMerger`, `PDFSplitter`
-- External plugins: auto-discovered from `plugins/` via `importlib`; added dynamically to sidebar and stack
-- `SettingsPlugin` — settings page with theme switching (dark/light) and about information
-- `WelcomePage` — landing page showing feature cards
+- **`ToolboxWindow`** — main window; owns the sidebar (`QVBoxLayout`) and a `QStackedWidget` for tool pages
+- **`Theme`** — dark/light color palette constants; applied via Qt stylesheets
+- **`ToolPlugin`** (abstract base) — all tools inherit this; must implement `create_ui() -> QWidget` and `update_theme(theme)`
+- **Built-in tools**: `ImageCompressor`, `ImageToPDF`, `FormatConverter`, `ImageStitcher`, `PDFMerger`, `PDFSplitter`
+- **Plugins**: auto-discovered from `plugins/` via `importlib`; added dynamically to sidebar and stack
+- **`SettingsPlugin`** — settings page with theme switching (dark/light) and about info
+- **`WelcomePage`** — landing page showing feature cards
 
-### Configuration System
+### Configuration System (`config.py`)
 
-`config.py` centralizes all app configuration:
-- `APP_NAME`, `APP_VERSION`, `APP_DESCRIPTION`, `APP_COPYRIGHT` — basic app info
-- `APP_WEBSITE_URL`, `APP_WEBSITE_LINK_TEXT` — website link in settings
-- `FEATURE_MODULES` — list of feature cards shown on welcome page
-- `UI_CONFIG` — window size, sidebar width, corner radius settings
-- `THEME_CONFIG` — default theme and color settings
-- `WELCOME_CONFIG` — welcome page text content
-
-### Adding a Tool / Plugin
-
-Inherit `ToolPlugin`, implement `create_ui()`, and drop the file in `plugins/`. Example:
-
-```python
-from toolbox import ToolPlugin, Card, AnimatedButton
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
-
-class MyTool(ToolPlugin):
-    name = "我的工具"
-    description = "工具描述"
-    icon = "🔧"
-    
-    def create_ui(self) -> QWidget:
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.addWidget(QLabel("Hello, World!"))
-        return widget
-    
-    def update_theme(self, theme):
-        """Optional: update UI when theme changes"""
-        pass
-```
+| Constant | Purpose |
+|----------|---------|
+| `APP_NAME`, `APP_VERSION`, `APP_DESCRIPTION`, `APP_COPYRIGHT` | Basic app info |
+| `APP_WEBSITE_URL`, `APP_WEBSITE_LINK_TEXT` | Website link in settings |
+| `FEATURE_MODULES` | Feature cards shown on welcome page |
+| `UI_CONFIG` | Window size, sidebar width, corner radius |
+| `THEME_CONFIG` | Default theme and color settings |
+| `WELCOME_CONFIG` | Welcome page text content |
+| `SPACING_SMALL`, `SPACING_MEDIUM` | Spacing constants for UI |
+| `FONT_SIZE_*`, `FONT_WEIGHT_*` | Font constants for UI |
 
 ### Threading
 
 Long operations run in `QThread` workers that emit progress signals — never block the main thread.
+Each plugin defines its own `*Worker` class (e.g., `CompressionWorker`, `PDFMergeWorker`). Consider using `BaseWorker` from `common/base_worker.py` to reduce duplication.
 
-**Note:** Currently each plugin defines its own Worker class with similar structure. When adding new plugins, consider whether a shared base Worker class can be created in `common/` to reduce duplication.
+### PDF Conversion
 
-### Code Reuse Guidelines
+`PDFWorker` (in `image_to_pdf.py`) tries libraries in order: `img2pdf` → `PyMuPDF` → `PIL`. All three are in `requirements.txt`. Supports compression with adjustable quality (1–100%) for all three backends.
 
-**MANDATORY RULE: If identical or similar code appears 2+ times, you MUST abstract it into a shared class or method immediately.**
+---
 
-This is not a suggestion — it is a strict requirement to prevent maintenance debt. Every duplication:
-- Requires bug fixes in multiple places
-- Increases likelihood of inconsistent behavior
-- Makes future refactoring more dangerous
+## Development Standards
 
-#### Shared Components (in `toolbox.py` or `common/`)
+### Syntax Check After Modification (MANDATORY)
+
+**Rule: After modifying any Python file, you MUST run syntax checking before marking the task as complete.**
+
+Required checks:
+- **Syntax validation**: `python -m py_compile <file.py>`
+- **Indentation check**: Consistent indentation (4 spaces per level, no tabs)
+- **Import verification**: All used names (`Image`, `fitz`, `img2pdf`, `FONT_WEIGHT_*`, etc.) must be properly imported
+- **Line ending check**: LF (`\n`) only, not CRLF (`\r\n`)
+
+Check command:
+```bash
+# Syntax check a single file
+python -m py_compile <file.py>
+
+# Check all Python files in the project
+find . -name "*.py" -not -path "./.git/*" -not -path "*/__pycache__/*" -exec python -m py_compile {} \;
+```
+
+Common issues to catch:
+- `NameError` / `ImportError` — missing imports (e.g., `Image` from `PIL`, `fitz`, `PDF_COLUMNS`)
+- `IndentationError` — mixed tabs/spaces or incorrect indent
+- `SyntaxError` — malformed Python code (missing colons, unclosed brackets)
+- Method definitions missing `:` (e.g., `def update_theme(self, theme)` — colon required)
+
+### Code Reuse (MANDATORY)
+
+**Rule: If identical or similar code appears 2+ times, you MUST abstract it into a shared class or method.**
+
+- Before writing new code, check `common/`, `toolbox.py`, or existing plugins for similar logic
+- Shared components go in `common/` or the base class (`ToolPlugin`, `Theme`)
+- When refactoring, update ALL occurrences, not just new code
+
+#### Shared Components
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
 | `ToolPlugin` | `toolbox.py` | Base class for all plugins |
-| `Theme` | `toolbox.py` | Dark/light color palettes + **ALL color constants** |
+| `Theme` | `toolbox.py` | Dark/light color palettes + ALL color constants |
 | `AnimatedButton` | `toolbox.py` | Reusable button with hover effects |
 | `Card` | `toolbox.py` | Card container with title/content layout |
 | `DragDropHandler` | `toolbox.py` | Drag-and-drop utility |
 | `SidebarButton` | `toolbox.py` | Sidebar navigation button |
 | `FileListPanel` | `common/file_list_panel.py` | Reusable file list table with buttons |
-| `get_image_size`, `get_file_size` | `common/utils.py` | Image size and file size helper functions |
+| `ActionPanel` | `common/action_panel.py` | Button + progress bar + status label |
 | `BaseWorker` | `common/base_worker.py` | Base QThread worker with standard signals |
 | `MessageUtils` | `common/message_utils.py` | Themed message boxes and dialogs |
+| `get_image_size`, `get_file_size` | `common/utils.py` | Image/file size helper functions |
+| `get_pdf_pages`, `get_create_time` | `common/utils.py` | PDF/file time helper functions |
+| `IMAGE_COLUMNS`, `PDF_COLUMNS` | `common/utils.py` | Common table column definitions |
+| `PIL_AVAILABLE`, `FITZ_AVAILABLE`, `IMG2PDF_AVAILABLE` | `common/utils.py` | Module availability flags |
 
-**Use these shared components whenever possible instead of reimplementing similar functionality.**
+#### Patterns That MUST Use Shared Components
 
-#### Patterns That MUST Be Abstracted (Duplicated 2+ Times)
+| Pattern | Use Instead |
+|---------|---------------|
+| Worker class in each plugin | `BaseWorker` from `common/base_worker.py` |
+| Image size/format helpers | `get_image_size()` from `common/utils.py` |
+| Button/progress bar styles | `Theme` class constants |
+| `update_theme()` per plugin | Implement in `ToolPlugin` base class |
+| File size formatting | `get_file_size()` from `common/utils.py` |
+| Status message updates | Shared helper or `ActionPanel` |
 
-| Pattern | Duplicated In | Action Required |
-|---------|---------------|-----------------|
-| Worker Classes | All plugins | Use `BaseWorker` from `common/` |
-| Image Helper Functions | 4+ plugins | Use `get_image_size()` from `common/utils.py` |
-| Button/Progress Bar Styles | All plugins | Define in `Theme` class, use `Theme.get_button_style()` |
-| `apply_theme()` Method | All plugins | Implement in `ToolPlugin` base class |
-| Import Fallback Pattern | All plugins | Document once, reference pattern |
-| File size formatting | 3+ plugins | Add `format_file_size()` to `common/utils.py` |
-| Status message updates | All plugins | Use shared helper method |
+#### When Adding a New Plugin
 
-**Before adding a new plugin, check this table. If your plugin needs any of these patterns, use the shared component.**
+1. **Check `FileListPanel`** — if the plugin needs a file list, use `FileListPanel` from `common/file_list_panel.py`
+2. **Use shared UI components** — import `AnimatedButton`, `Card` from `toolbox`
+3. **Reuse helper functions** — check `common/utils.py` before writing new ones
+4. **Use `ActionPanel`** — for button + progress + status, use `ActionPanel` from `common/action_panel.py`
+5. **Follow existing patterns** — follow established plugin code for consistency
+6. **Implement `update_theme()`** — update ALL custom-styled widgets; use `Theme` constants
+7. **Test in both themes** — verify text readability in dark AND light mode
 
-#### When Adding New Plugins
+### File Encoding and Line Endings
 
-1. **Check `FileListPanel` first** — If the plugin needs a file list with add/remove/clear buttons, use `FileListPanel` from `common/file_list_panel.py` instead of building custom UI.
-2. **Use shared UI components** — Import `AnimatedButton`, `Card` from `toolbox` instead of creating custom buttons/cards.
-3. **Reuse helper functions** — Check if needed utilities already exist in `common/` before writing new ones.
-4. **Follow existing patterns** — If you must write plugin-specific code, follow the patterns established by existing plugins for consistency.
-5. **Implement `update_theme()` properly** — MUST update ALL widgets that have custom styles. Use `Theme.get_button_style()` for gradient buttons.
-6. **Test in both themes** — Verify all text is readable in both dark and light themes before marking work complete.
+- **Encoding**: All Python files MUST use UTF-8 (first line: `# -*- encoding: utf-8 -*-`)
+- **Line Endings**: All Python files MUST use LF (`\n`), not CRLF (`\r\n`)
+- **Module docstring**: Every file MUST have a brief module docstring after the encoding line
 
-#### Creating New Shared Components
+```python
+# -*- encoding: utf-8 -*-
+"""
+Brief description of this module
+"""
+```
 
-When you identify code that should be shared:
+### Exception Handling (MANDATORY)
 
-1. Create new shared code in `common/` directory (e.g., `common/utils.py`, `common/base_worker.py`)
-2. Update `ToolPlugin` base class in `toolbox.py` if the shared code is fundamental to all plugins
-3. Update this CLAUDE.md file to document the new shared component in the table above
-4. Refactor existing plugins to use the new shared component (in a separate commit)
+**Rule: Only catch exceptions that are meaningful and necessary. Always provide error information.**
 
-### Theme System
+- **No meaningless try-catch** — don't wrap code that cannot reasonably raise
+- **Catch and report** — always print or log the error when catching
+- **No try-catch for project-internal imports** — `config.py`, `toolbox.py`, etc. should fail loudly
+- **No duplicate import checks** — import `PIL_AVAILABLE`, `FITZ_AVAILABLE`, `IMG2PDF_AVAILABLE` from `common.utils`, never re-declare
+
+```python
+# GOOD: Catching a reasonable exception with error info
+try:
+    plugin_module = importlib.import_module(module_name)
+except ImportError as e:
+    print(f"Failed to import {module_name}: {e}")
+    return None
+
+# BAD: Meaningless try-catch
+try:
+    x = 1 + 2
+except Exception as e:
+    print(e)  # Addition never raises
+
+# BAD: Catching but not reporting
+try:
+    data = json.load(file)
+except json.JSONDecodeError:
+    return None  # No error info — hard to debug
+```
+
+---
+
+## Theme System
 
 - Two themes: `Theme.DARK` (default) and `Theme.LIGHT`
 - Theme switching via `SettingsPlugin` with persistent storage using `QSettings`
 - All plugins MUST implement `update_theme(theme)` to respond to theme changes
 - Global stylesheet applied to main window with theme-specific colors
 
-#### Color Constants (Defined in `Theme` class)
+### Color Constants (Defined in `Theme` class)
 
 | Constant | Dark Theme | Light Theme | Usage |
 |----------|------------|-------------|-------|
@@ -294,66 +278,99 @@ When you identify code that should be shared:
 | `WARNING` | `#ffd43b` | `#f08c00` | Warning messages |
 | `ERROR` | `#ff6b6b` | `#e03131` | Error messages |
 
-#### Theme Compliance Rules (MANDATORY)
+### Theme Compliance Rules (MANDATORY)
 
 1. **NEVER hardcode colors** — Always use `Theme.COLOR_NAME` or `theme["key"]`
 2. **Text must contrast with background** — Use `TEXT_PRIMARY`/`TEXT_SECONDARY` for all text
 3. **Test in BOTH themes** — Every style change must be verified in dark AND light mode
-4. **QMessageBox styling** — Use `MessageUtils.show_info()`, `MessageUtils.show_error()` etc. from `common/message_utils.py` instead of raw `QMessageBox` to ensure theme compliance
+4. **Message boxes** — Use `MessageUtils.show_info()`, etc. from `common/message_utils.py` instead of raw `QMessageBox`
 5. **Gradient buttons** — Text color must be explicitly set for all states:
    ```python
-   # GOOD: Explicit text color for each state
+   # GOOD
    button.setStyleSheet(f"""
        QPushButton {{ color: {Theme.TEXT_PRIMARY}; }}
        QPushButton:hover {{ color: {Theme.TEXT_PRIMARY}; }}
    """)
-   
-   # BAD: Depends on inheritance, may be unreadable
+   # BAD — depends on inheritance
    button.setStyleSheet("background: qlineargradient(...);")
    ```
-6. **Status labels** — Use appropriate color constants:
-   - Success: `Theme.SUCCESS`
-   - Error: `Theme.ERROR`
-   - Warning: `Theme.WARNING`
-   - Info: `Theme.ACCENT_PRIMARY`
+6. **Status labels** — Use appropriate color constants: Success=`Theme.SUCCESS`, Error=`Theme.ERROR`, Warning=`Theme.WARNING`, Info=`Theme.ACCENT_PRIMARY`
 
-### PDF Conversion
+---
 
-`PDFWorker` tries libraries in order: `img2pdf` → `PyMuPDF` → `PIL`. All three are in `requirements.txt`.
-Supports compression with adjustable quality (1-100%) for all three backends.
+## Adding a Plugin
 
-### Key Dependencies
+Inherit `ToolPlugin`, implement `create_ui()` and `update_theme()`, then drop the file in `plugins/`.
 
-| Package | Role |
-|---------|------|
-| PyQt6 | GUI |
-| Pillow | Image processing |
-| img2pdf | Primary PDF conversion |
-| PyMuPDF (fitz) | Fallback PDF conversion |
-| pyinstaller | Build executables |
+```python
+from toolbox import ToolPlugin, Card, AnimatedButton, Theme
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
+
+class MyTool(ToolPlugin):
+    name = "我的工具"
+    description = "工具描述"
+    icon = "🔧"
+
+    def create_ui(self) -> QWidget:
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.addWidget(QLabel("Hello, World!"))
+        return widget
+
+    def update_theme(self, theme):
+        """Update UI when theme changes — MUST update all custom-styled widgets."""
+        pass
+```
+
+### Plugin Checklist
+
+- [ ] Inherits `ToolPlugin` and implements `create_ui()` + `update_theme()`
+- [ ] Uses `FileListPanel` if file list needed
+- [ ] Uses `ActionPanel` for action button + progress + status
+- [ ] Imports shared helpers from `common/utils.py` (not re-declared)
+- [ ] Imports `Image`/`fitz`/`img2pdf` conditionally based on availability flags
+- [ ] All used names are imported (run pyflakes to verify)
+- [ ] Tested in both dark and light themes
+- [ ] Added to `hiddenimports` in `toolbox.spec`
+- [ ] Syntax-checked with `python -m py_compile`
+
+---
 
 ## Testing
 
-All test files are located in the `test/` directory. Test files use a `test_` prefix for easy identification. Common test patterns:
+All test files are in `test/` with a `test_` prefix.
 
-- `test_button.py` - Button UI component tests
-- `test_icon.py` - Icon and theme tests  
-- `test_plugin.py` - Plugin system tests
-- `test_scaling.py` - Image scaling functionality tests
-- `test_sidebar.py` - Sidebar navigation tests
+- `test_button.py` — Button UI component tests
+- `test_icon.py` — Icon and theme tests
+- `test_plugin.py` — Plugin system tests
+- `test_scaling.py` — Image scaling functionality tests
+- `test_sidebar.py` — Sidebar navigation tests
 
-When adding new features, create corresponding test files in the `test/` directory to maintain code quality and stability.
+When adding features, create corresponding test files in `test/`.
+
+---
 
 ## Packaging
 
-### Important: Dynamic Import Issue
+### Dynamic Import Issue
 
-PyInstaller cannot automatically detect modules loaded via `importlib` (dynamic imports). All plugins in the `plugins/` directory must be explicitly listed in `toolbox.spec`'s `hiddenimports` section.
+PyInstaller cannot auto-detect modules loaded via `importlib`. All plugins in `plugins/` must be explicitly listed in `toolbox.spec`'s `hiddenimports`.
 
 **When adding a new plugin:**
+
 1. Create the plugin file in `plugins/` (e.g., `plugins/my_plugin.py`)
 2. Add `'plugins.my_plugin'` to `hiddenimports` in `toolbox.spec`
 3. Run `python verify_packaging.py` to verify
 4. Rebuild with `pyinstaller toolbox.spec`
 
-See `PACKAGING_GUIDE.md` for detailed troubleshooting and best practices.
+See `PACKAGING_GUIDE.md` for detailed troubleshooting.
+
+### Key Dependencies
+
+| Package | Role |
+|---------|------|
+| PyQt6 | GUI framework |
+| Pillow (PIL) | Image processing |
+| img2pdf | Primary PDF conversion |
+| PyMuPDF (fitz) | Fallback PDF conversion |
+| PyInstaller | Build executables |
