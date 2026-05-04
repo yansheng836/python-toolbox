@@ -213,7 +213,7 @@ class FileDeduplicatorWidget(QWidget):
         if Theme is not None:
             self.apply_theme(Theme.DARK)
 
-    def update_theme(self, theme):
+    def apply_theme(self, theme):
         """应用主题到所有组件"""
         # 标题和描述
         if hasattr(self, 'title_label'):
