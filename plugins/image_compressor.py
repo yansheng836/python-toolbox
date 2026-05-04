@@ -8,15 +8,14 @@ import sys
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QProgressBar, QComboBox, QSlider, QLineEdit, QGridLayout,
-    QFileDialog
+    QProgressBar, QComboBox, QSlider, QLineEdit, QGridLayout
 )
 
 from common.message_utils import show_info, show_error, show_warning
 from common.dialog_utils import get_existing_directory
 from common.action_panel import ActionPanel
 from common.utils import PIL_AVAILABLE
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 if PIL_AVAILABLE:
     from PIL import Image
@@ -24,7 +23,7 @@ if PIL_AVAILABLE:
 # 导入主程序中的基类和组件
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
-from config import SPACING_SMALL, SPACING_MEDIUM
+from config import SPACING_SMALL
 
 from common.file_list_panel import FileListPanel
 from common.utils import IMAGE_COLUMNS

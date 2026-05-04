@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QProgressBar, QLabel
 from PyQt6.QtCore import Qt, pyqtSignal
 
 from toolbox import AnimatedButton, Card, Theme, FONT_SIZE_14, FONT_WEIGHT_600
-from common.message_utils import show_info, show_error
+from common.message_utils import show_info
 
 
 class ActionPanel(Card):

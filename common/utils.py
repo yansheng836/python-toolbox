@@ -27,6 +27,7 @@ try:
 except ImportError as e:
     print(f"Warning: {e}")
     IMG2PDF_AVAILABLE = False
+    img2pdf = None
 
 
 def get_image_size(file_path):

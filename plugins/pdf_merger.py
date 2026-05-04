@@ -5,25 +5,23 @@ PDF合并工具插件
 """
 import os
 import sys
-from typing import List
 
 from common.utils import FITZ_AVAILABLE
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
-from config import SPACING_SMALL, SPACING_MEDIUM
+from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
+from config import SPACING_SMALL
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QListWidget, QAbstractItemView, QMessageBox, QFileDialog,
-    QComboBox, QSpinBox, QGridLayout, QLineEdit, QSizePolicy
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
+    QLineEdit
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import QThread, pyqtSignal
 
 from common.message_utils import show_info, show_error, show_warning
 from common.file_list_panel import FileListPanel
 from common.action_panel import ActionPanel
-from common.utils import get_file_size, get_pdf_pages, PDF_COLUMNS
+from common.utils import PDF_COLUMNS
 
 if FITZ_AVAILABLE:
     import fitz

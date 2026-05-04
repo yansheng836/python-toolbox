@@ -12,9 +12,9 @@ from typing import Dict
 
 # 从config.py导入全局配置
 from config import (
-    APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_COPYRIGHT,
+    APP_NAME, APP_VERSION, APP_COPYRIGHT,
     APP_WEBSITE_URL, APP_WEBSITE_LINK_TEXT,
-    FEATURE_MODULES, PLUGIN_MODULES, UI_CONFIG, THEME_CONFIG, WELCOME_CONFIG,
+    FEATURE_MODULES, PLUGIN_MODULES, UI_CONFIG, WELCOME_CONFIG,
     TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_20,
     FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800,
     SPACING_SMALL, SPACING_MEDIUM
@@ -22,7 +22,7 @@ from config import (
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QStackedWidget, QFrame, QSizePolicy,
+    QLabel, QPushButton, QStackedWidget, QFrame,
     QGraphicsDropShadowEffect, QSystemTrayIcon, QMenu, QScrollArea
 )
 from PyQt6.QtCore import (

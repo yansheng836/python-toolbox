@@ -14,8 +14,8 @@ if PIL_AVAILABLE:
 
 # 导入主程序中的ToolPlugin基类
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
-from config import SPACING_SMALL, SPACING_MEDIUM
+from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_700, Theme
+from config import SPACING_SMALL
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
 )
 
 from common.message_utils import show_info, show_error, show_warning
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import QThread, pyqtSignal
 
 from common.file_list_panel import FileListPanel
 from common.utils import IMAGE_COLUMNS

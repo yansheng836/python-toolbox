@@ -4,9 +4,7 @@
 按内容Hash查找重复文件，支持预览后选择规则删除
 """
 import os
-import sys
 import hashlib
-import time
 from collections import defaultdict
 
 from PyQt6.QtWidgets import (
@@ -14,7 +12,7 @@ from PyQt6.QtWidgets import (
     QFileDialog, QLineEdit, QHBoxLayout
 )
 
-from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, FONT_WEIGHT_700, Theme
+from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
 from common.message_utils import show_info, show_error, show_warning, show_question
 from common.action_panel import ActionPanel
 from common.utils import get_create_time, get_modify_time
@@ -332,7 +330,6 @@ class FileDeduplicatorWidget(QWidget):
 
         # 更新已勾选的父节点下子节点的背景色
         if hasattr(self, 'results_tree'):
-            from PyQt6.QtGui import QBrush
             for i in range(self.results_tree.topLevelItemCount()):
                 parent = self.results_tree.topLevelItem(i)
                 if parent.checkState(0) == Qt.CheckState.Checked:
@@ -456,7 +453,6 @@ class FileDeduplicatorWidget(QWidget):
         if column != 0:
             return
 
-        from PyQt6.QtGui import QBrush
         checked = item.checkState(0) == Qt.CheckState.Checked
         highlight = self.child_highlight_color if checked else self.child_normal_color
         for i in range(item.childCount()):

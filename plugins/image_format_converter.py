@@ -22,7 +22,7 @@ if PIL_AVAILABLE:
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
-from config import SPACING_SMALL, SPACING_MEDIUM
+from config import SPACING_SMALL
 
 from common.file_list_panel import FileListPanel
 from common.utils import IMAGE_COLUMNS
