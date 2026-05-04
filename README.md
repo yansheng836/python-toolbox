@@ -1,5 +1,7 @@
 # 工具箱 (ToolBox)
 
+![ToolBox](README.assets/ToolBox.png)
+
 <div align="center">
 
 **离线 · 高效 · 美观** 的桌面工具集合
