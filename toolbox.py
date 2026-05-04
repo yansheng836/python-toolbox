@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
     QGraphicsDropShadowEffect, QSystemTrayIcon, QMenu, QScrollArea
 )
 from PyQt6.QtCore import (
-    Qt, QPropertyAnimation, QEasingCurve, QSettings
+    Qt, QPropertyAnimation, QEasingCurve, QSettings, QTimer, QEvent
 )
 from PyQt6.QtGui import (
     QIcon, QPixmap, QColor, QFont, QAction
@@ -296,7 +296,7 @@ class DragDropHandler:
         text_edit.setText("\n".join([os.path.basename(f) for f in files_list]))
 
 class WelcomePage(QWidget):
-    """欢迎页面"""
+    """欢迎页面 - 支持卡片自动轮播"""
 
     def __init__(self, plugins=None, parent=None):
         super().__init__(parent)
@@ -308,7 +308,67 @@ class WelcomePage(QWidget):
         self.hint = None
         self.text_labels = []
         self.desc_labels = []
+
+        # 轮播相关属性
+        self.scroll_area = None
+        self.features_widget = None
+        self.scroll_timer = None
+        self.scroll_step = 1
+        self.scroll_interval = 30
+        self.pause_on_hover = True
+        self._scroll_direction = 1  # 1=右, -1=左
+        self._at_end_pause = 0
+        self._paused_by_hover = False
+
         self.setup_ui()
+        self._init_auto_scroll()
+
+    def _init_auto_scroll(self):
+        """初始化自动轮播定时器"""
+        self.scroll_timer = QTimer(self)
+        self.scroll_timer.timeout.connect(self._do_auto_scroll)
+        self.scroll_timer.start(self.scroll_interval)
+
+    def _do_auto_scroll(self):
+        """执行自动滚动"""
+        if not self.scroll_area or not self.features_widget:
+            return
+        if self._paused_by_hover:
+            return
+
+        hbar = self.scroll_area.horizontalScrollBar()
+        if hbar.maximum() <= 0:
+            return
+
+        current = hbar.value()
+        maximum = hbar.maximum()
+
+        # 暂停计数（到达端点后短暂停留）
+        if self._at_end_pause > 0:
+            self._at_end_pause -= 1
+            return
+
+        if self._scroll_direction > 0:
+            if current >= maximum:
+                self._scroll_direction = -1
+                self._at_end_pause = int(1500 / self.scroll_interval)  # 暂停1.5秒
+                return
+            hbar.setValue(current + self.scroll_step)
+        else:
+            if current <= 0:
+                self._scroll_direction = 1
+                self._at_end_pause = int(1500 / self.scroll_interval)
+                return
+            hbar.setValue(current - self.scroll_step)
+
+    def eventFilter(self, watched, event):
+        """事件过滤器：仅当鼠标进入/离开卡片滚动区域时暂停/恢复轮播"""
+        if watched == self.scroll_area:
+            if event.type() == QEvent.Type.Enter:
+                self._paused_by_hover = True
+            elif event.type() == QEvent.Type.Leave:
+                self._paused_by_hover = False
+        return super().eventFilter(watched, event)
 
     def update_theme(self, theme):
         """更新欢迎页主题"""
@@ -335,6 +395,31 @@ class WelcomePage(QWidget):
             label.setStyleSheet(f"color: {theme['text']};")
         for label in self.desc_labels:
             label.setStyleSheet(f"color: {theme['text_secondary']};")
+
+        # 更新滚动条主题
+        if self.scroll_area:
+            self.scroll_area.setStyleSheet(f"""
+                QScrollArea {{
+                    border: none;
+                    background-color: transparent;
+                }}
+                QScrollBar:horizontal {{
+                    background: {theme['bg_secondary']};
+                    height: 8px;
+                    margin: 0;
+                }}
+                QScrollBar::handle:horizontal {{
+                    background: {theme['surface']};
+                    min-width: 20px;
+                    border-radius: 4px;
+                }}
+                QScrollBar::handle:horizontal:hover {{
+                    background: {theme['text_secondary']};
+                }}
+                QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+                    width: 0;
+                }}
+            """)
 
     @staticmethod
     def _get_favicon_path():
@@ -384,40 +469,40 @@ class WelcomePage(QWidget):
         self.subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.subtitle)
 
-        # 功能卡片区域 - 使用横向滚动
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        # 设置卡片高度
-        scroll_area.setFixedHeight(300)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll_area.setStyleSheet("""
-            QScrollArea {
+        # 功能卡片区域 - 使用横向滚动（自动轮播）
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFixedHeight(300)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setStyleSheet(f"""
+            QScrollArea {{
                 border: none;
                 background-color: transparent;
-            }
-            QScrollBar:horizontal {
-                background: #1e293b;
+            }}
+            QScrollBar:horizontal {{
+                background: {Theme.DARK['bg_secondary']};
                 height: 8px;
                 margin: 0;
-            }
-            QScrollBar::handle:horizontal {
-                background: #475569;
+            }}
+            QScrollBar::handle:horizontal {{
+                background: {Theme.DARK['surface']};
                 min-width: 20px;
                 border-radius: 4px;
-            }
-            QScrollBar::handle:horizontal:hover {
-                background: #64748b;
-            }
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+            }}
+            QScrollBar::handle:horizontal:hover {{
+                background: {Theme.DARK['text_secondary']};
+            }}
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
                 width: 0;
-            }
+            }}
         """)
-        scroll_area.viewport().setStyleSheet("background-color: transparent;")
+        self.scroll_area.viewport().setStyleSheet("background-color: transparent;")
+        self.scroll_area.installEventFilter(self)
 
-        features = QWidget()
-        features_layout = QHBoxLayout(features)
-        # 卡片间距：调小至12px，使卡片排列更紧凑（原16px）
+        self.features_widget = QWidget()
+        features_layout = QHBoxLayout(self.features_widget)
+        # 卡片间距
         features_layout.setSpacing(10)
         features_layout.setContentsMargins(5, 10, 5, 10)
 
@@ -478,8 +563,8 @@ class WelcomePage(QWidget):
 
             features_layout.addWidget(card)
 
-        scroll_area.setWidget(features)
-        layout.addWidget(scroll_area)
+        self.scroll_area.setWidget(self.features_widget)
+        layout.addWidget(self.scroll_area)
 
         self.hint = QLabel(WELCOME_CONFIG.get("hint", ""))
         self.hint.setStyleSheet(f"""
