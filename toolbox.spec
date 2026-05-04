@@ -37,7 +37,7 @@ import sys
 import os
 
 # 将项目根目录加入 sys.path，确保能导入 config.py
-_spec_dir = os.path.dirname(os.path.abspath(__file__))
+_spec_dir = os.path.abspath('.')
 if _spec_dir not in sys.path:
     sys.path.insert(0, _spec_dir)
 
