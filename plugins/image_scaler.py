@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import List
 
 from common.utils import PIL_AVAILABLE
+if PIL_AVAILABLE:
+    from PIL import Image
 
 # 导入主程序中的ToolPlugin基类
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

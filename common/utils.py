@@ -80,8 +80,9 @@ def get_modify_time(file_path):
 
 def get_pdf_pages(file_path):
     """获取PDF页数"""
+    if not FITZ_AVAILABLE:
+        return "N/A"
     try:
-        import fitz
         doc = fitz.open(file_path)
         pages = len(doc)
         doc.close()
@@ -95,5 +96,12 @@ def get_pdf_pages(file_path):
 IMAGE_COLUMNS = [
     ("文件名", lambda f: os.path.basename(f)),
     ("尺寸", get_image_size),
+    ("大小", get_file_size)
+]
+
+# PDF类插件通用的表格列定义
+PDF_COLUMNS = [
+    ("文件名", lambda f: os.path.basename(f)),
+    ("页数", get_pdf_pages),
     ("大小", get_file_size)
 ]

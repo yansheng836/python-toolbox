@@ -22,7 +22,45 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 from common.message_utils import show_info, show_error, show_warning
 from common.file_list_panel import FileListPanel
-from common.utils import get_file_size, get_pdf_pages
+from common.action_panel import ActionPanel
+from common.utils import get_file_size, get_pdf_pages, PDF_COLUMNS
+
+if FITZ_AVAILABLE:
+    import fitz
+
+
+class PDFMergeWorker(QThread):
+    """PDF合并工作线程"""
+    progress = pyqtSignal(int)
+    status = pyqtSignal(str)
+    finished = pyqtSignal(bool, str)
+
+    def __init__(self, files, output):
+        super().__init__()
+        self.files = files
+        self.output = output
+
+    def run(self):
+        try:
+            if not FITZ_AVAILABLE:
+                self.finished.emit(False, "PyMuPDF 未安装")
+                return
+
+            self.status.emit("正在合并PDF...")
+            merged = fitz.open()
+
+            for i, file_path in enumerate(self.files):
+                self.status.emit(f"正在处理: {os.path.basename(file_path)}")
+                doc = fitz.open(file_path)
+                merged.insert_pdf(doc)
+                doc.close()
+                self.progress.emit(i + 1)
+
+            merged.save(self.output)
+            merged.close()
+            self.finished.emit(True, f"合并完成，共 {len(self.files)} 个文件")
+        except Exception as e:
+            self.finished.emit(False, f"合并失败: {str(e)}")
 
 class PDFMergerWidget(QWidget):
     """PDF合并工具主界面"""
@@ -185,11 +223,6 @@ class PDFMergerWidget(QWidget):
 class PDFMerger(ToolPlugin):
     """PDF合并插件"""
 
-    def update_theme(self, theme):
-        """更新主题"""
-        if hasattr(self, 'widget') and hasattr(self.widget, 'apply_theme'):
-            self.widget.apply_theme(theme)
-
     def create_ui(self):
         """创建UI"""
         self.widget = PDFMergerWidget(icon=self.icon, name=self.name, description=self.description, theme=Theme.DARK)
@@ -200,5 +233,5 @@ class PDFMerger(ToolPlugin):
 
     def update_theme(self, theme):
         """更新主题"""
-        if hasattr(self, 'widget') and hasattr(self.widget, 'update_theme'):
-            self.widget.update_theme(theme)
+        if hasattr(self, 'widget') and hasattr(self.widget, 'apply_theme'):
+            self.widget.apply_theme(theme)

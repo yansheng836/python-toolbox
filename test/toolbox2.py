@@ -20,7 +20,7 @@ from PyQt6.QtGui import (
     QColor, QFont, QKeySequence, QAction
 )
 
-from config import FONT_SIZE_16, FONT_SIZE_20, SPACING_SMALL, SPACING_MEDIUM
+from config import FONT_SIZE_16, FONT_SIZE_20, FONT_WEIGHT_600, FONT_WEIGHT_700, SPACING_SMALL, SPACING_MEDIUM
 
 # 平台检测
 IS_WINDOWS = sys.platform == 'win32'

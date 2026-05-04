@@ -42,6 +42,31 @@ Brief description of this module
 """
 ```
 
+### Syntax Check After Modification (MANDATORY)
+
+**Rule: After modifying any Python file, you MUST run syntax checking before marking the task as complete.**
+
+Required checks:
+- **Syntax validation**: Run `python -m py_compile <file.py>` to check for syntax errors
+- **Indentation check**: Ensure consistent indentation (4 spaces per level, no tabs)
+- **Import verification**: Verify all used classes, methods, and variables are properly imported
+- **Line ending check**: Confirm LF (`\n`) line endings, not CRLF (`\r\n`)
+
+Check command:
+```bash
+# Syntax check a file
+python -m py_compile <file.py>
+
+# Check all Python files in the project
+find . -name "*.py" -exec python -m py_compile {} \;
+```
+
+Common issues to catch:
+- `NameError` / `ImportError` - missing imports
+- `IndentationError` - mixed tabs/spaces or incorrect indent
+- `SyntaxError` - malformed Python code
+- `AttributeError` - using undefined attributes
+
 ### Exception Handling (MANDATORY)
 
 **Rule: Only catch exceptions that are meaningful and necessary. Always provide error information when catching exceptions.**

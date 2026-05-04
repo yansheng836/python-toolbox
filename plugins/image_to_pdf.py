@@ -5,12 +5,11 @@
 """
 import os
 import sys
-import io
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QProgressBar,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QComboBox, QSlider, QLineEdit,
-    QGridLayout, QCheckBox, QFileDialog
+    QGridLayout, QCheckBox
 )
 
 from common.message_utils import show_info, show_error, show_warning
@@ -19,9 +18,16 @@ from common.action_panel import ActionPanel
 from common.utils import PIL_AVAILABLE, IMG2PDF_AVAILABLE, FITZ_AVAILABLE
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
+if PIL_AVAILABLE:
+    from PIL import Image
+if IMG2PDF_AVAILABLE:
+    import img2pdf
+if FITZ_AVAILABLE:
+    import fitz
+
 # 导入主程序中的基类和组件
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
+from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, Theme
 
 from common.file_list_panel import FileListPanel
 from common.utils import IMAGE_COLUMNS, get_create_time

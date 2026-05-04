@@ -15,14 +15,78 @@ from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_12
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QListWidget, QAbstractItemView, QMessageBox, QFileDialog,
-    QComboBox, QSpinBox, QSlider, QRadioButton, QButtonGroup, QFormLayout,QWidget, QSizePolicy
+    QComboBox, QSpinBox, QSlider, QRadioButton, QButtonGroup, QFormLayout, QLineEdit, QSizePolicy
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 from common.message_utils import show_info, show_error, show_warning
 from common.file_list_panel import FileListPanel
 from common.action_panel import ActionPanel
-from common.utils import get_file_size, get_pdf_pages
+from common.utils import get_file_size, get_pdf_pages, get_create_time, PDF_COLUMNS
+
+if FITZ_AVAILABLE:
+    import fitz
+
+
+class PDFSplitWorker(QThread):
+    """PDF拆分工作线程"""
+    progress = pyqtSignal(int)
+    status = pyqtSignal(str)
+    finished = pyqtSignal(bool, str)
+
+    def __init__(self, input_file, output_path, output_format, pages_per_split, image_format, quality):
+        super().__init__()
+        self.input_file = input_file
+        self.output_path = output_path
+        self.output_format = output_format
+        self.pages_per_split = pages_per_split
+        self.image_format = image_format
+        self.quality = quality
+
+    def run(self):
+        try:
+            if not FITZ_AVAILABLE:
+                self.finished.emit(False, "PyMuPDF 未安装")
+                return
+
+            doc = fitz.open(self.input_file)
+            total_pages = len(doc)
+
+            if self.output_format == "pdf":
+                # 按页数拆分PDF
+                base_name = os.path.splitext(os.path.basename(self.input_file))[0]
+                count = 0
+                for i in range(0, total_pages, self.pages_per_split):
+                    self.status.emit(f"正在拆分: 第 {i+1}-{min(i+self.pages_per_split, total_pages)} 页")
+                    new_doc = fitz.open()
+                    end = min(i + self.pages_per_split, total_pages)
+                    new_doc.insert_pdf(doc, from_page=i, to_page=end-1)
+                    output_file = os.path.join(self.output_path, f"{base_name}_part{count+1}.pdf")
+                    new_doc.save(output_file)
+                    new_doc.close()
+                    count += 1
+                    self.progress.emit(count)
+                msg = f"拆分完成，共生成 {count} 个PDF文件"
+            else:
+                # 每页输出为图片
+                base_name = os.path.splitext(os.path.basename(self.input_file))[0]
+                count = 0
+                for i in range(total_pages):
+                    self.status.emit(f"正在转换: 第 {i+1}/{total_pages} 页")
+                    page = doc.load_page(i)
+                    mat = fitz.Matrix(self.quality / 100, self.quality / 100)
+                    pix = page.get_pixmap(matrix=mat)
+                    output_file = os.path.join(self.output_path, f"{base_name}_page{i+1}.{self.image_format.lower()}")
+                    pix.save(output_file)
+                    pix = None
+                    count += 1
+                    self.progress.emit(count)
+                msg = f"转换完成，共生成 {count} 张图片"
+
+            doc.close()
+            self.finished.emit(True, msg)
+        except Exception as e:
+            self.finished.emit(False, f"拆分失败: {str(e)}")
 
 class PDFSplitterWidget(QWidget):
     """PDF拆分工具主界面"""
@@ -55,13 +119,6 @@ class PDFSplitterWidget(QWidget):
         # PDF文件列表区域（列表模式，参考PDF合并）
         file_card = Card(title="PDF文件列表（仅支持一个文件）")
         file_layout = file_card.content_layout
-
-        PDF_COLUMNS = [
-            ("文件名", lambda f: os.path.basename(f)),
-            ("大小", get_file_size),
-            ("页数", get_pdf_pages),
-            ("创建时间", get_create_time)
-        ]
 
         self.file_panel = FileListPanel(
             columns=PDF_COLUMNS,

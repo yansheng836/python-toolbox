@@ -18,6 +18,9 @@ from common.action_panel import ActionPanel
 from common.utils import PIL_AVAILABLE
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
 
+if PIL_AVAILABLE:
+    from PIL import Image
+
 # 导入主程序中的基类和组件
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme

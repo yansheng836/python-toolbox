@@ -8,7 +8,7 @@ import sys
 import os
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel
 from PyQt6.QtGui import QIcon
-from PyQt6.QtCore import QFileInfo
+from PyQt6.QtCore import Qt, QFileInfo
 
 def test_icon():
     app = QApplication(sys.argv)
