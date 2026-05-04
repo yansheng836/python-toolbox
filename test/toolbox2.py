@@ -930,7 +930,7 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(nav)
 
         # 底部
-        footer = QLabel("v1.0.0")
+        footer = QLabel("v2.0.0")
         footer.setStyleSheet("color: #475569; font-size: 12px;")
         footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sidebar_layout.addWidget(footer)

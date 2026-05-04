@@ -36,12 +36,17 @@
 import sys
 import os
 
+# 将项目根目录加入 sys.path，确保能导入 config.py
+_spec_dir = os.path.dirname(os.path.abspath(__file__))
+if _spec_dir not in sys.path:
+    sys.path.insert(0, _spec_dir)
+
 # 从 config.py 导入应用信息
 try:
     from config import APP_NAME, APP_VERSION, APP_DESCRIPTION, APP_COPYRIGHT
 except ImportError:
     APP_NAME = "工具箱"
-    APP_VERSION = "1.0.0"
+    APP_VERSION = "2.0.0"
     APP_DESCRIPTION = "批量处理工具"
     APP_COPYRIGHT = "© 2026 yansheng836"
 
@@ -198,7 +203,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name=APP_NAME,           # 使用 config.py 中的应用名称
+    name=f'{APP_NAME}ToolBox-v{APP_VERSION}',  # 包含版本号的文件名
     debug=False,
     bootloader_ignore_signals=False,
     strip=True,              # 启用 strip 以移除调试符号

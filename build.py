@@ -97,11 +97,38 @@ def main():
     print(f"  可执行文件: {exe_file}")
     print(f"  文件大小: {file_size:.2f} MB")
 
-    # 步骤 6: 打包完成提示
+    # 步骤 6: 转换并复制用户手册
+    print_step(6, "转换用户手册为 DOCX")
+    # 读取版本号，定义输出文件名
+    import re
+    version = "2.0.0"
+    config_path = Path("config.py")
+    if config_path.exists():
+        content = config_path.read_text(encoding="utf-8")
+        match = re.search(r'APP_VERSION\s*=\s*"([^"]+)"', content)
+        if match:
+            version = match.group(1)
+    docx_name = f"用户手册-{version}.docx"
+    docx_path = Path("dist") / docx_name
+
+    try:
+        # 使用 pandoc 转换
+        pandoc_cmd = f'pandoc "用户手册.md" -o "{docx_path}"'
+        if run_command(pandoc_cmd, f"转换用户手册为 {docx_name}"):
+            print(f"✓ 用户手册已保存到: {docx_path}")
+        else:
+            print(f"⚠ 警告: pandoc 转换失败，跳过此步骤（请确保已安装 pandoc）")
+    except Exception as e:
+        print(f"⚠ 警告: 转换用户手册时出错: {e}")
+
+    # 步骤 7: 打包完成提示
+    print_step(7, "打包完成提示")
     print("\n" + "="*60)
     print("打包完成!")
     print("="*60)
     print(f"\n可执行文件位置: {exe_file.absolute()}")
+    if docx_path.exists():
+        print(f"用户手册: {docx_path}")
     print("\n测试建议:")
     print("  1. 运行应用，检查是否能正常启动")
     print("  2. 右键文件 → 属性 → 详细信息，查看版本信息")

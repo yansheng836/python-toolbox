@@ -5,13 +5,170 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/).
 
-[Unreleased]: https://github.com/yansheng836/python-toolbox/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/yansheng836/python-toolbox/compare/v2.0.0...HEAD
+[v2.0.0]: https://github.com/yansheng836/python-toolbox/compare/v1.0.11...v2.0.0
+[v1.0.11]: https://github.com/yansheng836/python-toolbox/compare/v1.0.10...v1.0.11
+[v1.0.10]: https://github.com/yansheng836/python-toolbox/compare/v1.0.9...v1.0.10
+[v1.0.9]: https://github.com/yansheng836/python-toolbox/compare/v1.0.8...v1.0.9
+[v1.0.8]: https://github.com/yansheng836/python-toolbox/compare/v1.0.7...v1.0.8
+[v1.0.7]: https://github.com/yansheng836/python-toolbox/compare/v1.0.6...v1.0.7
+[v1.0.6]: https://github.com/yansheng836/python-toolbox/compare/v1.0.5...v1.0.6
+[v1.0.5]: https://github.com/yansheng836/python-toolbox/compare/v1.0.4...v1.0.5
+[v1.0.4]: https://github.com/yansheng836/python-toolbox/compare/v1.0.3...v1.0.4
+[v1.0.3]: https://github.com/yansheng836/python-toolbox/compare/v1.0.2...v1.0.3
 [v1.0.2]: https://github.com/yansheng836/python-toolbox/compare/v1.0.1...v1.0.2
 [v1.0.1]: https://github.com/yansheng836/python-toolbox/compare/v1.0.0...v1.0.1
 [v1.0.0]: https://github.com/yansheng836/python-toolbox/compare/v0.0.1...v1.0.0
 [v0.0.1]: https://github.com/yansheng836/python-toolbox/releases/tag/v0.0.1
 
 ## [Unreleased]
+
+## [v2.0.0] - 2026-05-05
+
+### Added
+- 新增面向非技术用户的 Markdown 格式使用手册（`用户手册.md`）
+  - 涵盖全部 8 个功能的详细使用步骤和适用场景
+  - 包含界面介绍、通用操作元素、主题切换、常见问题等章节
+  - 纯用户视角编写，无技术术语
+- 全面更新 `README.md`
+  - 重写功能特色表格，涵盖全部工具和通用特性
+  - 新增截图预览区域（ASCII 占位符）
+  - 新增简明使用指南，每个工具列出操作步骤
+  - 更新插件开发章节，添加配置示例和现有插件列表
+  - 新增打包发布章节（环境要求、打包步骤）
+  - 优化排版和可读性
+- 新增 `CLAUDE.md` 语法检查强制规则
+  - 修改 Python 文件后必须进行语法检查
+  - 包括语法验证、缩进检查、导入验证、行尾检查
+- 恢复 `README.md` 中的程序介绍图 `ToolBox.png`
+- 更新 `CHANGELOG.md`，采用 Keep a Changelog 标准格式
+
+### Changed
+- 更新所有版本号至 v2.0.0
+  - `config.py`: APP_VERSION = "2.0.0"
+  - `toolbox.py`: ToolPlugin.version = "2.0.0"
+  - `settings_page.py`: version = "2.0.0"
+  - `test/test_app.py`: 两处版本号
+  - `test/toolbox2.py`: 版本号
+- 重新整理 `CLAUDE.md`
+  - 新增 Quick Reference 速查表，集中展示 6 条强制规则
+  - 合并重复的 Code Reuse 章节，统一到 Development Standards
+  - 更新 Project Structure 与实际文件结构一致（含 common/、plugins/、8个插件）
+  - 新增 Plugin Checklist 和 Adding a Plugin 完整示例
+  - 精简冗余描述，优化章节层级结构
+- 统一模块可用性检查到 `common/utils.py`
+  - 移除不必要的 try-catch
+  - 集中管理 `PIL_AVAILABLE`、`FITZ_AVAILABLE`、`IMG2PDF_AVAILABLE`
+- 优化插件代码结构
+  - 新增 `PDF_COLUMNS` 定义到 `common/utils.py`
+  - 添加缺失的 `PDFMergeWorker` 和 `PDFSplitWorker` 类
+  - 统一管理 `ActionPanel` 导入
+
+### Fixed
+- 修复多个插件未定义名称问题
+  - `image_compressor.py`: 添加 `Image` 条件导入
+  - `image_format_converter.py`: 添加 `Image` 条件导入
+  - `image_scaler.py`: 添加 `Image` 条件导入
+  - `image_stitcher.py`: 添加 `Image` 条件导入
+  - `image_to_pdf.py`: 添加 `Image`、`fitz`、`img2pdf` 条件导入
+  - `pdf_merger.py`: 添加 `ActionPanel`、`PDF_COLUMNS` 导入和 Worker 类
+  - `pdf_splitter.py`: 添加 `QLineEdit`、`get_create_time` 导入和 Worker 类
+  - `common/utils.py`: 修复重复导入 `fitz` 问题
+  - `test/test_icon.py`: 添加 `Qt` 导入
+- 修复 `file_deduplicator.py` 主题切换报错
+  - 重命名 `FileDeduplicatorWidget.update_theme` 为 `apply_theme`
+  - 修复插件注册时调用 `self.widget.apply_theme(theme)` 失败的问题
+- 清理各文件未使用的导入
+  - 移除 `toolbox.py` 未使用的配置和组件导入
+  - 移除 `common/action_panel.py` 未使用的 `show_error` 导入
+  - 移除 `common/utils.py` 未使用的 `img2pdf` 导入
+  - 清理各插件未使用的导入（`sys`、`time`、`QBrush`、`QSizePolicy` 等）
+  - 修复过度清理导致的 `Qt`、`List`、`QFileDialog` 缺失问题
+- 修复 `common/utils.py` 中 `get_pdf_pages` 方法
+  - 添加 `FITZ_AVAILABLE` 检查，防止未定义错误
+
+### Removed
+- 移除各插件中重复的导入检查模式
+  - 统一使用 `common/utils.py` 中的可用性标志
+
+## [v1.0.11] - 2026-05-04
+
+### Changed
+- 调整文件去重删除规则下拉框顺序
+- 新增文件名降序规则
+
+## [v1.0.10] - 2026-05-03
+
+### Added
+- 统一操作按钮样式为 `ActionPanel` 标准
+- 优化 PDF 拆分 PNG 输出质量
+
+## [v1.0.9] - 2026-05-02
+
+### Performance
+- 优化 PDF 合并及文件列表性能
+
+### Fixed
+- 修复主题合规问题（文本颜色对比度）
+
+## [v1.0.8] - 2026-05-01
+
+### Added
+- 统一图片压缩、格式转换、拼接功能布局为 `ActionPanel` 标准
+  - 统一操作面板交互体验
+  - 按钮 + 进度条 + 状态标签一体化
+
+## [v1.0.7] - 2026-04-30
+
+### Fixed
+- 添加临时 PDF 和输出 PDF 的空文件验证
+- 防止空文件导致处理失败
+
+## [v1.0.6] - 2026-04-29
+
+### Added
+- 图片拼接新增"智能缩放"对齐方式（默认）
+  - 自动按比例缩放图片以适应拼接画布
+
+## [v1.0.5] - 2026-04-28
+
+### Fixed
+- 区分 JPG/JPEG 扩展名，保持原格式时保留原始扩展名
+- 修复图片压缩输出文件扩展名不一致问题
+
+## [v1.0.4] - 2026-04-27
+
+### Fixed
+- 修复图片压缩/缩放/拼接的上移下移功能
+  - 改为选中行上下移动，操作更直观
+
+## [v1.0.3] - 2026-04-26
+
+### Added
+- 将左侧和欢迎页的 emoji logo 替换为 `favicon.ico` 图标
+- 为右侧内容区域添加滚动支持，适配小屏场景
+- 支持手动调整窗口大小，添加窗口最大尺寸配置
+- 新增插件排序功能，支持通过 `order` 属性控制侧边栏顺序
+- 添加 push/PR 时运行 main.py 检查（CI/CD）
+
+### Changed
+- 重构 `config.py` 配置顺序，新增 `FONT_SIZE_24` 常量
+- 统一字体大小为全局变量（`FONT_SIZE_12/14/16/20/24`）
+- 将内置图片处理功能提取为独立插件
+- 精简欢迎页布局，缩小 logo/标题/卡片尺寸，改为容器居中布局
+
+### Fixed
+- 修复窗口图标和控制栏图标不显示的问题
+- 修复插件 `get_widget` 缺失和导入失败问题
+- 修复插件实例化失败问题
+- 去掉全局 QFrame 边框，卡片内添加分隔线，统一样式管理
+- 调整欢迎页卡片布局，修复滚动条问题
+- 修复图片拼接图标显示问题
+- 修复插件 f-string QSS 转义错误
+
+### Refactored
+- 移除所有 Python 文件中未使用的 import
+- 优化 main.py 检查步骤，避免复杂 shell 脚本
 
 ## [v1.0.2] - 2026-04-26
 

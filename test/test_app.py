@@ -13,11 +13,11 @@ def main():
 
     # 窗口标题
     app.setApplicationName("工具箱")
-    app.setApplicationVersion("1.0.0")
+    app.setApplicationVersion("2.0.0")
 
     # 创建窗口
     window = ToolboxWindow(app)
-    window.setWindowTitle("工具箱 v1.0.0 - 测试模式")
+    window.setWindowTitle("工具箱 v2.0.0 - 测试模式")
     window.show()
 
     print("程序启动成功")

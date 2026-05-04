@@ -86,7 +86,7 @@ class SettingsPlugin:
     name = "设置"
     description = "应用程序设置和关于信息"
     icon = "⚙️"
-    version = "1.0.0"
+    version = "2.0.0"
 
     theme_changed = pyqtSignal(dict)  # 主题更改信号
 

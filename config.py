@@ -6,7 +6,7 @@
 
 # 应用基本信息
 APP_NAME = "工具箱"
-APP_VERSION = "1.0.2"
+APP_VERSION = "2.0.0"
 APP_DESCRIPTION = "批量处理工具，支持图片压缩、PDF转换、格式转换、拼接和PDF合并"
 APP_COPYRIGHT = "© 2026 yansheng836"
 APP_WEBSITE_URL = "https://github.com/yansheng836/python-toolbox"  # 官方网站URL

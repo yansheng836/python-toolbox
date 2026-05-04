@@ -70,9 +70,9 @@ VSVersionInfo(
         [StringStruct(u'CompanyName', u'{company_name}'),
         StringStruct(u'FileDescription', u'{APP_DESCRIPTION}'),
         StringStruct(u'FileVersion', u'{APP_VERSION}.0'),
-        StringStruct(u'InternalName', u'{APP_NAME}'),
+        StringStruct(u'InternalName', u'{APP_NAME}ToolBox'),
         StringStruct(u'LegalCopyright', u'{APP_COPYRIGHT}'),
-        StringStruct(u'OriginalFilename', u'{APP_NAME}.exe'),
+        StringStruct(u'OriginalFilename', u'{APP_NAME}ToolBox-v{APP_VERSION}.exe'),
         StringStruct(u'ProductName', u'{APP_NAME}'),
         StringStruct(u'ProductVersion', u'{APP_VERSION}.0')])
       ]),
