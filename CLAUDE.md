@@ -18,6 +18,7 @@ These rules MUST be followed. Violations will cause bugs or maintenance debt.
 | 8 | UI components MUST support responsive layout (Expanding策略, 动态高度) | [Responsive Layout](#responsive-layout-mandatory) |
 | 9 | When writing/overwriting output files, check if the file is locked/occupied before processing | [File Operations](#file-operations-mandatory) |
 | 10 | When deleting temporary files, check if the file exists first to avoid error spam | [File Operations](#file-operations-mandatory) |
+| 11 | When processing files/images, use context managers and release resources properly | [Performance Optimization](#performance-optimization-mandatory) |
 
 ---
 
@@ -447,6 +448,99 @@ for tf in temp_files:
 **Check other plugins:**
 - ✅ `image_to_pdf.py` — fixed in commit 58ec96e (uses `abspath`, `exists`, `set`)
 - ⚠️ `file_deduplicator.py` (line 557) — `os.remove(file_path)` without existence check
+
+---
+
+## Performance Optimization
+
+### Performance Optimization (MANDATORY)
+
+**Rule: Plugins processing images or files MUST manage memory properly to avoid leaks and excessive memory usage.**
+
+Based on commit `f28dfae` - fixes for memory leaks and file handle issues.
+
+#### Core Principles
+
+1. **Use context managers** — Always use `with Image.open(f) as img:` to ensure file handles are released
+2. **Explicit close** — Call `img.close()` after processing to free memory immediately
+3. **Avoid loading all data at once** — For batch processing, process files one-by-one or in batches
+4. **Use BATCH_SIZE** — For large batch operations, control memory with `BATCH_SIZE = N`
+5. **Release intermediate objects** — When creating new images (resized, converted), close the old one
+
+#### Context Manager Pattern
+
+```python
+# GOOD: Context manager ensures file handle release
+with Image.open(file_path) as src_img:
+    img = src_img.copy()  # Work on a copy
+# src_img is automatically closed here
+
+# BAD: File handle leak
+img = Image.open(file_path)  # Never closed, handle leaks
+```
+
+#### Process Files One-by-One (Not All at Once)
+
+```python
+# GOOD: Process one-by-one (image_stitcher.py pattern)
+for f in self.files:
+    with Image.open(f) as img:
+        # Process this image
+        img.save(output_path)
+    # File closed, memory freed
+
+# BAD: Load ALL images into memory
+images = []
+for f in self.files:
+    img = Image.open(f)
+    images.append(img)  # Memory grows unbounded!
+```
+
+#### Release Memory After Processing
+
+```python
+# GOOD: Close after save
+img.save(output_path, "JPEG", quality=85)
+img.close()  # Free memory immediately
+
+# GOOD: Close old image when creating new one
+new_img = img.resize((w, h), Image.Resampling.LANCZOS)
+img.close()  # Release original
+img = new_img
+
+# BAD: Never closing
+scaled_img = img.resize((w, h))
+scaled_img.save(output_file)
+# Memory not freed until garbage collection
+```
+
+#### Batch Processing Pattern
+
+```python
+# GOOD: Batch with BATCH_SIZE (image_to_pdf.py pattern)
+BATCH_SIZE = 50
+
+for batch_start in range(0, total, self.BATCH_SIZE):
+    batch_files = files[batch_start:batch_start + self.BATCH_SIZE]
+    batch_imgs = []
+    for f in batch_files:
+        with Image.open(f) as img:
+            batch_imgs.append(img.copy())
+    # Process this batch...
+    batch_imgs.clear()  # Release batch memory
+```
+
+#### Check Plugins for Performance Issues
+
+| Plugin | Status | Issue |
+|--------|--------|-------|
+| `image_stitcher.py` | ✅ Fixed (f28dfae) | Was loading ALL images into memory |
+| `image_compressor.py` | ✅ Fixed (f28dfae) | Now uses context manager + explicit close |
+| `image_scaler.py` | ✅ Fixed (f28dfae) | Now closes `scaled_img` after save |
+| `image_format_converter.py` | ✅ Fixed (f28dfae) | Now uses context manager + close |
+| `image_to_pdf.py` | ✅ Fixed (f28dfae) | Now uses context manager in scan + batch processing |
+| `pdf_merger.py` | ✅ OK | Uses `doc.close()` correctly |
+| `pdf_splitter.py` | ✅ OK | Uses `doc.close()` correctly |
 
 ## Theme System
 
