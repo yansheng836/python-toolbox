@@ -52,6 +52,25 @@ class PDFWorker(QThread):
     def run(self):
         temp_files = []  # 所有临时文件，用于异常时清理
         try:
+            # ========= 预检查：目标文件是否被占用 =========
+            # 在开始处理前检查，避免处理完成后才发现文件被占用
+            try:
+                # 尝试以独占写模式打开目标文件
+                with open(self.output, 'ab') as f:
+                    pass  # 立即关闭，不写入任何内容
+            except PermissionError as e:
+                # Windows 文件被占用时会抛出 PermissionError (WinError 32)
+                self.finished.emit(
+                    False,
+                    f"目标文件被占用，无法写入：\n{self.output}\n\n"
+                    f"请先关闭该文件（如在 WPS、Adobe Reader 等软件中打开），然后重试。"
+                )
+                return
+            except Exception as e:
+                # 其他错误（如路径不存在、权限不足等）
+                self.finished.emit(False, f"无法访问目标文件：{str(e)}")
+                return
+
             total = len(self.files)
             skipped = 0
 
