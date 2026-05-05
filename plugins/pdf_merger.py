@@ -40,6 +40,22 @@ class PDFMergeWorker(QThread):
 
     def run(self):
         try:
+            # ========= 预检查：目标文件是否被占用 =========
+            if self.output:
+                try:
+                    with open(self.output, 'ab') as f:
+                        pass
+                except PermissionError as e:
+                    self.finished.emit(
+                        False,
+                        f"目标文件被占用，无法写入：\n{self.output}\n\n"
+                        f"请先关闭该文件（如在 WPS、Adobe Reader 等软件中打开），然后重试。"
+                    )
+                    return
+                except Exception as e:
+                    self.finished.emit(False, f"无法访问目标文件：{str(e)}")
+                    return
+
             if not FITZ_AVAILABLE:
                 self.finished.emit(False, "PyMuPDF 未安装")
                 return

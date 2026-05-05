@@ -448,7 +448,7 @@ for tf in temp_files:
 - ✅ `image_to_pdf.py` — fixed in commit 58ec96e (uses `abspath`, `exists`, `set`)
 - ⚠️ `file_deduplicator.py` (line 557) — `os.remove(file_path)` without existence check
 
-Let's fix `file_deduplicator.py`:
+## Theme System
 
 - Two themes: `Theme.DARK` (default) and `Theme.LIGHT`
 - Theme switching via `SettingsPlugin` with persistent storage using `QSettings`

@@ -46,6 +46,22 @@ class ImageStitchWorker(QThread):
 
     def run(self):
         try:
+            # ========= 预检查：目标文件是否被占用 =========
+            if self.output_path:
+                try:
+                    with open(self.output_path, 'ab') as f:
+                        pass
+                except PermissionError as e:
+                    self.finished.emit(
+                        False,
+                        f"目标文件被占用，无法写入：\n{self.output_path}\n\n"
+                        f"请先关闭该文件，然后重试。"
+                    )
+                    return
+                except Exception as e:
+                    self.finished.emit(False, f"无法访问目标文件：{str(e)}")
+                    return
+
             images = []
             skipped = 0
             for f in self.files:
