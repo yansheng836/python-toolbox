@@ -16,6 +16,8 @@ These rules MUST be followed. Violations will cause bugs or maintenance debt.
 | 6 | Module availability flags (`PIL_AVAILABLE`, etc.) must be imported from `common/utils.py`, never re-declared | [Exception Handling](#exception-handling-mandatory) |
 | 7 | Informational text MUST use `SelectableLabel` to support copying | [Text Copyability](#text-copyability-mandatory) |
 | 8 | UI components MUST support responsive layout (Expanding策略, 动态高度) | [Responsive Layout](#responsive-layout-mandatory) |
+| 9 | When writing/overwriting output files, check if the file is locked/occupied before processing | [File Operations](#file-operations-mandatory) |
+| 10 | When deleting temporary files, check if the file exists first to avoid error spam | [File Operations](#file-operations-mandatory) |
 
 ---
 
@@ -369,7 +371,84 @@ When adding new UI components:
 
 ---
 
-## Theme System
+## File Operations
+
+### File Operations (MANDATORY)
+
+Two critical rules for file handling:
+
+#### Rule 9: Pre-check Output Files
+
+**When writing/overwriting output files, check if the file is locked/occupied before processing.**
+
+This prevents wasting user time by catching the error early, rather than after all processing is complete.
+
+```python
+# GOOD: Pre-check if output file is locked (image_to_pdf.py pattern)
+try:
+    with open(self.output, 'ab') as f:
+        pass  # Test if file can be opened for writing
+except PermissionError as e:
+    # Windows file lock (WinError 32) - file opened in WPS, Adobe Reader, etc.
+    self.finished.emit(
+        False,
+        f"目标文件被占用，无法写入：\n{self.output}\n\n"
+        f"请先关闭该文件（如在 WPS、Adobe Reader 等软件中打开），然后重试。"
+    )
+    return
+except Exception as e:
+    self.finished.emit(False, f"无法访问目标文件：{str(e)}")
+    return
+```
+
+**Why this matters:**
+- Processing many files takes time — don't discover the file is locked AFTER processing
+- User sees "conversion failed" after waiting, then must restart everything
+- Clear error message helps user understand what to do (close the file)
+
+**Check other plugins:**
+- ✅ `image_to_pdf.py` — has this check (since commit 79b9b69)
+- ✅ Other plugins — `file_deduplicator.py` only reads files (no output file check needed)
+- ✅ `pdf_merger.py`, `pdf_splitter.py`, etc. — use `QFileDialog` which handles file access natively
+
+#### Rule 10: Check File Existence Before Deletion
+
+**When deleting temporary files, check if the file exists first to avoid error spam.**
+
+This is especially important when files may have been moved, already deleted, or when using relative paths that resolve differently.
+
+```python
+# GOOD: Check existence before deleting
+import os
+for tf in temp_files:
+    try:
+        tf_full = os.path.abspath(tf)  # Always use absolute path
+        if os.path.exists(tf_full):
+            os.remove(tf_full)
+    except OSError as e:
+        print(f"Error removing temp file {tf}: {e}")
+
+# BAD: Direct deletion without checks
+for tf in temp_files:
+    os.remove(tf)  # May raise FileNotFoundError or WinError 2
+```
+
+**Why this matters:**
+- After `shutil.move()` or other operations, the temp file may no longer exist at the expected path
+- Relative paths can resolve incorrectly when working directory changes
+- Batch operations may create duplicate filenames, causing some to be already deleted
+
+**Best practices:**
+1. **Use `os.path.abspath()`** — convert all paths to absolute before operations
+2. **Use `os.path.exists()`** — check before delete to avoid errors
+3. **Use `set()` instead of `list`** — for temp_files storage to avoid duplicates
+4. **Use `set.discard()`** — instead of `list.remove()` to avoid ValueError on missing items
+
+**Check other plugins:**
+- ✅ `image_to_pdf.py` — fixed in commit 58ec96e (uses `abspath`, `exists`, `set`)
+- ⚠️ `file_deduplicator.py` (line 557) — `os.remove(file_path)` without existence check
+
+Let's fix `file_deduplicator.py`:
 
 - Two themes: `Theme.DARK` (default) and `Theme.LIGHT`
 - Theme switching via `SettingsPlugin` with persistent storage using `QSettings`
@@ -463,6 +542,8 @@ class MyTool(ToolPlugin):
 - [ ] Tested in normal, maximized, and fullscreen window modes
 - [ ] Added to `hiddenimports` in `toolbox.spec`
 - [ ] Syntax-checked with `python -m py_compile`
+- [ ] When writing/overwriting output files, check if the file is locked (Rule #9)
+- [ ] When deleting files, check if the file exists first (Rule #10)
 
 ---
 

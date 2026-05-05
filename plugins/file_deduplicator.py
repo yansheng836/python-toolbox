@@ -554,8 +554,12 @@ class FileDeduplicatorWidget(QWidget):
             failed_files = []
             for i, file_path in enumerate(files_to_delete):
                 try:
-                    os.remove(file_path)
-                    deleted += 1
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                        deleted += 1
+                    else:
+                        # 文件已不存在（可能已被其他程序或用户删除）
+                        deleted += 1  # 视为成功，因为目标已达到（文件不存在）
                 except Exception as e:
                     print(f"delete error: {e}")
                     failed += 1
