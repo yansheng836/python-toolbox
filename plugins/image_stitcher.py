@@ -62,101 +62,106 @@ class ImageStitchWorker(QThread):
                     self.finished.emit(False, f"无法访问目标文件：{str(e)}")
                     return
 
-            images = []
+            # ========= 第一遍：扫描尺寸，不加载像素数据 =========
+            self.status.emit("正在扫描图片尺寸...")
+            file_info = []  # (path, width, height)
             skipped = 0
             for f in self.files:
-                self.status.emit(f"正在读取: {os.path.basename(f)}")
                 try:
-                    img = Image.open(f)
-                    img.load()  # 强制加载，提前发现损坏文件
-                    images.append(img.convert("RGBA"))
+                    with Image.open(f) as img:
+                        img.verify()  # 快速检查文件是否损坏
+                        # verify 后需要重新打开
+                        img = Image.open(f)
+                        file_info.append((f, img.width, img.height))
                 except Exception as e:
                     print(f"Error in image_stitcher: {e}")
                     skipped += 1
                     self.status.emit(f"跳过损坏图片: {os.path.basename(f)}")
                     continue
 
-            if not images:
+            if not file_info:
                 self.finished.emit(False, "没有成功读取任何图片，请检查图片文件是否损坏。")
                 return
 
-            # 按最大尺寸扩展：先缩放图片
+            # ========= 计算拼接后画布尺寸 =========
             if self.align == "max_size":
-                self.status.emit("正在按最大尺寸缩放图片...")
+                # 按最大尺寸扩展：计算缩放后的尺寸
                 if self.direction == "vertical":
-                    # 纵向拼接：找出宽度最大的图片，其他图片按比例缩放
-                    max_width = max(img.width for img in images)
-                    scaled_images = []
-                    for img in images:
-                        if img.width != max_width:
-                            ratio = max_width / img.width
-                            new_height = int(img.height * ratio)
-                            scaled = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
-                            scaled_images.append(scaled)
+                    max_width = max(w for _, w, _ in file_info)
+                    scaled_info = []
+                    for f, w, h in file_info:
+                        if w != max_width:
+                            ratio = max_width / w
+                            scaled_info.append((f, max_width, int(h * ratio)))
                         else:
-                            scaled_images.append(img)
-                    images = scaled_images
+                            scaled_info.append((f, w, h))
+                    file_info = scaled_info
                 else:
-                    # 横向拼接：找出高度最大的图片，其他图片按比例缩放
-                    max_height = max(img.height for img in images)
-                    scaled_images = []
-                    for img in images:
-                        if img.height != max_height:
-                            ratio = max_height / img.height
-                            new_width = int(img.width * ratio)
-                            scaled = img.resize((new_width, max_height), Image.Resampling.LANCZOS)
-                            scaled_images.append(scaled)
+                    max_height = max(h for _, _, h in file_info)
+                    scaled_info = []
+                    for f, w, h in file_info:
+                        if h != max_height:
+                            ratio = max_height / h
+                            scaled_info.append((f, int(w * ratio), max_height))
                         else:
-                            scaled_images.append(img)
-                    images = scaled_images
+                            scaled_info.append((f, w, h))
+                    file_info = scaled_info
 
-            # 检查拼接后尺寸，避免超大图片导致失败
+            # 检查拼接后尺寸
             if self.direction == "horizontal":
-                total_w = sum(img.width for img in images)
-                total_h = max(img.height for img in images)
+                total_w = sum(w for _, w, _ in file_info)
+                total_h = max(h for _, _, h in file_info)
             else:
-                total_w = max(img.width for img in images)
-                total_h = sum(img.height for img in images)
+                total_w = max(w for _, w, _ in file_info)
+                total_h = sum(h for _, _, h in file_info)
 
-            MAX_DIMENSION = 65535  # 多数格式支持的最大尺寸
+            MAX_DIMENSION = 65535
             if total_w > MAX_DIMENSION or total_h > MAX_DIMENSION:
                 self.finished.emit(False,
                                    f"拼接后尺寸过大（{total_w}x{total_h}），超过 {MAX_DIMENSION} 像素限制。\n"
                                    f"建议：1) 减少图片数量；2) 先缩小图片尺寸；3) 使用纵向拼接代替横向。")
                 return
 
+            # ========= 第二遍：逐张处理并拼接到画布 =========
             self.status.emit("正在拼接...")
-            # 按最大尺寸扩展后，使用 start 对齐（因为尺寸已统一）
             align = "start" if self.align == "max_size" else self.align
+            canvas = Image.new("RGBA", (total_w, total_h), self.bg_color + (255,))
 
             if self.direction == "horizontal":
-                total_w = sum(img.width for img in images)
-                total_h = max(img.height for img in images)
-                canvas = Image.new("RGBA", (total_w, total_h), self.bg_color + (255,))
                 x = 0
-                for img in images:
-                    if align == "center":
-                        y = (total_h - img.height) // 2
-                    elif align == "end":
-                        y = total_h - img.height
-                    else:
-                        y = 0
-                    canvas.paste(img, (x, y), img)
-                    x += img.width
+                for i, (f, expected_w, expected_h) in enumerate(file_info):
+                    self.status.emit(f"正在处理: {os.path.basename(f)} ({i+1}/{len(file_info)})")
+                    with Image.open(f) as img:
+                        img = img.convert("RGBA")
+                        if self.align == "max_size":
+                            # 需要缩放
+                            if img.width != expected_w:
+                                img = img.resize((expected_w, expected_h), Image.Resampling.LANCZOS)
+                        if align == "center":
+                            y = (total_h - img.height) // 2
+                        elif align == "end":
+                            y = total_h - img.height
+                        else:
+                            y = 0
+                        canvas.paste(img, (x, y), img)
+                        x += img.width
             else:
-                total_w = max(img.width for img in images)
-                total_h = sum(img.height for img in images)
-                canvas = Image.new("RGBA", (total_w, total_h), self.bg_color + (255,))
                 y = 0
-                for img in images:
-                    if align == "center":
-                        x = (total_w - img.width) // 2
-                    elif align == "end":
-                        x = total_w - img.width
-                    else:
-                        x = 0
-                    canvas.paste(img, (x, y), img)
-                    y += img.height
+                for i, (f, expected_w, expected_h) in enumerate(file_info):
+                    self.status.emit(f"正在处理: {os.path.basename(f)} ({i+1}/{len(file_info)})")
+                    with Image.open(f) as img:
+                        img = img.convert("RGBA")
+                        if self.align == "max_size":
+                            if img.height != expected_h:
+                                img = img.resize((expected_w, expected_h), Image.Resampling.LANCZOS)
+                        if align == "center":
+                            x = (total_w - img.width) // 2
+                        elif align == "end":
+                            x = total_w - img.width
+                        else:
+                            x = 0
+                        canvas.paste(img, (x, y), img)
+                        y += img.height
 
             # 输出格式不支持透明时转 RGB
             ext = os.path.splitext(self.output_path)[1].lower()
@@ -165,13 +170,13 @@ class ImageStitchWorker(QThread):
                 bg.paste(canvas, mask=canvas.split()[3])
                 canvas = bg
 
-            # 根据输出格式添加压缩参数，避免文件变大
+            # 根据输出格式添加压缩参数
             save_kwargs = {}
             if ext in (".jpg", ".jpeg", ".webp"):
                 save_kwargs['quality'] = 85
                 save_kwargs['optimize'] = True
             elif ext == ".png":
-                save_kwargs['compress_level'] = 6  # 0-9，6 是兼顾压缩率和速度的常用值
+                save_kwargs['compress_level'] = 6
                 save_kwargs['optimize'] = True
             elif ext == ".tiff":
                 save_kwargs['compression'] = "tiff_deflate"
@@ -183,7 +188,7 @@ class ImageStitchWorker(QThread):
             self.finished.emit(True, msg)
         except Exception as e:
             error_detail = f"{str(e)}\n\n详细错误:\n{traceback.format_exc()}"
-            print(error_detail)  # 输出到控制台方便调试
+            print(error_detail)
             self.finished.emit(False, f"拼接失败: {str(e)}")
 
 

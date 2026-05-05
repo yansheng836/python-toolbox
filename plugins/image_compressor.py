@@ -69,7 +69,9 @@ class CompressionWorker(QThread):
             for i, file_path in enumerate(self.files):
                 self.status.emit(f"正在处理: {os.path.basename(file_path)}")
 
-                img = Image.open(file_path)
+                # 使用上下文管理器确保图片处理后释放内存
+                with Image.open(file_path) as src_img:
+                    img = src_img.copy()  # 复制一份操作，原文件可立即释放
 
                 # 确定输出格式及扩展名
                 # Pillow 格式映射（JPG/JPEG 底层都是 JPEG）
@@ -113,14 +115,18 @@ class CompressionWorker(QThread):
                     if img.mode in ('RGBA', 'LA'):
                         background = Image.new('RGB', img.size, (255, 255, 255))
                         background.paste(img, mask=img.split()[-1])
+                        img.close()  # 关闭之前的图像
                         img = background
                     elif img.mode == 'P':
                         img = img.convert('RGBA')
                         background = Image.new('RGB', img.size, (255, 255, 255))
                         background.paste(img, mask=img.split()[-1])
+                        img.close()
                         img = background
                     elif img.mode != 'RGB':
-                        img = img.convert('RGB')
+                        new_img = img.convert('RGB')
+                        img.close()
+                        img = new_img
 
                 # 保存
                 save_kwargs = {}
@@ -133,6 +139,7 @@ class CompressionWorker(QThread):
                     save_kwargs['optimize'] = True
 
                 img.save(output_path, fmt, **save_kwargs)
+                img.close()  # 释放内存
                 processed += 1
                 self.progress.emit(i + 1)
 

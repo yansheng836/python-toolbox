@@ -77,9 +77,10 @@ class FormatConvertWorker(QThread):
             pil_fmt, ext = self.FORMAT_MAP[self.target_fmt]
             for i, file_path in enumerate(self.files):
                 self.status.emit(f"正在转换: {os.path.basename(file_path)}")
-                img = Image.open(file_path)
-                img.load()  # 强制加载，提前发现损坏文件
-                img = self._prepare_image(img, pil_fmt)
+                # 使用上下文管理器确保文件句柄释放，复制后操作避免源文件锁定
+                with Image.open(file_path) as src_img:
+                    src_img.load()  # 强制加载，提前发现损坏文件
+                    img = self._prepare_image(src_img, pil_fmt)
                 base = os.path.splitext(os.path.basename(file_path))[0]
                 out_dir = self.output_dir or os.path.dirname(file_path)
                 out_path = os.path.join(out_dir, f"{base}.{ext}")
@@ -96,12 +97,15 @@ class FormatConvertWorker(QThread):
                     save_kwargs['optimize'] = True
                 elif pil_fmt == "BMP":
                     if img.mode != "RGB":
-                        img = img.convert("RGB")
+                        new_img = img.convert("RGB")
+                        img.close()
+                        img = new_img
                 elif pil_fmt == "TIFF":
                     save_kwargs['compression'] = "tiff_deflate"
                 elif pil_fmt == "GIF":
                     save_kwargs['optimize'] = True
                 img.save(out_path, pil_fmt, **save_kwargs)
+                img.close()  # 释放内存
                 processed += 1
                 self.progress.emit(i + 1)
             self.finished.emit(True, f"成功转换 {processed} 张图片！")

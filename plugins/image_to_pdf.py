@@ -80,9 +80,9 @@ class PDFWorker(QThread):
                 self.status.emit("正在扫描图片尺寸...")
                 for f in self.files:
                     try:
-                        img = Image.open(f)
-                        if max_width is None or img.width > max_width:
-                            max_width = img.width
+                        with Image.open(f) as img:
+                            if max_width is None or img.width > max_width:
+                                max_width = img.width
                     except Exception as e:
                         print(f"Error in image_to_pdf: {e}")
                         skipped += 1
@@ -103,12 +103,13 @@ class PDFWorker(QThread):
                 batch_imgs = []
                 for f in batch_files:
                     try:
-                        img = Image.open(f)
-                        img.load()
-                        if img.mode in ('RGBA', 'LA', 'P'):
-                            img = img.convert('RGBA')
-                        else:
-                            img = img.convert('RGB')
+                        with Image.open(f) as src_img:
+                            src_img.load()
+                            if src_img.mode in ('RGBA', 'LA', 'P'):
+                                img = src_img.convert('RGBA')
+                            else:
+                                img = src_img.convert('RGB')
+                        # src_img 已关闭，img 为独立对象
                         batch_imgs.append(img)
                         processed_count += 1
                         self.progress.emit(processed_count)
@@ -130,19 +131,28 @@ class PDFWorker(QThread):
                     # 页面大小
                     if self.page_size == "智能缩放" and img.width != max_width:
                         ratio = max_width / img.width
-                        img = img.resize((max_width, int(img.height * ratio)), Image.Resampling.LANCZOS)
+                        resized = img.resize((max_width, int(img.height * ratio)), Image.Resampling.LANCZOS)
+                        img.close()
+                        img = resized
                     elif self.page_size == "A4":
-                        img = img.resize((595, 842), Image.Resampling.LANCZOS)
+                        resized = img.resize((595, 842), Image.Resampling.LANCZOS)
+                        img.close()
+                        img = resized
                     elif self.page_size == "A3":
-                        img = img.resize((842, 1191), Image.Resampling.LANCZOS)
+                        resized = img.resize((842, 1191), Image.Resampling.LANCZOS)
+                        img.close()
+                        img = resized
 
                     # 确保 RGB 模式
                     if img.mode == 'RGBA':
                         bg = Image.new('RGB', img.size, (255, 255, 255))
                         bg.paste(img, mask=img.split()[3])
+                        img.close()
                         img = bg
                     elif img.mode != 'RGB':
-                        img = img.convert('RGB')
+                        rgb = img.convert('RGB')
+                        img.close()
+                        img = rgb
 
                     # 去除 ICC 配置，避免 "broken data stream" 错误
                     if 'icc_profile' in img.info:
@@ -155,6 +165,7 @@ class PDFWorker(QThread):
                         os.makedirs(temp_dir, exist_ok=True)
                     tmp_jpg = os.path.join(temp_dir, f".temp_{int(time.time() * 1000)}_{id(img)}.jpg")
                     img.save(tmp_jpg, format='JPEG', quality=jpeg_quality, optimize=True)
+                    img.close()  # 释放内存
                     batch_jpeg_files.append(tmp_jpg)
                     temp_files.add(tmp_jpg)  # 使用集合，避免重复
 
@@ -193,7 +204,10 @@ class PDFWorker(QThread):
                             temp_files.discard(jpg_file)
                         continue
                 else:
-                    pil_imgs = [Image.open(j).convert('RGB') for j in batch_jpeg_files]
+                    pil_imgs = []
+                    for j in batch_jpeg_files:
+                        with Image.open(j) as src:
+                            pil_imgs.append(src.convert('RGB'))
                     if pil_imgs:
                         pil_imgs[0].save(
                             temp_pdf, "PDF",
@@ -201,6 +215,9 @@ class PDFWorker(QThread):
                             save_all=True,
                             append_images=pil_imgs[1:]
                         )
+                        # 释放内存
+                        for img in pil_imgs:
+                            img.close()
 
                 # 验证临时PDF不为空
                 if os.path.getsize(temp_pdf) == 0:

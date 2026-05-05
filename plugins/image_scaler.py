@@ -116,6 +116,7 @@ class ScalingWorker(QThread):
                         else:
                             scaled_img.save(output_file)
 
+                        scaled_img.close()  # 释放内存
                         success_count += 1
                         self.image_processed.emit(input_file, output_file)
 
