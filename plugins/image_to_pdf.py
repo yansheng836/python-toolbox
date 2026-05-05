@@ -50,7 +50,7 @@ class PDFWorker(QThread):
     BATCH_SIZE = 50  # 每批处理图片数，控制内存占用
 
     def run(self):
-        temp_files = []  # 所有临时文件，用于异常时清理
+        temp_files = set()  # 使用集合避免重复文件名导致的清理问题
         try:
             # ========= 预检查：目标文件是否被占用 =========
             # 在开始处理前检查，避免处理完成后才发现文件被占用
@@ -148,14 +148,15 @@ class PDFWorker(QThread):
                     if 'icc_profile' in img.info:
                         del img.info['icc_profile']
 
-                    # 保存为临时 JPEG
-                    tmp_jpg = os.path.join(
-                        os.path.dirname(self.output) or '.',
-                        f".temp_{id(img)}.jpg"
-                    )
+                    # 保存为临时 JPEG（使用时间戳+随机数避免文件名冲突）
+                    import time
+                    temp_dir = os.path.dirname(self.output) or '.'
+                    if not os.path.exists(temp_dir):
+                        os.makedirs(temp_dir, exist_ok=True)
+                    tmp_jpg = os.path.join(temp_dir, f".temp_{int(time.time() * 1000)}_{id(img)}.jpg")
                     img.save(tmp_jpg, format='JPEG', quality=jpeg_quality, optimize=True)
                     batch_jpeg_files.append(tmp_jpg)
-                    temp_files.append(tmp_jpg)  # 注册临时文件
+                    temp_files.add(tmp_jpg)  # 使用集合，避免重复
 
                 batch_imgs.clear()
 
@@ -164,22 +165,33 @@ class PDFWorker(QThread):
                     os.path.dirname(self.output) or '.',
                     f".temp_{batch_start}.pdf"
                 )
-                temp_files.append(temp_pdf)
+                temp_files.add(temp_pdf)
 
                 if FITZ_AVAILABLE:
                     doc = fitz.open()
                     for jpg_file in batch_jpeg_files:
-                        fitz_img = fitz.open(jpg_file)
-                        pdfbytes = fitz_img.convert_to_pdf()
-                        img_pdf = fitz.open("pdf", pdfbytes)
-                        doc.insert_pdf(img_pdf)
-                        img_pdf.close()
-                        fitz_img.close()
+                        try:
+                            fitz_img = fitz.open(jpg_file)
+                            pdfbytes = fitz_img.convert_to_pdf()
+                            img_pdf = fitz.open("pdf", pdfbytes)
+                            doc.insert_pdf(img_pdf)
+                            img_pdf.close()
+                            fitz_img.close()
+                        except Exception as e:
+                            print(f"Error opening JPEG {jpg_file}: {e}")
+                            continue
                     doc.save(temp_pdf, garbage=0, deflate=False)
                     doc.close()
                 elif IMG2PDF_AVAILABLE:
-                    with open(temp_pdf, "wb") as f:
-                        f.write(img2pdf.convert(batch_jpeg_files))
+                    try:
+                        with open(temp_pdf, "wb") as f:
+                            f.write(img2pdf.convert(batch_jpeg_files))
+                    except Exception as e:
+                        print(f"Error creating PDF with img2pdf: {e}")
+                        # 清理本批 JPEG
+                        for jpg_file in batch_jpeg_files:
+                            temp_files.discard(jpg_file)
+                        continue
                 else:
                     pil_imgs = [Image.open(j).convert('RGB') for j in batch_jpeg_files]
                     if pil_imgs:
@@ -200,10 +212,9 @@ class PDFWorker(QThread):
                 for jpg_file in batch_jpeg_files:
                     try:
                         os.remove(jpg_file)
-                        temp_files.remove(jpg_file)
+                        temp_files.discard(jpg_file)
                     except OSError as e:
-                        print(f"Error in image_to_pdf: {e}")
-                        pass
+                        print(f"Error removing JPEG {jpg_file}: {e}")
 
             if not temp_pdfs:
                 self.finished.emit(False, "没有成功处理任何图片，请检查图片文件是否损坏。")
@@ -214,14 +225,18 @@ class PDFWorker(QThread):
             if len(temp_pdfs) == 1:
                 import shutil
                 shutil.move(temp_pdfs[0], self.output)
-                temp_files.remove(temp_pdfs[0])
+                temp_files.discard(temp_pdfs[0])
             else:
                 if FITZ_AVAILABLE:
                     doc = fitz.open()
                     for tpdf in temp_pdfs:
-                        src = fitz.open(tpdf)
-                        doc.insert_pdf(src)
-                        src.close()
+                        try:
+                            src = fitz.open(tpdf)
+                            doc.insert_pdf(src)
+                            src.close()
+                        except Exception as e:
+                            print(f"Error opening temp PDF {tpdf}: {e}")
+                            continue
                     doc.save(self.output, garbage=0, deflate=False)
                     doc.close()
                 else:
@@ -233,10 +248,9 @@ class PDFWorker(QThread):
             for tpdf in temp_pdfs:
                 try:
                     os.remove(tpdf)
-                    temp_files.remove(tpdf)
+                    temp_files.discard(tpdf)
                 except OSError as e:
-                    print(f"Error in image_to_pdf: {e}")
-                    pass
+                    print(f"Error removing temp PDF {tpdf}: {e}")
 
             msg = f"PDF已保存至:\n{self.output}"
             if skipped > 0:
@@ -255,8 +269,7 @@ class PDFWorker(QThread):
                 try:
                     os.remove(tf)
                 except OSError as e:
-                    print(f"Error in image_to_pdf: {e}")
-                    pass
+                    print(f"Error in image_to_pdf (cleanup): {e}")
 
 
 class ImageToPDF(ToolPlugin):
