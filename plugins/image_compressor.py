@@ -22,7 +22,7 @@ if PIL_AVAILABLE:
 
 # 导入主程序中的基类和组件
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
+from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, Theme
 from config import SPACING_SMALL
 
 from common.file_list_panel import FileListPanel
@@ -210,14 +210,14 @@ class ImageCompressor(ToolPlugin):
         self.theme = Theme.DARK
 
         # 标题（使用 PLUGIN_MODULES 配置中的 icon + name）
-        self.title_label = QLabel(f"{self.icon} {self.name}")
+        self.title_label = SelectableLabel(f"{self.icon} {self.name}")
         self.title_label.setStyleSheet(
             f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};"
         )
         layout.addWidget(self.title_label)
 
         # 说明（使用 PLUGIN_MODULES 配置中的 description）
-        self.desc_label = QLabel(self.description)
+        self.desc_label = SelectableLabel(self.description)
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 

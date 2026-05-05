@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QFileDialog, QLineEdit, QHBoxLayout
 )
 
-from toolbox import ToolPlugin, Card, AnimatedButton, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
+from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
 from common.message_utils import show_info, show_error, show_warning, show_question
 from common.action_panel import ActionPanel
 from common.utils import get_create_time, get_modify_time
@@ -112,12 +112,12 @@ class FileDeduplicatorWidget(QWidget):
         layout.setSpacing(16)
 
         # 标题（使用 PLUGIN_MODULES 配置中的 icon + name）
-        self.title_label = QLabel(f"{self.icon} {self.name}")
+        self.title_label = SelectableLabel(f"{self.icon} {self.name}")
         self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700};")
         layout.addWidget(self.title_label)
 
         # 描述（使用 PLUGIN_MODULES 配置中的 description）
-        self.desc_label = QLabel(self.description)
+        self.desc_label = SelectableLabel(self.description)
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
@@ -159,7 +159,7 @@ class FileDeduplicatorWidget(QWidget):
         results_card.content_layout.addWidget(self.results_tree)
 
         # 统计标签
-        self.stats_label = QLabel("未扫描")
+        self.stats_label = SelectableLabel("未扫描")
         self.stats_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_14};")
         results_card.content_layout.addWidget(self.stats_label)
         layout.addWidget(results_card)

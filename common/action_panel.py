@@ -9,7 +9,7 @@
 from PyQt6.QtWidgets import QProgressBar, QLabel
 from PyQt6.QtCore import Qt, pyqtSignal
 
-from toolbox import AnimatedButton, Card, Theme, FONT_SIZE_14, FONT_WEIGHT_600
+from toolbox import AnimatedButton, Card, SelectableLabel, Theme, FONT_SIZE_14, FONT_WEIGHT_600
 from common.message_utils import show_info
 
 
@@ -88,7 +88,7 @@ class ActionPanel(Card):
         self.content_layout.addWidget(self.progress)
 
         # 状态标签
-        self.status_label = QLabel(status_text)
+        self.status_label = SelectableLabel(status_text)
         self.status_label.setStyleSheet(f"color: {Theme.DARK['text_secondary']};")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.content_layout.addWidget(self.status_label)

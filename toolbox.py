@@ -149,6 +149,18 @@ class AnimatedButton(QPushButton):
         super().leaveEvent(event)
 
 
+class SelectableLabel(QLabel):
+    """支持鼠标选择和复制文本的标签组件"""
+
+    def __init__(self, text="", parent=None):
+        super().__init__(text, parent)
+        self.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+            | Qt.TextInteractionFlag.LinksAccessibleByMouse
+        )
+        self.setCursor(Qt.CursorShape.IBeamCursor)
+
+
 class Card(QFrame):
     """现代化卡片组件"""
 
@@ -452,7 +464,7 @@ class WelcomePage(QWidget):
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(logo)
 
-        self.title = QLabel(APP_NAME)
+        self.title = SelectableLabel(APP_NAME)
         self.title.setStyleSheet(f"""
             font-size: 36px;
             font-weight: {FONT_WEIGHT_800};
@@ -461,7 +473,7 @@ class WelcomePage(QWidget):
         self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.title)
 
-        self.subtitle = QLabel(WELCOME_CONFIG.get("subtitle", ""))
+        self.subtitle = SelectableLabel(WELCOME_CONFIG.get("subtitle", ""))
         self.subtitle.setStyleSheet(f"""
             font-size: {FONT_SIZE_16};
             color: {Theme.DARK['text_secondary']};
@@ -533,7 +545,7 @@ class WelcomePage(QWidget):
             self.separators.append(line1)
             card_layout.addWidget(line1)
 
-            text_label = QLabel(text)
+            text_label = SelectableLabel(text)
             font = text_label.font()
             font.setPointSize(14)
             font.setBold(True)
@@ -551,7 +563,7 @@ class WelcomePage(QWidget):
             card_layout.addWidget(line2)
 
             desc_text = desc[:40] + "..." if len(desc) > 40 else desc
-            desc_label = QLabel(desc_text)
+            desc_label = SelectableLabel(desc_text)
             desc_font = desc_label.font()
             desc_font.setPointSize(10)
             desc_label.setFont(desc_font)
@@ -566,7 +578,7 @@ class WelcomePage(QWidget):
         self.scroll_area.setWidget(self.features_widget)
         layout.addWidget(self.scroll_area)
 
-        self.hint = QLabel(WELCOME_CONFIG.get("hint", ""))
+        self.hint = SelectableLabel(WELCOME_CONFIG.get("hint", ""))
         self.hint.setStyleSheet(f"""
             font-size: {FONT_SIZE_16};
             color: {Theme.DARK['primary']};
@@ -687,18 +699,18 @@ class SettingsPlugin(ToolPlugin):
 
         about_card = Card(title="关于")
 
-        self.version_label = QLabel(f"版本: v{APP_VERSION}")
+        self.version_label = SelectableLabel(f"版本: v{APP_VERSION}")
         self.version_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};")
         self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.version_label)
 
-        self.desc_label = QLabel(self.description)
+        self.desc_label = SelectableLabel(self.description)
         self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_16};")
         self.desc_label.setWordWrap(True)
         self.desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.desc_label)
 
-        self.website_label = QLabel(
+        self.website_label = SelectableLabel(
             f"<a href='{APP_WEBSITE_URL}' style='color: #6366f1; text-decoration: none;'>{APP_WEBSITE_LINK_TEXT}</a>")
         self.website_label.setOpenExternalLinks(True)
         self.website_label.setStyleSheet(f"""
@@ -709,7 +721,7 @@ class SettingsPlugin(ToolPlugin):
         self.website_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.website_label)
 
-        self.copyright_label = QLabel(APP_COPYRIGHT)
+        self.copyright_label = SelectableLabel(APP_COPYRIGHT)
         self.copyright_label.setStyleSheet(f"color: #64748b; font-size: {FONT_SIZE_12};")
         self.copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.copyright_label)
