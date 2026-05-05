@@ -50,6 +50,29 @@ class FormatConvertWorker(QThread):
 
     def run(self):
         try:
+            # ========= 预检查：输出目录是否可写 =========
+            out_dir = self.output_dir or (
+                os.path.dirname(self.files[0]) if self.files else '.'
+            )
+            try:
+                if not os.path.exists(out_dir):
+                    os.makedirs(out_dir, exist_ok=True)
+                # 尝试在输出目录创建临时文件，检查是否可写
+                test_file = os.path.join(out_dir, ".write_test.tmp")
+                with open(test_file, 'w') as f:
+                    f.write("test")
+                os.remove(test_file)
+            except PermissionError as e:
+                self.finished.emit(
+                    False,
+                    f"输出目录被占用或无法写入：\n{out_dir}\n\n"
+                    f"请检查目录权限，或关闭可能占用该目录的程序。"
+                )
+                return
+            except Exception as e:
+                self.finished.emit(False, f"无法访问输出目录：{str(e)}")
+                return
+
             processed = 0
             pil_fmt, ext = self.FORMAT_MAP[self.target_fmt]
             for i, file_path in enumerate(self.files):

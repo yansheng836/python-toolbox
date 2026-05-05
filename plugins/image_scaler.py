@@ -51,6 +51,27 @@ class ScalingWorker(QThread):
 
     def run(self):
         try:
+            # ========= 预检查：输出目录是否可写 =========
+            output_dir = self.output_dir or os.path.dirname(self.input_files[0]) if self.input_files else '.'
+            try:
+                if not os.path.exists(output_dir):
+                    os.makedirs(output_dir, exist_ok=True)
+                # 尝试在输出目录创建临时文件，检查是否可写
+                test_file = os.path.join(output_dir, ".write_test.tmp")
+                with open(test_file, 'w') as f:
+                    f.write("test")
+                os.remove(test_file)
+            except PermissionError as e:
+                self.finished.emit(
+                    False,
+                    f"输出目录被占用或无法写入：\n{output_dir}\n\n"
+                    f"请检查目录权限，或关闭可能占用该目录的程序。"
+                )
+                return
+            except Exception as e:
+                self.finished.emit(False, f"无法访问输出目录：{str(e)}")
+                return
+
             # 如果指定了输出目录，则创建
             if self.output_dir:
                 os.makedirs(self.output_dir, exist_ok=True)
