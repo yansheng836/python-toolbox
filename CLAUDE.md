@@ -14,6 +14,8 @@ These rules MUST be followed. Violations will cause bugs or maintenance debt.
 | 4 | All Python files MUST use UTF-8 encoding and LF (`\n`) line endings | [File Encoding](#file-encoding-and-line-endings) |
 | 5 | Only catch meaningful exceptions; always report errors; no try-catch for project-internal imports | [Exception Handling](#exception-handling-mandatory) |
 | 6 | Module availability flags (`PIL_AVAILABLE`, etc.) must be imported from `common/utils.py`, never re-declared | [Exception Handling](#exception-handling-mandatory) |
+| 7 | Informational text MUST use `SelectableLabel` to support copying | [Text Copyability](#text-copyability-mandatory) |
+| 8 | UI components MUST support responsive layout (Expanding策略, 动态高度) | [Responsive Layout](#responsive-layout-mandatory) |
 
 ---
 
@@ -178,6 +180,7 @@ Common issues to catch:
 | `ToolPlugin` | `toolbox.py` | Base class for all plugins |
 | `Theme` | `toolbox.py` | Dark/light color palettes + ALL color constants |
 | `AnimatedButton` | `toolbox.py` | Reusable button with hover effects |
+| `SelectableLabel` | `toolbox.py` | Text label supporting mouse selection and copying |
 | `Card` | `toolbox.py` | Card container with title/content layout |
 | `DragDropHandler` | `toolbox.py` | Drag-and-drop utility |
 | `SidebarButton` | `toolbox.py` | Sidebar navigation button |
@@ -204,12 +207,15 @@ Common issues to catch:
 #### When Adding a New Plugin
 
 1. **Check `FileListPanel`** — if the plugin needs a file list, use `FileListPanel` from `common/file_list_panel.py`
-2. **Use shared UI components** — import `AnimatedButton`, `Card` from `toolbox`
+2. **Use shared UI components** — import `AnimatedButton`, `Card`, `SelectableLabel` from `toolbox`
 3. **Reuse helper functions** — check `common/utils.py` before writing new ones
 4. **Use `ActionPanel`** — for button + progress + status, use `ActionPanel` from `common/action_panel.py`
-5. **Follow existing patterns** — follow established plugin code for consistency
-6. **Implement `update_theme()`** — update ALL custom-styled widgets; use `Theme` constants
-7. **Test in both themes** — verify text readability in dark AND light mode
+5. **Use `SelectableLabel`** — for titles, descriptions, status messages (any text users might copy)
+6. **Responsive layout** — no `addStretch()` at end; let FileListPanel expand naturally
+7. **Follow existing patterns** — follow established plugin code for consistency
+8. **Implement `update_theme()`** — update ALL custom-styled widgets; use `Theme` constants
+9. **Test in both themes** — verify text readability in dark AND light mode
+10. **Test responsive behavior** — verify layout adapts in normal, maximized, and fullscreen modes
 
 ### File Encoding and Line Endings
 
@@ -253,6 +259,113 @@ try:
 except json.JSONDecodeError:
     return None  # No error info — hard to debug
 ```
+
+### Text Copyability (MANDATORY)
+
+**Rule: All informational text that users might want to copy MUST use `SelectableLabel` instead of `QLabel`.**
+
+Users should be able to select and copy:
+- Version numbers, copyright info, website links
+- File paths, output paths, status messages
+- Error messages, scan results, statistics
+- Plugin titles and descriptions
+- Welcome page content
+
+#### Using SelectableLabel
+
+```python
+from toolbox import SelectableLabel
+
+# GOOD: Informational text uses SelectableLabel
+self.version_label = SelectableLabel(f"版本: v{APP_VERSION}")
+self.status_label = SelectableLabel("正在处理...")
+self.desc_label = SelectableLabel(self.description)
+
+# BAD: Informational text uses QLabel (not copyable)
+self.version_label = QLabel(f"版本: v{APP_VERSION}")
+```
+
+#### When to Use SelectableLabel
+
+| Use SelectableLabel | Use QLabel |
+|---------------------|------------|
+| Version numbers, copyright | Button text |
+| File paths, output paths | Form field labels ("输出格式:") |
+| Status messages, error messages | Decorative icons |
+| Statistics, scan results | Section titles (unless user needs to copy) |
+| Plugin titles/descriptions | - |
+
+#### SelectableLabel Features
+
+- Supports text selection with mouse (`TextSelectableByMouse`)
+- Supports clickable links (`LinksAccessibleByMouse`)
+- Shows I-beam cursor on hover
+- Works with all existing QLabel styling
+
+### Responsive Layout (MANDATORY)
+
+**Rule: UI components MUST adapt to window size changes. Avoid fixed heights; use Expanding策略 and dynamic sizing.**
+
+#### Core Principles
+
+1. **Tables and lists**: Use `setSizePolicy(Expanding, Expanding)` to fill available space
+2. **No `addStretch()` at layout end**: Let content naturally fill space instead of pushing to bottom
+3. **Dynamic heights**: Use `resizeEvent` for components that need proportional sizing
+4. **Minimum heights only**: Use `setMinimumHeight()` instead of `setFixedHeight()`
+
+#### FileListPanel (Already Responsive)
+
+`FileListPanel` in `common/file_list_panel.py` already implements responsive layout:
+
+```python
+self.table.setMinimumHeight(self.table_min_height)  # Minimum, not fixed
+self.table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+```
+
+When using `FileListPanel`, the table automatically expands when the window grows.
+
+#### Plugin Layout Pattern
+
+```python
+# GOOD: Responsive layout
+layout = QVBoxLayout(widget)
+layout.addWidget(self.title_label)
+layout.addWidget(self.desc_label)
+layout.addWidget(file_card)      # Contains FileListPanel
+layout.addWidget(settings_card)
+layout.addWidget(self.action_panel)
+# NO addStretch() — let FileListPanel expand naturally
+
+# BAD: Fixed layout with wasted space
+layout.addWidget(self.action_panel)
+layout.addStretch()  # Pushes empty space to bottom instead of expanding content
+```
+
+#### Dynamic Height Components
+
+For components that need proportional sizing (like welcome page carousel):
+
+```python
+def resizeEvent(self, event):
+    """Adjust component height based on window size"""
+    super().resizeEvent(event)
+    if self.scroll_area:
+        available_height = self.height()
+        # Calculate target height: min 250px, max 500px, default 35% of window
+        target_height = max(250, min(500, int(available_height * 0.35)))
+        self.scroll_area.setMaximumHeight(target_height)
+```
+
+#### Responsive Layout Checklist
+
+When adding new UI components:
+
+- [ ] Tables/lists use `setSizePolicy(Expanding, Expanding)`
+- [ ] Use `setMinimumHeight()` instead of `setFixedHeight()` where possible
+- [ ] No `layout.addStretch()` at the end of plugin layouts
+- [ ] Components that need proportional sizing implement `resizeEvent()`
+- [ ] Test in normal, maximized, and fullscreen modes
+- [ ] Verify no excessive whitespace at bottom when window is large
 
 ---
 
@@ -303,8 +416,8 @@ except json.JSONDecodeError:
 Inherit `ToolPlugin`, implement `create_ui()` and `update_theme()`, then drop the file in `plugins/`.
 
 ```python
-from toolbox import ToolPlugin, Card, AnimatedButton, Theme
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
+from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, Theme
+from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
 class MyTool(ToolPlugin):
     name = "我的工具"
@@ -314,12 +427,26 @@ class MyTool(ToolPlugin):
     def create_ui(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.addWidget(QLabel("Hello, World!"))
+        
+        # Use SelectableLabel for informational text
+        self.title_label = SelectableLabel(f"{self.icon} {self.name}")
+        layout.addWidget(self.title_label)
+        
+        self.desc_label = SelectableLabel(self.description)
+        layout.addWidget(self.desc_label)
+        
+        # Add your content here
+        # ...
+        
+        # NO layout.addStretch() at the end for responsive layout
         return widget
 
     def update_theme(self, theme):
         """Update UI when theme changes — MUST update all custom-styled widgets."""
-        pass
+        if hasattr(self, 'title_label'):
+            self.title_label.setStyleSheet(f"color: {theme['text']};")
+        if hasattr(self, 'desc_label'):
+            self.desc_label.setStyleSheet(f"color: {theme['text_secondary']};")
 ```
 
 ### Plugin Checklist
@@ -327,10 +454,13 @@ class MyTool(ToolPlugin):
 - [ ] Inherits `ToolPlugin` and implements `create_ui()` + `update_theme()`
 - [ ] Uses `FileListPanel` if file list needed
 - [ ] Uses `ActionPanel` for action button + progress + status
+- [ ] Uses `SelectableLabel` for informational text (titles, descriptions, status)
+- [ ] Responsive layout: no `addStretch()` at end, tables use Expanding策略
 - [ ] Imports shared helpers from `common/utils.py` (not re-declared)
 - [ ] Imports `Image`/`fitz`/`img2pdf` conditionally based on availability flags
 - [ ] All used names are imported (run pyflakes to verify)
 - [ ] Tested in both dark and light themes
+- [ ] Tested in normal, maximized, and fullscreen window modes
 - [ ] Added to `hiddenimports` in `toolbox.spec`
 - [ ] Syntax-checked with `python -m py_compile`
 
