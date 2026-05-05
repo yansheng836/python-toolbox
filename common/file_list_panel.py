@@ -7,7 +7,7 @@ import os
 import re
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
-    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
+    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QSizePolicy
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent
 
@@ -80,6 +80,8 @@ class FileListPanel(QWidget):
 
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setMinimumHeight(self.table_min_height)
+        # 设置表格扩展策略，使其在窗口变大时自动拉伸
+        self.table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         # 启用拖拽支持
         self.table.setAcceptDrops(True)
         self.table.installEventFilter(self)

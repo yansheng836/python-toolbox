@@ -358,8 +358,6 @@ class ImageStitcher(ToolPlugin):
         self.action_panel.clicked.connect(self.start_stitch)
         layout.addWidget(self.action_panel)
 
-        layout.addStretch()
-
         # 应用初始主题
         if Theme is not None:
             self.update_theme(Theme.DARK)

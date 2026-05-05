@@ -207,8 +207,6 @@ class FileDeduplicatorWidget(QWidget):
 
         layout.addWidget(deletion_card)
 
-        layout.addStretch()
-
         # 应用初始主题
         if Theme is not None:
             self.apply_theme(Theme.DARK)

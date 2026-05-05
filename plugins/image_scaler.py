@@ -300,8 +300,6 @@ class ImageScalerWidget(QWidget):
         self.action_panel.clicked.connect(self.start_scaling)
         layout.addWidget(self.action_panel)
 
-        layout.addStretch()
-
         # 初始状态
         self.on_scale_type_changed()
 

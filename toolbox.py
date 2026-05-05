@@ -382,6 +382,16 @@ class WelcomePage(QWidget):
                 self._paused_by_hover = False
         return super().eventFilter(watched, event)
 
+    def resizeEvent(self, event):
+        """窗口大小变化时动态调整轮播区域高度"""
+        super().resizeEvent(event)
+        if self.scroll_area:
+            # 根据窗口高度动态设置轮播区域高度（约占可用高度的 35-40%）
+            available_height = self.height()
+            # 计算合适的高度：最小 250px，最大 500px，默认约 35% 窗口高度
+            target_height = max(250, min(500, int(available_height * 0.35)))
+            self.scroll_area.setMaximumHeight(target_height)
+
     def update_theme(self, theme):
         """更新欢迎页主题"""
         if self.title:
@@ -484,7 +494,8 @@ class WelcomePage(QWidget):
         # 功能卡片区域 - 使用横向滚动（自动轮播）
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setFixedHeight(300)
+        # 移除固定高度，改为在 resizeEvent 中动态设置
+        self.scroll_area.setMinimumHeight(250)  # 设置最小高度
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll_area.setStyleSheet(f"""
