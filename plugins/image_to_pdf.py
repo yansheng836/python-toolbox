@@ -206,12 +206,15 @@ class PDFWorker(QThread):
                 if os.path.getsize(temp_pdf) == 0:
                     raise Exception(f"临时PDF生成失败（0字节）: {temp_pdf}")
 
+                # 使用相对路径存储，但确保临时文件能被找到
                 temp_pdfs.append(temp_pdf)
 
                 # 2d. 清理本批 JPEG（PDF 已生成，JPEG 不再需要）
                 for jpg_file in batch_jpeg_files:
                     try:
-                        os.remove(jpg_file)
+                        jpg_full = os.path.abspath(jpg_file)
+                        if os.path.exists(jpg_full):
+                            os.remove(jpg_full)
                         temp_files.discard(jpg_file)
                     except OSError as e:
                         print(f"Error removing JPEG {jpg_file}: {e}")
@@ -224,7 +227,10 @@ class PDFWorker(QThread):
             self.status.emit("正在合并PDF...")
             if len(temp_pdfs) == 1:
                 import shutil
-                shutil.move(temp_pdfs[0], self.output)
+                # 使用完整路径移动文件（处理相对路径情况）
+                temp_pdf_full = os.path.abspath(temp_pdfs[0])
+                if os.path.exists(temp_pdf_full):
+                    shutil.move(temp_pdf_full, self.output)
                 temp_files.discard(temp_pdfs[0])
             else:
                 if FITZ_AVAILABLE:
@@ -247,7 +253,10 @@ class PDFWorker(QThread):
             self.status.emit("正在清理临时文件...")
             for tpdf in temp_pdfs:
                 try:
-                    os.remove(tpdf)
+                    # 使用完整路径删除临时文件
+                    temp_pdf_full = os.path.abspath(tpdf)
+                    if os.path.exists(temp_pdf_full):
+                        os.remove(temp_pdf_full)
                     temp_files.discard(tpdf)
                 except OSError as e:
                     print(f"Error removing temp PDF {tpdf}: {e}")
@@ -267,7 +276,9 @@ class PDFWorker(QThread):
             # 异常或正常结束时，清理所有未删除的临时文件
             for tf in list(temp_files):
                 try:
-                    os.remove(tf)
+                    tf_full = os.path.abspath(tf)
+                    if os.path.exists(tf_full):
+                        os.remove(tf_full)
                 except OSError as e:
                     print(f"Error in image_to_pdf (cleanup): {e}")
 
