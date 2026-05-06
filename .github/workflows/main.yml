@@ -84,8 +84,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: toolbox-build-${{ github.sha }}
-          path:
-            - dist/*.exe
-            - dist/*.docx
+          path: |
+            dist/*.exe
+            dist/*.docx
           retention-days: 30
           if-no-files-found: error
