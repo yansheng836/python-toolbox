@@ -38,6 +38,7 @@ class ImageStitchWorker(QThread):
     """图片拼接工作线程（支持自动分批）"""
     status = pyqtSignal(str)
     finished = pyqtSignal(bool, str)
+    progress = pyqtSignal(int)  # 整体进度 0-100
 
     def __init__(self, files, output_path, direction, align, bg_color):
         super().__init__()
@@ -259,6 +260,7 @@ class ImageStitchWorker(QThread):
                                 y = 0
                             canvas.paste(img, (x, y), img)
                             x += img.width
+                        self.progress.emit(int(global_idx / total_images * 100))
                 else:
                     y = 0
                     for i, (f, expected_w, expected_h) in enumerate(batch_info):
@@ -279,6 +281,7 @@ class ImageStitchWorker(QThread):
                                 x = 0
                             canvas.paste(img, (x, y), img)
                             y += img.height
+                        self.progress.emit(int(global_idx / total_images * 100))
 
                 # 输出格式不支持透明时转 RGB
                 out_path = self._make_output_path(bi)
@@ -533,11 +536,12 @@ class ImageStitcher(ToolPlugin):
         align = align_map[self.align_combo.currentIndex()]
         bg = (self.bg_r.value(), self.bg_g.value(), self.bg_b.value())
 
-        self.action_panel.start_task(0, status="正在拼接...")
+        self.action_panel.start_task(100, status="正在拼接...")
         self.worker = ImageStitchWorker(
             files, self.output_path.text(), direction, align, bg
         )
         self.worker.status.connect(self.action_panel.update_status)
+        self.worker.progress.connect(self.action_panel.update_progress)
         self.worker.finished.connect(self.stitch_finished)
         self.worker.start()
 
