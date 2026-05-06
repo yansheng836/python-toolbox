@@ -9,33 +9,88 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
 
-    # Check out repository under $GITHUB_WORKSPACE, so the job can access it
-    - name: Checkout code
-      uses: actions/checkout@v6
+      # Check out repository
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-    # Run using Python 3.8 for consistency and aiohttp
-    - name: Set up Python 3.12.7
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12.7'
-        architecture: 'x64'
-        cache: 'pip'
+      # Set up Python 3.12
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
+          cache: 'pip'
 
-    # Install dependencies with `pip`
-    - name: Install requirements
-      run: |
-        python3 -m pip install --upgrade pip setuptools wheel
-        python3 -m pip install -r requirements.txt
+      # Install dependencies with pip
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements.txt
+        shell: bash
 
-    # Run main.py to check for errors (headless mode with xvfb)
-    - name: Run main.py to check for errors
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y xvfb
-        # Run with virtual display, timeout after 10 seconds (GUI won't exit by itself)
-        # Exit code 124 means timeout (expected), other non-zero codes indicate errors
-        timeout 10 xvfb-run --auto-servernum python3 main.py || [ $? -eq 124 ]
+      # Syntax check - core modules
+      - name: Syntax check - core modules
+        run: |
+          echo "Checking syntax for core modules..."
+          python -m py_compile config.py
+          python -m py_compile toolbox.py
+          python -m py_compile main.py
+          python -m py_compile settings_page.py
+          python -m py_compile build.py
+          echo "✓ Core modules syntax check passed"
+        shell: bash
+
+      # Syntax check - common modules
+      - name: Syntax check - common modules
+        run: |
+          echo "Checking syntax for common modules..."
+          for file in common/*.py; do
+            [ -f "$file" ] && python -m py_compile "$file"
+          done
+          echo "✓ Common modules syntax check passed"
+        shell: bash
+
+      # Syntax check - plugin modules
+      - name: Syntax check - plugin modules
+        run: |
+          echo "Checking syntax for plugin modules..."
+          for file in plugins/*.py; do
+            [ -f "$file" ] && python -m py_compile "$file"
+          done
+          echo "✓ Plugin modules syntax check passed"
+        shell: bash
+
+      # Syntax check - test files
+      - name: Syntax check - test files
+        run: |
+          echo "Checking syntax for test files..."
+          if [ -d "test" ]; then
+            for file in test/*.py; do
+              [ -f "$file" ] && python -m py_compile "$file"
+            done
+          fi
+          echo "✓ Test files syntax check passed"
+        shell: bash
+
+      # Run main.py to check for errors (timeout after 10 seconds)
+      - name: Run main.py to check for errors
+        run: |
+          # Start main.py in background
+          python main.py &
+          PID=$!
+          echo "Started main.py with PID $PID"
+          sleep 10
+          # Check if process is still running
+          if tasklist /FI "PID eq $PID" 2>NUL | find "$PID" >NUL; then
+            echo "✓ main.py started successfully (still running as expected)"
+            taskkill /F /PID $PID 2>NUL || true
+            exit 0
+          else
+            echo "✗ main.py exited unexpectedly"
+            exit 1
+          fi
+        shell: bash
