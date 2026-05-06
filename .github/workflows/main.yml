@@ -1,103 +1,103 @@
-name: Test
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: windows-latest
-
-    steps:
-
-      # Check out repository
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      # Set up Python 3.12
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          architecture: 'x64'
-          cache: 'pip'
-
-      # Install dependencies with pip
-      - name: Install requirements
-        shell: bash
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          python -m pip install -r requirements.txt
-
-      # Syntax check - core modules
-      - name: Syntax check - core modules
-        shell: bash
-        run: |
-          echo "Checking syntax for core modules..."
-          python -m py_compile config.py
-          python -m py_compile toolbox.py
-          python -m py_compile main.py
-          python -m py_compile settings_page.py
-          python -m py_compile build.py
-          echo "OK: Core modules syntax check passed"
-
-      # Syntax check - common modules
-      - name: Syntax check - common modules
-        shell: bash
-        run: |
-          echo "Checking syntax for common modules..."
-          for file in common/*.py; do
-            [ -f "$file" ] && python -m py_compile "$file"
-          done
-          echo "OK: Common modules syntax check passed"
-
-      # Syntax check - plugin modules
-      - name: Syntax check - plugin modules
-        shell: bash
-        run: |
-          echo "Checking syntax for plugin modules..."
-          for file in plugins/*.py; do
-            [ -f "$file" ] && python -m py_compile "$file"
-          done
-          echo "OK: Plugin modules syntax check passed"
-
-      # Syntax check - test files
-      - name: Syntax check - test files
-        shell: bash
-        run: |
-          echo "Checking syntax for test files..."
-          if [ -d "test" ]; then
-            for file in test/*.py; do
-              [ -f "$file" ] && python -m py_compile "$file"
-            done
-          fi
-          echo "OK: Test files syntax check passed"
-
-      # Verify main.py can be imported (headless check)
-      - name: Verify main.py import
-        shell: bash
-        run: python -c "import sys; sys.path.insert(0, '.'); import main; print('OK: main.py imported successfully')"
-
-      # Run build.py to verify packaging works
-      - name: Run build.py to verify executable generation
-        shell: bash
-        timeout-minutes: 10
-        run: |
-          echo "Running build.py to verify packaging..."
-          python build.py
-          echo "OK: build.py completed successfully"
-
-      # Upload build artifacts (exe + user manual)
-      - name: Upload build artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: toolbox-build-${{ github.sha }}
-          path: |
-            dist/*.exe
-            dist/*.docx
-          retention-days: 30
-          if-no-files-found: error
+name: Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+
+      # Check out repository
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # Set up Python 3.12
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
+          cache: 'pip'
+
+      # Install dependencies with pip
+      - name: Install requirements
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements.txt
+
+      # Syntax check - core modules
+      - name: Syntax check - core modules
+        shell: bash
+        run: |
+          echo "Checking syntax for core modules..."
+          python -m py_compile config.py
+          python -m py_compile toolbox.py
+          python -m py_compile main.py
+          python -m py_compile settings_page.py
+          python -m py_compile build.py
+          echo "OK: Core modules syntax check passed"
+
+      # Syntax check - common modules
+      - name: Syntax check - common modules
+        shell: bash
+        run: |
+          echo "Checking syntax for common modules..."
+          for file in common/*.py; do
+            [ -f "$file" ] && python -m py_compile "$file"
+          done
+          echo "OK: Common modules syntax check passed"
+
+      # Syntax check - plugin modules
+      - name: Syntax check - plugin modules
+        shell: bash
+        run: |
+          echo "Checking syntax for plugin modules..."
+          for file in plugins/*.py; do
+            [ -f "$file" ] && python -m py_compile "$file"
+          done
+          echo "OK: Plugin modules syntax check passed"
+
+      # Syntax check - test files
+      - name: Syntax check - test files
+        shell: bash
+        run: |
+          echo "Checking syntax for test files..."
+          if [ -d "test" ]; then
+            for file in test/*.py; do
+              [ -f "$file" ] && python -m py_compile "$file"
+            done
+          fi
+          echo "OK: Test files syntax check passed"
+
+      # Verify main.py can be imported (headless check)
+      - name: Verify main.py import
+        shell: bash
+        run: python -c "import sys; sys.path.insert(0, '.'); import main; print('OK: main.py imported successfully')"
+
+      # Run build.py to verify packaging works
+      - name: Run build.py to verify executable generation
+        shell: bash
+        timeout-minutes: 10
+        run: |
+          echo "Running build.py to verify packaging..."
+          python build.py
+          echo "OK: build.py completed successfully"
+
+      # Upload build artifacts (exe + user manual)
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolbox-build-${{ github.sha }}
+          path: |
+            dist/*.exe
+            dist/*.docx
+          retention-days: 30
+          if-no-files-found: error
