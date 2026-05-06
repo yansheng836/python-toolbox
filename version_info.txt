@@ -4,7 +4,7 @@
 # 自动从 config.py 生成
 #
 # 应用名称: 工具箱
-# 版本: 2.0.0
+# 版本: 2.0.1
 # 描述: 批量处理工具，支持图片压缩、PDF转换、格式转换、拼接和PDF合并
 # 版权: © 2026 yansheng836
 #
@@ -12,8 +12,8 @@
 VSVersionInfo(
   ffi=FixedFileInfo(
     # filevers 和 prodvers 应该是四个整数的元组
-    filevers=(2, 0, 0, 0),
-    prodvers=(2, 0, 0, 0),
+    filevers=(2, 0, 1, 0),
+    prodvers=(2, 0, 1, 0),
     # 包含 VS_FF_DEBUG, VS_FF_PRERELEASE, VS_FF_PATCHED, VS_FF_PRIVATEBUILD, VS_FF_INFOINFERRED, VS_FF_SPECIALBUILD 等标志
     mask=0x3f,
     flags=0x0,
@@ -33,12 +33,12 @@ VSVersionInfo(
         u'080404b0',  # 中文(中国) + Unicode
         [StringStruct(u'CompanyName', u'yansheng836'),
         StringStruct(u'FileDescription', u'批量处理工具，支持图片压缩、PDF转换、格式转换、拼接和PDF合并'),
-        StringStruct(u'FileVersion', u'2.0.0.0'),
+        StringStruct(u'FileVersion', u'2.0.1.0'),
         StringStruct(u'InternalName', u'工具箱ToolBox'),
         StringStruct(u'LegalCopyright', u'© 2026 yansheng836'),
-        StringStruct(u'OriginalFilename', u'工具箱ToolBox-v2.0.0.exe'),
+        StringStruct(u'OriginalFilename', u'工具箱ToolBox-v2.0.1.exe'),
         StringStruct(u'ProductName', u'工具箱'),
-        StringStruct(u'ProductVersion', u'2.0.0.0')])
+        StringStruct(u'ProductVersion', u'2.0.1.0')])
       ]),
     VarFileInfo([VarStruct(u'Translation', [2052, 1200])])  # 中文(中国)
   ]

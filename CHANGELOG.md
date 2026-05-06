@@ -5,7 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/).
 
-[Unreleased]: https://github.com/yansheng836/python-toolbox/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/yansheng836/python-toolbox/compare/v2.0.1...HEAD
+[v2.0.1]: https://github.com/yansheng836/python-toolbox/compare/v2.0.0...v2.0.1
 [v2.0.0]: https://github.com/yansheng836/python-toolbox/compare/v1.0.11...v2.0.0
 [v1.0.11]: https://github.com/yansheng836/python-toolbox/compare/v1.0.10...v1.0.11
 [v1.0.10]: https://github.com/yansheng836/python-toolbox/compare/v1.0.9...v1.0.10
@@ -21,7 +22,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 [v1.0.0]: https://github.com/yansheng836/python-toolbox/compare/v0.0.1...v1.0.0
 [v0.0.1]: https://github.com/yansheng836/python-toolbox/releases/tag/v0.0.1
 
-## [Unreleased]
+## [v2.0.1] - 2026-05-06
+
+### Added
+- 实现响应式布局，支持窗口大小自适应
+  - 统一插件布局，移除 `addStretch()` 让内容自然填充
+  - `FileListPanel` 组件使用 `Expanding` 策略自适应
+  - 欢迎页卡片支持自动轮播效果
+- 新增 `SelectableLabel` 组件，支持文本选择和复制
+  - 所有信息文本（版本号、文件路径、状态消息等）使用该组件
+  - 用户可自由选择和复制文本内容
+- 新增性能优化强制性标准（Rule #11）
+  - 插件处理图片/文件时必须正确管理内存
+  - 使用上下文管理器、显式关闭、批量处理等模式
+
+### Changed
+- 更新 `CLAUDE.md` 新增多项强制性标准
+  - 文本可复制性标准（Rule #7）
+  - 响应式布局标准（Rule #8）
+  - 文件操作标准（Rule #9、#10）
+- 优化 `toolbox.spec` 使用 `os.path.abspath('.')` 替代 `__file__` 避免未定义错误
+
+### Fixed
+- 修复插件内存泄漏和文件句柄未释放问题
+  - 所有图片处理插件改用上下文管理器 `with Image.open() as img:`
+  - 显式调用 `img.close()` 释放内存
+  - 图片拼接改为逐张处理，避免一次性加载所有图片到内存
+- 为图片压缩、缩放、格式转换添加输出目录可写检查
+- 为图片拼接、PDF合并、PDF拆分添加文件占用预检查
+  - 在写入前检测目标文件是否被占用（如 WPS、Adobe Reader 等）
+  - 提供清晰的错误提示，指导用户关闭占用程序
+- 修复图片转 PDF 临时文件问题
+  - 修复临时文件名冲突
+  - 修复清理时的路径问题（使用 `os.path.abspath()` + `os.path.exists()` 检查）
+  - 目标文件被占用时提前检测并提示
 
 ## [v2.0.0] - 2026-05-05
 

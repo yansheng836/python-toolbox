@@ -234,7 +234,7 @@ class ToolPlugin:
     name = "Base Tool"
     description = "Base tool description"
     icon = "🔧"
-    version = "2.0.0"
+    version = "2.0.1"
     order = 999  # 插件排序权重，数值越小排在越前面
 
     def __init__(self, parent=None):

@@ -101,7 +101,7 @@ def main():
     print_step(6, "转换用户手册为 DOCX")
     # 读取版本号，定义输出文件名
     import re
-    version = "2.0.0"
+    version = "2.0.1"
     config_path = Path("config.py")
     if config_path.exists():
         content = config_path.read_text(encoding="utf-8")
