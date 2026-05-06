@@ -1,11 +1,12 @@
 # -*- encoding: utf-8 -*-
 """
 图片拼接插件
-多图横向/纵向合并为一张
+多图横向/纵向合并，支持自动分批（超尺寸时生成多个文件）
 """
 import os
 import sys
 import traceback
+from pathlib import Path
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
@@ -30,9 +31,11 @@ from config import SPACING_SMALL, SPACING_MEDIUM
 from common.file_list_panel import FileListPanel
 from common.utils import IMAGE_COLUMNS, get_create_time
 
+MAX_DIMENSION = 60000  # Pillow 实际限制 65500，保守取值
+
 
 class ImageStitchWorker(QThread):
-    """图片拼接工作线程"""
+    """图片拼接工作线程（支持自动分批）"""
     status = pyqtSignal(str)
     finished = pyqtSignal(bool, str)
 
@@ -44,33 +47,84 @@ class ImageStitchWorker(QThread):
         self.align = align  # "start" | "center" | "end" | "max_size"
         self.bg_color = bg_color  # (R, G, B)
 
+    def _make_output_path(self, batch_index):
+        """根据批次生成输出文件路径，第1批使用原路径，后续添加 _2, _3 等后缀"""
+        if batch_index == 0:
+            return self.output_path
+        p = Path(self.output_path)
+        return str(p.parent / f"{p.stem}_{batch_index + 1}{p.suffix}")
+
+    def _split_into_batches(self, file_info, direction):
+        """
+        将图片分组为多个批次，每批拼接后在拼接方向上的尺寸不超过 MAX_DIMENSION。
+        返回批次列表，每批是 [(path, width, height), ...]。
+        单张图片尺寸超过 MAX_DIMENSION 时，保持原样（后续保存时会报错提示）。
+        """
+        batches = []
+        current_batch = []
+        current_dim = 0  # 横向时为累计宽度，纵向时为累计高度
+
+        for f, w, h in file_info:
+            img_dim = w if direction == "horizontal" else h
+
+            # 单张图片就超过限制，单独成批（后续会报错）
+            if img_dim > MAX_DIMENSION:
+                if current_batch:
+                    batches.append(current_batch)
+                    current_batch = []
+                    current_dim = 0
+                batches.append([(f, w, h)])
+                continue
+
+            if current_batch and current_dim + img_dim > MAX_DIMENSION:
+                batches.append(current_batch)
+                current_batch = [(f, w, h)]
+                current_dim = img_dim
+            else:
+                current_batch.append((f, w, h))
+                current_dim += img_dim
+
+        if current_batch:
+            batches.append(current_batch)
+
+        return batches
+
+    def _apply_max_size_align(self, batch_info, direction):
+        """
+        对批次内图片按 max_size 对齐方式计算缩放后的尺寸。
+        横向拼接时统一高度，纵向拼接时统一宽度。
+        """
+        if direction == "vertical":
+            max_width = max(w for _, w, _ in batch_info)
+            result = []
+            for f, w, h in batch_info:
+                if w != max_width:
+                    ratio = max_width / w
+                    result.append((f, max_width, int(h * ratio)))
+                else:
+                    result.append((f, w, h))
+            return result
+        else:
+            max_height = max(h for _, _, h in batch_info)
+            result = []
+            for f, w, h in batch_info:
+                if h != max_height:
+                    ratio = max_height / h
+                    result.append((f, int(w * ratio), max_height))
+                else:
+                    result.append((f, w, h))
+            return result
+
     def run(self):
         try:
-            # ========= 预检查：目标文件是否被占用 =========
-            if self.output_path:
-                try:
-                    with open(self.output_path, 'ab') as f:
-                        pass
-                except PermissionError as e:
-                    self.finished.emit(
-                        False,
-                        f"目标文件被占用，无法写入：\n{self.output_path}\n\n"
-                        f"请先关闭该文件，然后重试。"
-                    )
-                    return
-                except Exception as e:
-                    self.finished.emit(False, f"无法访问目标文件：{str(e)}")
-                    return
-
-            # ========= 第一遍：扫描尺寸，不加载像素数据 =========
+            # ========= 第一遍：扫描尺寸 =========
             self.status.emit("正在扫描图片尺寸...")
             file_info = []  # (path, width, height)
             skipped = 0
             for f in self.files:
                 try:
                     with Image.open(f) as img:
-                        img.verify()  # 快速检查文件是否损坏
-                        # verify 后需要重新打开
+                        img.verify()
                         img = Image.open(f)
                         file_info.append((f, img.width, img.height))
                 except Exception as e:
@@ -83,106 +137,184 @@ class ImageStitchWorker(QThread):
                 self.finished.emit(False, "没有成功读取任何图片，请检查图片文件是否损坏。")
                 return
 
-            # ========= 计算拼接后画布尺寸 =========
+            # ========= 分批：max_size 先全局缩放，再分批；其他模式直接分批 =========
             if self.align == "max_size":
-                # 按最大尺寸扩展：计算缩放后的尺寸
+                # 全局统一尺寸后分批
                 if self.direction == "vertical":
-                    max_width = max(w for _, w, _ in file_info)
-                    scaled_info = []
+                    max_w = max(w for _, w, _ in file_info)
+                    scaled = []
                     for f, w, h in file_info:
-                        if w != max_width:
-                            ratio = max_width / w
-                            scaled_info.append((f, max_width, int(h * ratio)))
+                        if w != max_w:
+                            ratio = max_w / w
+                            nh = int(h * ratio)
+                            if nh > MAX_DIMENSION:
+                                self.finished.emit(False,
+                                    f"智能缩放后图片高度（{nh}）超过 {MAX_DIMENSION}，"
+                                    f"请先缩小图片尺寸或使用其他对齐方式。")
+                                return
+                            scaled.append((f, max_w, nh))
                         else:
-                            scaled_info.append((f, w, h))
-                    file_info = scaled_info
+                            if h > MAX_DIMENSION:
+                                self.finished.emit(False,
+                                    f"图片 {os.path.basename(f)} 的高度（{h}）"
+                                    f"超过 {MAX_DIMENSION}，请先缩小该图片。")
+                                return
+                            scaled.append((f, w, h))
                 else:
-                    max_height = max(h for _, _, h in file_info)
-                    scaled_info = []
+                    max_h = max(h for _, _, h in file_info)
+                    scaled = []
                     for f, w, h in file_info:
-                        if h != max_height:
-                            ratio = max_height / h
-                            scaled_info.append((f, int(w * ratio), max_height))
+                        if h != max_h:
+                            ratio = max_h / h
+                            nw = int(w * ratio)
+                            if nw > MAX_DIMENSION:
+                                self.finished.emit(False,
+                                    f"智能缩放后图片宽度（{nw}）超过 {MAX_DIMENSION}，"
+                                    f"请先缩小图片尺寸或使用其他对齐方式。")
+                                return
+                            scaled.append((f, nw, max_h))
                         else:
-                            scaled_info.append((f, w, h))
-                    file_info = scaled_info
-
-            # 检查拼接后尺寸
-            if self.direction == "horizontal":
-                total_w = sum(w for _, w, _ in file_info)
-                total_h = max(h for _, _, h in file_info)
+                            if w > MAX_DIMENSION:
+                                self.finished.emit(False,
+                                    f"图片 {os.path.basename(f)} 的宽度（{w}）"
+                                    f"超过 {MAX_DIMENSION}，请先缩小该图片。")
+                                return
+                            scaled.append((f, w, h))
+                batches = self._split_into_batches(scaled, self.direction)
             else:
-                total_w = max(w for _, w, _ in file_info)
-                total_h = sum(h for _, _, h in file_info)
+                # 检查单张图片尺寸是否超过限制
+                for f, w, h in file_info:
+                    img_dim = w if self.direction == "horizontal" else h
+                    if img_dim > MAX_DIMENSION:
+                        dim_name = "宽度" if self.direction == "horizontal" else "高度"
+                        self.finished.emit(False,
+                            f"图片 {os.path.basename(f)} 的{dim_name}（{img_dim}）"
+                            f"超过 {MAX_DIMENSION}，请先缩小该图片。")
+                        return
+                batches = self._split_into_batches(file_info, self.direction)
 
-            MAX_DIMENSION = 65535
-            if total_w > MAX_DIMENSION or total_h > MAX_DIMENSION:
-                self.finished.emit(False,
-                                   f"拼接后尺寸过大（{total_w}x{total_h}），超过 {MAX_DIMENSION} 像素限制。\n"
-                                   f"建议：1) 减少图片数量；2) 先缩小图片尺寸；3) 使用纵向拼接代替横向。")
-                return
+            num_batches = len(batches)
 
-            # ========= 第二遍：逐张处理并拼接到画布 =========
-            self.status.emit("正在拼接...")
-            align = "start" if self.align == "max_size" else self.align
-            canvas = Image.new("RGBA", (total_w, total_h), self.bg_color + (255,))
+            # ========= 预检查：所有目标文件是否被占用 =========
+            for bi in range(num_batches):
+                out_path = self._make_output_path(bi)
+                try:
+                    with open(out_path, 'ab') as f:
+                        pass
+                except PermissionError:
+                    self.finished.emit(
+                        False,
+                        f"目标文件被占用，无法写入：\n{out_path}\n\n"
+                        f"请先关闭该文件，然后重试。"
+                    )
+                    return
+                except Exception as e:
+                    self.finished.emit(False, f"无法访问目标文件：{str(e)}")
+                    return
 
-            if self.direction == "horizontal":
-                x = 0
-                for i, (f, expected_w, expected_h) in enumerate(file_info):
-                    self.status.emit(f"正在处理: {os.path.basename(f)} ({i+1}/{len(file_info)})")
-                    with Image.open(f) as img:
-                        img = img.convert("RGBA")
-                        if self.align == "max_size":
-                            # 需要缩放
-                            if img.width != expected_w:
+            # ========= 逐批次拼接 =========
+            saved_paths = []
+            total_images = sum(len(b) for b in batches)
+
+            for bi, batch_info in enumerate(batches):
+                align = "start" if self.align == "max_size" else self.align
+
+                # 计算本批次画布尺寸
+                if self.direction == "horizontal":
+                    batch_w = sum(w for _, w, _ in batch_info)
+                    batch_h = max(h for _, _, h in batch_info)
+                else:
+                    batch_w = max(w for _, w, _ in batch_info)
+                    batch_h = sum(h for _, _, h in batch_info)
+
+
+                # 最终检查：画布尺寸不得超过 Pillow 限制
+                if batch_w > MAX_DIMENSION or batch_h > MAX_DIMENSION:
+                    self.finished.emit(
+                        False,
+                        f"批次 {bi+1} 画布尺寸（{batch_w}x{batch_h}）"
+                        f"超过 {MAX_DIMENSION}，请减少图片数量或缩小图片尺寸。"
+                    )
+                    return
+
+                canvas = Image.new("RGBA", (batch_w, batch_h), self.bg_color + (255,))
+
+                if self.direction == "horizontal":
+                    x = 0
+                    for i, (f, expected_w, expected_h) in enumerate(batch_info):
+                        global_idx = sum(len(b) for b in batches[:bi]) + i + 1
+                        self.status.emit(
+                            f"正在处理: {os.path.basename(f)} "
+                            f"({global_idx}/{total_images})，批次 {bi+1}/{num_batches}"
+                        )
+                        with Image.open(f) as img:
+                            img = img.convert("RGBA")
+                            if img.width != expected_w or img.height != expected_h:
                                 img = img.resize((expected_w, expected_h), Image.Resampling.LANCZOS)
-                        if align == "center":
-                            y = (total_h - img.height) // 2
-                        elif align == "end":
-                            y = total_h - img.height
-                        else:
-                            y = 0
-                        canvas.paste(img, (x, y), img)
-                        x += img.width
+                            if align == "center":
+                                y = (batch_h - img.height) // 2
+                            elif align == "end":
+                                y = batch_h - img.height
+                            else:
+                                y = 0
+                            canvas.paste(img, (x, y), img)
+                            x += img.width
+                else:
+                    y = 0
+                    for i, (f, expected_w, expected_h) in enumerate(batch_info):
+                        global_idx = sum(len(b) for b in batches[:bi]) + i + 1
+                        self.status.emit(
+                            f"正在处理: {os.path.basename(f)} "
+                            f"({global_idx}/{total_images})，批次 {bi+1}/{num_batches}"
+                        )
+                        with Image.open(f) as img:
+                            img = img.convert("RGBA")
+                            if img.width != expected_w or img.height != expected_h:
+                                img = img.resize((expected_w, expected_h), Image.Resampling.LANCZOS)
+                            if align == "center":
+                                x = (batch_w - img.width) // 2
+                            elif align == "end":
+                                x = batch_w - img.width
+                            else:
+                                x = 0
+                            canvas.paste(img, (x, y), img)
+                            y += img.height
+
+                # 输出格式不支持透明时转 RGB
+                out_path = self._make_output_path(bi)
+                ext = os.path.splitext(out_path)[1].lower()
+                to_save = canvas
+                if ext in (".jpg", ".jpeg", ".bmp"):
+                    bg = Image.new("RGB", canvas.size, self.bg_color)
+                    bg.paste(canvas, mask=canvas.split()[3])
+                    to_save = bg
+
+                save_kwargs = {}
+                if ext in (".jpg", ".jpeg", ".webp"):
+                    save_kwargs['quality'] = 85
+                    save_kwargs['optimize'] = True
+                elif ext == ".png":
+                    save_kwargs['compress_level'] = 6
+                    save_kwargs['optimize'] = True
+                elif ext == ".tiff":
+                    save_kwargs['compression'] = "tiff_deflate"
+
+                # 最后防线：Pillow 硬限制 65500
+                if to_save.width > 65500 or to_save.height > 65500:
+                    self.finished.emit(
+                        False,
+                        f"图片尺寸（{to_save.width}x{to_save.height}）"
+                        f"超过 Pillow 限制（65500），无法保存。"
+                    )
+                    return
+                to_save.save(out_path, **save_kwargs)
+                saved_paths.append(out_path)
+
+            # ========= 完成 =========
+            if num_batches == 1:
+                msg = f"拼接完成，已保存到:\n{saved_paths[0]}"
             else:
-                y = 0
-                for i, (f, expected_w, expected_h) in enumerate(file_info):
-                    self.status.emit(f"正在处理: {os.path.basename(f)} ({i+1}/{len(file_info)})")
-                    with Image.open(f) as img:
-                        img = img.convert("RGBA")
-                        if self.align == "max_size":
-                            if img.height != expected_h:
-                                img = img.resize((expected_w, expected_h), Image.Resampling.LANCZOS)
-                        if align == "center":
-                            x = (total_w - img.width) // 2
-                        elif align == "end":
-                            x = total_w - img.width
-                        else:
-                            x = 0
-                        canvas.paste(img, (x, y), img)
-                        y += img.height
-
-            # 输出格式不支持透明时转 RGB
-            ext = os.path.splitext(self.output_path)[1].lower()
-            if ext in (".jpg", ".jpeg", ".bmp"):
-                bg = Image.new("RGB", canvas.size, self.bg_color)
-                bg.paste(canvas, mask=canvas.split()[3])
-                canvas = bg
-
-            # 根据输出格式添加压缩参数
-            save_kwargs = {}
-            if ext in (".jpg", ".jpeg", ".webp"):
-                save_kwargs['quality'] = 85
-                save_kwargs['optimize'] = True
-            elif ext == ".png":
-                save_kwargs['compress_level'] = 6
-                save_kwargs['optimize'] = True
-            elif ext == ".tiff":
-                save_kwargs['compression'] = "tiff_deflate"
-
-            canvas.save(self.output_path, **save_kwargs)
-            msg = f"拼接完成，已保存到:\n{self.output_path}"
+                msg = f"拼接完成，已分为 {num_batches} 个文件保存:\n" + "\n".join(saved_paths)
             if skipped > 0:
                 msg += f"\n（已跳过 {skipped} 张损坏图片）"
             self.finished.emit(True, msg)
@@ -304,39 +436,37 @@ class ImageStitcher(ToolPlugin):
         # 拼接设置
         settings_card = Card(title="拼接设置")
         grid = QGridLayout()
-        grid.setHorizontalSpacing(8)  # 两列之间无间距
+        grid.setHorizontalSpacing(8)
         grid.setVerticalSpacing(10)
         settings_card.content_layout.addLayout(grid)
 
-        # 第0行：拼接方向占左半边，对齐方式占右半边，两半紧贴无间距
-        # 左半边：拼接方向（标签+下拉框，下拉框拉伸占满左半边）
+        # 第0行：拼接方向占左半边，对齐方式占右半边
         dir_widget = QWidget()
         dir_layout = QHBoxLayout(dir_widget)
         dir_layout.setContentsMargins(0, 0, 0, 0)
-        dir_layout.setSpacing(SPACING_SMALL)  # 标签和控件之间8px
+        dir_layout.setSpacing(SPACING_SMALL)
         dir_layout.addWidget(QLabel("拼接方向:"))
         self.dir_combo = QComboBox()
         self.dir_combo.addItems(["横向（左→右）", "纵向（上→下）"])
-        self.dir_combo.setCurrentIndex(1)  # 默认竖向拼接
-        dir_layout.addWidget(self.dir_combo, 1)  # 拉伸占满左半边
+        self.dir_combo.setCurrentIndex(1)
+        dir_layout.addWidget(self.dir_combo, 1)
         grid.addWidget(dir_widget, 0, 0)
 
-        # 右半边：对齐方式（标签+下拉框，下拉框拉伸占满右半边）
         align_widget = QWidget()
         align_layout = QHBoxLayout(align_widget)
         align_layout.setContentsMargins(0, 0, 0, 0)
-        align_layout.setSpacing(SPACING_SMALL)  # 标签和控件之间8px
+        align_layout.setSpacing(SPACING_SMALL)
         align_layout.addWidget(QLabel("对齐方式:"))
         self.align_combo = QComboBox()
         self.align_combo.addItems(["顶部/左侧对齐", "居中对齐", "底部/右侧对齐", "智能缩放"])
-        self.align_combo.setCurrentIndex(3)  # 默认智能缩放
-        align_layout.addWidget(self.align_combo, 1)  # 拉伸占满右半边
+        self.align_combo.setCurrentIndex(3)
+        align_layout.addWidget(self.align_combo, 1)
         grid.addWidget(align_widget, 0, 1)
 
         grid.setColumnStretch(0, 1)
         grid.setColumnStretch(1, 1)
 
-        # 第1行：背景颜色（标签和控件之间无间距）
+        # 第1行：背景颜色
         bg_row = QHBoxLayout()
         bg_row.setSpacing(SPACING_SMALL)
         bg_row.addWidget(QLabel("背景颜色:"))
@@ -353,9 +483,9 @@ class ImageStitcher(ToolPlugin):
             bg_row.addWidget(QLabel(label))
             bg_row.addWidget(spin)
         bg_row.addStretch()
-        grid.addLayout(bg_row, 1, 0, 1, 2)  # 跨两列
+        grid.addLayout(bg_row, 1, 0, 1, 2)
 
-        # 第2行：输出文件（标签和控件之间无间距）
+        # 第2行：输出文件
         out_row = QHBoxLayout()
         out_row.setSpacing(SPACING_SMALL)
         out_row.addWidget(QLabel("输出文件:"))
@@ -366,7 +496,7 @@ class ImageStitcher(ToolPlugin):
         browse_btn.setMaximumWidth(80)
         browse_btn.clicked.connect(self.browse_output)
         out_row.addWidget(browse_btn)
-        grid.addLayout(out_row, 2, 0, 1, 2)  # 跨两列
+        grid.addLayout(out_row, 2, 0, 1, 2)
         layout.addWidget(settings_card)
 
         # 应用初始主题
@@ -379,9 +509,6 @@ class ImageStitcher(ToolPlugin):
         self.action_panel.clicked.connect(self.start_stitch)
         layout.addWidget(self.action_panel)
 
-        # 应用初始主题
-        if Theme is not None:
-            self.update_theme(Theme.DARK)
         return widget
 
     def browse_output(self):
@@ -396,11 +523,6 @@ class ImageStitcher(ToolPlugin):
         files = self.file_panel.get_files()
         if len(files) < 2:
             show_warning(None, "警告", "请至少添加 2 张图片！")
-            return
-        MAX_IMAGES = 20
-        if len(files) > MAX_IMAGES:
-            show_warning(None, "警告",
-                          f"图片数量过多（当前 {len(files)} 张），请控制在 {MAX_IMAGES} 张以内，避免内存不足或处理失败。")
             return
         if not self.output_path.text():
             show_warning(None, "警告", "请选择输出文件路径！")
