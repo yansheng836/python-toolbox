@@ -27,13 +27,14 @@ jobs:
 
       # Install dependencies with pip
       - name: Install requirements
+        shell: bash
         run: |
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install -r requirements.txt
-        shell: bash
 
       # Syntax check - core modules
       - name: Syntax check - core modules
+        shell: bash
         run: |
           echo "Checking syntax for core modules..."
           python -m py_compile config.py
@@ -41,31 +42,31 @@ jobs:
           python -m py_compile main.py
           python -m py_compile settings_page.py
           python -m py_compile build.py
-          echo "✓ Core modules syntax check passed"
-        shell: bash
+          echo "OK: Core modules syntax check passed"
 
       # Syntax check - common modules
       - name: Syntax check - common modules
+        shell: bash
         run: |
           echo "Checking syntax for common modules..."
           for file in common/*.py; do
             [ -f "$file" ] && python -m py_compile "$file"
           done
-          echo "✓ Common modules syntax check passed"
-        shell: bash
+          echo "OK: Common modules syntax check passed"
 
       # Syntax check - plugin modules
       - name: Syntax check - plugin modules
+        shell: bash
         run: |
           echo "Checking syntax for plugin modules..."
           for file in plugins/*.py; do
             [ -f "$file" ] && python -m py_compile "$file"
           done
-          echo "✓ Plugin modules syntax check passed"
-        shell: bash
+          echo "OK: Plugin modules syntax check passed"
 
       # Syntax check - test files
       - name: Syntax check - test files
+        shell: bash
         run: |
           echo "Checking syntax for test files..."
           if [ -d "test" ]; then
@@ -73,24 +74,24 @@ jobs:
               [ -f "$file" ] && python -m py_compile "$file"
             done
           fi
-          echo "✓ Test files syntax check passed"
-        shell: bash
+          echo "OK: Test files syntax check passed"
 
       # Run main.py to check for errors (timeout after 10 seconds)
       - name: Run main.py to check for errors
+        shell: pwsh
         run: |
-          # Start main.py in background
-          python main.py &
-          PID=$!
-          echo "Started main.py with PID $PID"
-          sleep 10
+          echo "Starting main.py to verify it can launch..."
+          $process = Start-Process -FilePath "python" -ArgumentList "main.py" -PassThru
+          $pid = $process.Id
+          echo "Started main.py with PID $pid"
+          Start-Sleep -Seconds 10
           # Check if process is still running
-          if tasklist /FI "PID eq $PID" 2>NUL | find "$PID" >NUL; then
-            echo "✓ main.py started successfully (still running as expected)"
-            taskkill /F /PID $PID 2>NUL || true
+          $running = Get-Process -Id $pid -ErrorAction SilentlyContinue
+          if ($running) {
+            echo "OK: main.py started successfully (still running as expected)"
+            Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
             exit 0
-          else
-            echo "✗ main.py exited unexpectedly"
+          } else {
+            echo "ERROR: main.py exited unexpectedly"
             exit 1
-          fi
-        shell: bash
+          }
