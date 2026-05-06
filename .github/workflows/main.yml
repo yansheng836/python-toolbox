@@ -61,16 +61,15 @@ jobs:
         shell: bash
         run: |
           echo "Checking syntax for test files..."
-          if [ -d "test" ]; then
-            for file in test/*.py; do
-              [ -f "$file" ] && python -m py_compile "$file"
-            done
-          fi
+          for file in test/*.py; do
+            [ -f "$file" ] && python -m py_compile "$file"
+          done
           echo "OK: Test files syntax check passed"
 
       - name: Verify main.py import
         shell: bash
-        run: python -c "import sys; sys.path.insert(0, '.'); import main; print('OK: main.py imported successfully')"
+        run: |
+          python -c "import sys; sys.path.insert(0, '.'); import main; print('Verification passed')"
 
       - name: Run build.py to verify executable generation
         shell: bash
@@ -85,8 +84,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: toolbox-build-${{ github.sha }}
-          path: |
-            dist/*.exe
-            dist/*.docx
+          path:
+            - dist/*.exe
+            - dist/*.docx
           retention-days: 30
           if-no-files-found: error
