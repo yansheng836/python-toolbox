@@ -27,7 +27,7 @@ def _apply_style(msg_box, theme=None):
         }}
         QMessageBox QPushButton {{
             background-color: {theme['primary']};
-            color: {theme['text']};
+            color: #ffffff;
             border: none;
             border-radius: 6px;
             padding: 6px 20px;
@@ -35,6 +35,7 @@ def _apply_style(msg_box, theme=None):
         }}
         QMessageBox QPushButton:hover {{
             background-color: {theme['primary_hover']};
+            color: #ffffff;
         }}
     """)
 
