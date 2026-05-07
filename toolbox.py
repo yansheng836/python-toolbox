@@ -14,6 +14,7 @@ from typing import Dict
 from config import (
     APP_NAME, APP_VERSION, APP_COPYRIGHT,
     APP_WEBSITE_URL, APP_WEBSITE_LINK_TEXT,
+    APP_UPDATE_URL, APP_ISSUE_URL,
     FEATURE_MODULES, PLUGIN_MODULES, UI_CONFIG, WELCOME_CONFIG,
     TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_20,
     FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800,
@@ -715,11 +716,23 @@ class SettingsPlugin(ToolPlugin):
         self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.version_label)
 
-        self.desc_label = SelectableLabel(self.description)
-        self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_16};")
-        self.desc_label.setWordWrap(True)
-        self.desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        about_card.content_layout.addWidget(self.desc_label)
+        # 检查更新
+        update_label = SelectableLabel(
+            f"<a href='{APP_UPDATE_URL}' style='color: #6366f1; text-decoration: none;'>"
+            f"检查更新</a>")
+        update_label.setOpenExternalLinks(True)
+        update_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        update_label.setStyleSheet(f"font-size: {FONT_SIZE_14}; padding: 2px;")
+        about_card.content_layout.addWidget(update_label)
+
+        # 问题反馈
+        issue_label = SelectableLabel(
+            f"<a href='{APP_ISSUE_URL}' style='color: #6366f1; text-decoration: none;'>"
+            f"问题反馈</a>")
+        issue_label.setOpenExternalLinks(True)
+        issue_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        issue_label.setStyleSheet(f"font-size: {FONT_SIZE_14}; padding: 2px;")
+        about_card.content_layout.addWidget(issue_label)
 
         self.website_label = SelectableLabel(
             f"<a href='{APP_WEBSITE_URL}' style='color: #6366f1; text-decoration: none;'>{APP_WEBSITE_LINK_TEXT}</a>")
@@ -736,6 +749,7 @@ class SettingsPlugin(ToolPlugin):
         self.copyright_label.setStyleSheet(f"color: #64748b; font-size: {FONT_SIZE_12};")
         self.copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.copyright_label)
+
         about_card.content_layout.addStretch()
 
         layout.addWidget(general_card)
