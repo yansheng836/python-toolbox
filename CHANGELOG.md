@@ -5,7 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/).
 
-[Unreleased]: https://github.com/yansheng836/python-toolbox/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/yansheng836/python-toolbox/compare/v2.0.3...HEAD
+[v2.0.3]: https://github.com/yansheng836/python-toolbox/compare/v2.0.2...v2.0.3
+[v2.0.2]: https://github.com/yansheng836/python-toolbox/compare/v2.0.1...v2.0.2
 [v2.0.1]: https://github.com/yansheng836/python-toolbox/compare/v2.0.0...v2.0.1
 [v2.0.0]: https://github.com/yansheng836/python-toolbox/compare/v1.0.11...v2.0.0
 [v1.0.11]: https://github.com/yansheng836/python-toolbox/compare/v1.0.10...v1.0.11
@@ -21,6 +23,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 [v1.0.1]: https://github.com/yansheng836/python-toolbox/compare/v1.0.0...v1.0.1
 [v1.0.0]: https://github.com/yansheng836/python-toolbox/compare/v0.0.1...v1.0.0
 [v0.0.1]: https://github.com/yansheng836/python-toolbox/releases/tag/v0.0.1
+
+## [v2.0.3] - 2026-05-07
+
+### Added
+- 图片拼接支持无限张数，超尺寸自动分批处理
+- 在设置页关于中添加检查更新和问题反馈链接（配置化管理）
+- 新增 LICENSE.txt 许可证文件
+
+### Changed
+- 替换 README 截图预览为实际功能截图
+- 在用户手册各功能标题后添加对应截图
+- README 导航栏添加用户手册链接和许可证说明
+- 精简 TODO 列表，移除必要性较低的待办项
+
+### Fixed
+- 统一所有插件描述文字颜色，修复主题切换时颜色不一致
+- 弹窗按钮文字颜色改为白色，提升浅色主题下可读性
+- 图片拼接进度条改为按每张图片更新，支持百分比显示
+
+## [v2.0.2] - 2026-05-06
+
+### Added
+- GitHub Actions 添加打包验证和构建产物上传
+- CI 流程添加 Python 语法检查和 Windows 环境支持
+
+### Fixed
+- 修复 CI 配置中 YAML 语法错误（jobs 拼写、always() 表达式）
+- 修复 CRLF 换行符导致的 YAML 解析错误
+- 修复 build.py 编码问题并优化打包验证流程
 
 ## [v2.0.1] - 2026-05-06
 
