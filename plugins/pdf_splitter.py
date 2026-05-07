@@ -133,7 +133,7 @@ class PDFSplitterWidget(QWidget):
         layout.addWidget(self.title_label)
 
         self.desc_label = SelectableLabel(self.description)
-        self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
+        self.desc_label.setStyleSheet(f"color: {Theme.DARK['text_secondary']}; font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
         # PDF文件列表区域（列表模式，参考PDF合并）
@@ -227,6 +227,8 @@ class PDFSplitterWidget(QWidget):
 
     def apply_theme(self, theme):
         """应用主题到所有组件"""
+        if hasattr(self, 'desc_label'):
+            self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};")
         if hasattr(self, 'file_panel'):
             self.file_panel.update_theme(theme)
         if hasattr(self, 'output_path'):

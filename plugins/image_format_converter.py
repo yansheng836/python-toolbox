@@ -216,7 +216,7 @@ class FormatConverter(ToolPlugin):
         layout.addWidget(self.title_label)
 
         self.desc_label = SelectableLabel(self.description)
-        self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
+        self.desc_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
         # 文件选择区域

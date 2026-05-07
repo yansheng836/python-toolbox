@@ -158,7 +158,7 @@ class ImageScalerWidget(QWidget):
 
         # 说明（使用 PLUGIN_MODULES 配置中的 description）
         self.desc_label = SelectableLabel(self.description)
-        self.desc_label.setStyleSheet(f"font-size: {FONT_SIZE_14};")
+        self.desc_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
         # 文件选择区域
@@ -421,6 +421,10 @@ class ImageScalerWidget(QWidget):
 
     def apply_theme(self, theme):
         """应用主题到所有组件"""
+        if hasattr(self, 'title_label'):
+            self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700}; color: {theme['text']};")
+        if hasattr(self, 'desc_label'):
+            self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};")
         if hasattr(self, 'file_panel'):
             self.file_panel.update_theme(theme)
         if hasattr(self, 'action_panel'):
