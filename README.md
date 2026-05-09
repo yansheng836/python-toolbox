@@ -1,9 +1,10 @@
 # 工具箱 (ToolBox)
 
+![Build and Deploy](https://img.shields.io/github/actions/workflow/status/yansheng836/python-toolbox/main.yml?style=flat&label=Build%20and%20Deploy) ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/yansheng836/python-toolbox) [![GitHub Issues](https://img.shields.io/github/issues/yansheng836/python-toolbox)](https://github.com/yansheng836/python-toolbox/issues) [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/yansheng836/python-toolbox)](https://github.com/yansheng836/python-toolbox/pulls) [![GitHub Tag](https://img.shields.io/github/v/tag/yansheng836/python-toolbox)](https://github.com/yansheng836/python-toolbox/tags) [![GitHub Release](https://img.shields.io/github/v/release/yansheng836/python-toolbox)](https://github.com/yansheng836/python-toolbox/releases) ![GitHub Repo stars](https://img.shields.io/github/stars/yansheng836/python-toolbox) ![GitHub forks](https://img.shields.io/github/forks/yansheng836/python-toolbox) [![Codacy Badge](https://app.codacy.com/project/badge/Grade/0238d17f5c0b438d9b63044c1bac6728)](https://app.codacy.com/gh/yansheng836/python-toolbox/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade) [![GitHub License](https://img.shields.io/github/license/yansheng836/python-toolbox)](https://github.com/yansheng836/python-toolbox/blob/main/LICENSE.txt)
+
 [![ToolBox](README.assets/ToolBox.png)](https://github.com/yansheng836/python-toolbox)
 
 <div align="center">
-
 **离线 · 高效 · 美观** 的桌面工具集合
 
 [功能特色](#功能特色) · [截图预览](#截图预览) · [快速开始](#快速开始) · [使用指南](#使用指南) · [插件开发](#插件开发) · [用户手册](用户手册.md) 
@@ -284,10 +285,17 @@ pyinstaller toolbox.spec
 
 本项目为开源项目，使用[MIT协议](./LICENSE.txt)，欢迎自由使用和贡献。
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=yansheng836/python-toolbox&type=Timeline)](https://star-history.com/#yansheng836/python-toolbox&Timeline)
+
+## Visitors
+
+<a href="https://info.flagcounter.com/nYwQ"><img src="https://s01.flagcounter.com/count2/nYwQ/bg_FFFFFF/txt_000000/border_CCCCCC/columns_2/maxflags_12/viewers_0/labels_1/pageviews_1/flags_0/percent_0/" alt="Flag Counter" border="0"></a>
+
 ---
 
 <div align="center">
-
 **工具箱** — 让文件处理更简单 🚀
-
 </div>
+
