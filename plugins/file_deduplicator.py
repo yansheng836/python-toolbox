@@ -370,6 +370,7 @@ class FileDeduplicatorWidget(QWidget):
             self.folder_display.setText(dir_path)
             self.scan_panel.btn.setEnabled(True)
             self.scan_panel.update_status(f"已选择文件夹: {dir_path}")
+            self.start_scan()
 
     def start_scan(self):
         """开始扫描"""
