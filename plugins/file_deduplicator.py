@@ -9,7 +9,7 @@ from collections import defaultdict
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QComboBox, QTreeWidget, QTreeWidgetItem,
-    QFileDialog, QLineEdit, QHBoxLayout
+    QFileDialog, QLineEdit, QHBoxLayout, QCheckBox
 )
 
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
@@ -166,8 +166,11 @@ class FileDeduplicatorWidget(QWidget):
 
         # 删除规则卡片
         deletion_card = Card(title="删除规则设置")
-        deletion_layout = QHBoxLayout()
-        deletion_layout.addWidget(QLabel("删除规则:"))
+        rule_row_layout = QHBoxLayout()
+
+        # 左半：删除规则下拉框
+        left_half = QHBoxLayout()
+        left_half.addWidget(QLabel("删除规则:"))
         self.rule_combo = QComboBox()
         self.rule_combo.addItems([
             "按创建时间升序排序（旧→新，保留首个，删除后续）",
@@ -175,8 +178,20 @@ class FileDeduplicatorWidget(QWidget):
             "按文件名升序排序（A→Z，保留首个，删除后续）",
             "按文件名降序排序（Z→A，保留首个，删除后续）"
         ])
-        deletion_layout.addWidget(self.rule_combo, 1)
-        deletion_card.content_layout.addLayout(deletion_layout)
+        left_half.addWidget(self.rule_combo, 1)
+
+        # 右半：删除后是否自动扫描（文字在前，勾选框在后，与"启用压缩"样式一致）
+        right_half = QHBoxLayout()
+        self.auto_rescan_label = QLabel("删除后自动扫描")
+        right_half.addWidget(self.auto_rescan_label)
+        self.auto_rescan_checkbox = QCheckBox()
+        self.auto_rescan_checkbox.setChecked(False)
+        right_half.addWidget(self.auto_rescan_checkbox)
+        right_half.addStretch()
+
+        rule_row_layout.addLayout(left_half, 1)
+        rule_row_layout.addLayout(right_half, 1)
+        deletion_card.content_layout.addLayout(rule_row_layout)
 
         # 全选/取消全选按钮
         select_btn_layout = QHBoxLayout()
@@ -312,6 +327,10 @@ class FileDeduplicatorWidget(QWidget):
 
         # 存储当前主题供 show_duplicates 使用
         self.current_theme = theme
+
+        # 删除后自动扫描标签
+        if hasattr(self, 'auto_rescan_label'):
+            self.auto_rescan_label.setStyleSheet(f"color: {theme['text']};")
 
         # 删除操作面板——使用主题错误色更新渐变
         if hasattr(self, 'delete_panel'):
@@ -566,7 +585,6 @@ class FileDeduplicatorWidget(QWidget):
                     failed_files.append(f"{file_path}: {str(e)}")
                 self.delete_panel.update_progress(i + 1)
 
-            # 显示结果
             result_msg = f"删除完成: 成功 {deleted} 个，失败 {failed} 个"
             if failed_files:
                 result_msg += "\n\n失败文件:\n" + "\n".join(failed_files[:5])
@@ -574,8 +592,15 @@ class FileDeduplicatorWidget(QWidget):
                     result_msg += f"\n... 还有 {len(failed_files)-5} 个失败文件"
             self.delete_panel.finish_task(result_msg)
             show_info(self, "删除结果", result_msg)
-            # 重新扫描刷新结果
-            self.start_scan()
+            # 根据勾选状态决定是否自动重新扫描
+            if self.auto_rescan_checkbox.isChecked():
+                self.start_scan()
+            else:
+                # 清空重复文件列表和扫描信息（避免数据不对应）
+                self.results_tree.clear()
+                self.duplicates = {}
+                self.stats_label.setText("已删除 — 请重新扫描以刷新结果")
+                self.delete_panel.btn.setEnabled(False)
 
 
 class FileDeduplicator(ToolPlugin):
