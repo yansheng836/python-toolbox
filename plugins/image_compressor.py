@@ -8,7 +8,7 @@ import sys
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QProgressBar, QComboBox, QSlider, QLineEdit, QGridLayout
+    QComboBox, QSlider, QLineEdit, QGridLayout
 )
 
 from common.message_utils import show_info, show_error, show_warning
@@ -194,19 +194,6 @@ class ImageCompressor(ToolPlugin):
                         border-radius: 6px;
                         padding: 6px;
                         color: {theme['text']};
-                    }}
-                """)
-            if hasattr(self, 'progress_bar'):
-                self.progress_bar.setStyleSheet(f"""
-                    QProgressBar {{
-                        background-color: {theme['bg']};
-                        border-radius: 6px;
-                        text-align: center;
-                        color: {theme['text']};
-                    }}
-                    QProgressBar::chunk {{
-                        background-color: {theme['primary']};
-                        border-radius: 6px;
                     }}
                 """)
             if hasattr(self, 'start_btn'):

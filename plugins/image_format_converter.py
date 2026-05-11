@@ -8,7 +8,7 @@ import sys
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QProgressBar, QComboBox, QLineEdit, QGridLayout
+    QComboBox, QLineEdit, QGridLayout
 )
 
 from common.message_utils import show_info, show_error, show_warning

@@ -19,7 +19,7 @@ from config import SPACING_SMALL
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
-    QSpinBox, QComboBox, QLineEdit, QProgressBar,
+    QSpinBox, QComboBox, QLineEdit,
     QGridLayout, QCheckBox
 )
 

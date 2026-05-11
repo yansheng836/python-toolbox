@@ -75,6 +75,7 @@ class ActionPanel(Card):
         self.progress.setStyleSheet(f"""
             QProgressBar {{
                 background-color: {Theme.DARK['bg_secondary']};
+                border: none;
                 border-radius: 6px;
                 text-align: center;
                 color: {Theme.DARK['text']};
@@ -153,6 +154,7 @@ class ActionPanel(Card):
         self.progress.setStyleSheet(f"""
             QProgressBar {{
                 background-color: {theme['bg']};
+                border: none;
                 border-radius: 6px;
                 text-align: center;
                 color: {theme['text']};
