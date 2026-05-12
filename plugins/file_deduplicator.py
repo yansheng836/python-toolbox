@@ -173,10 +173,12 @@ class FileDeduplicatorWidget(QWidget):
         left_half.addWidget(QLabel("删除规则:"))
         self.rule_combo = QComboBox()
         self.rule_combo.addItems([
-            "按创建时间升序排序（旧→新，保留首个，删除后续）",
-            "按创建时间降序排序（新→旧，保留首个，删除后续）",
+            "按创建时间升序排序（旧→新，时间相同按修改时间，含副本标记的放后面）",
+            "按创建时间降序排序（新→旧，时间相同按修改时间，含副本标记的放后面）",
             "按文件名升序排序（A→Z，保留首个，删除后续）",
-            "按文件名降序排序（Z→A，保留首个，删除后续）"
+            "按文件名降序排序（Z→A，保留首个，删除后续）",
+            "智能识别副本（优先删除含(1)/_copy/_backup等标记的文件，其余按创建时间升序）",
+            "智能识别副本（优先删除含(1)/_copy/_backup等标记的文件，其余按创建时间降序）"
         ])
         left_half.addWidget(self.rule_combo, 1)
 
@@ -502,6 +504,28 @@ class FileDeduplicatorWidget(QWidget):
             bytes /= 1024
         return f"{bytes:.2f} TB"
 
+    def _has_copy_keyword(self, filename):
+        """检查文件名是否包含副本/备份关键字，返回 (是否包含, 优先级)"""
+        keywords = [
+            r'\(\d+\)',       # (1), (2), (3)...
+            '_copy',
+            '_backup',
+            '-copy',
+            '-backup',
+            '_副本',
+            '-副本',
+            ' - 副本',
+            '_备份',
+            '-备份',
+            '_copy_',
+            '-copy-',
+        ]
+        import re
+        for kw in keywords:
+            if re.search(kw, filename, re.IGNORECASE):
+                return True
+        return False
+
     def scan_finished(self, success, message):
         """扫描完成回调"""
         self.scan_panel.finish_task(message)
@@ -539,14 +563,34 @@ class FileDeduplicatorWidget(QWidget):
             if len(file_list) <= 1:
                 continue
             # 按规则排序
-            if rule == 0:  # 创建时间升序（旧→新）
-                sorted_files = sorted(file_list, key=lambda x: os.path.getctime(x))
-            elif rule == 1:  # 创建时间降序（新→旧）
-                sorted_files = sorted(file_list, key=lambda x: os.path.getctime(x), reverse=True)
+            if rule == 0:  # 创建时间升序（旧→新），时间相同则按修改时间，再相同则含关键字的放后面
+                sorted_files = sorted(file_list, key=lambda x: (
+                    os.path.getctime(x),
+                    os.path.getmtime(x),
+                    1 if self._has_copy_keyword(os.path.basename(x)) else 0
+                ))
+            elif rule == 1:  # 创建时间降序（新→旧），时间相同则按修改时间降序，再相同则含关键字的放后面
+                sorted_files = sorted(file_list, key=lambda x: (
+                    -os.path.getctime(x),
+                    -os.path.getmtime(x),
+                    1 if self._has_copy_keyword(os.path.basename(x)) else 0
+                ))
             elif rule == 2:  # 文件名升序
                 sorted_files = sorted(file_list, key=lambda x: os.path.basename(x).lower())
-            else:  # 文件名降序
+            elif rule == 3:  # 文件名降序
                 sorted_files = sorted(file_list, key=lambda x: os.path.basename(x).lower(), reverse=True)
+            elif rule == 4:  # 智能识别副本（含关键字的优先删除，其余按创建时间升序）
+                sorted_files = sorted(file_list, key=lambda x: (
+                    1 if self._has_copy_keyword(os.path.basename(x)) else 0,
+                    os.path.getctime(x),
+                    os.path.getmtime(x),
+                ))
+            elif rule == 5:  # 智能识别副本（含关键字的优先删除，其余按创建时间降序）
+                sorted_files = sorted(file_list, key=lambda x: (
+                    1 if self._has_copy_keyword(os.path.basename(x)) else 0,
+                    -os.path.getctime(x),
+                    -os.path.getmtime(x),
+                ))
             # 保留第一个，删除后续
             files_to_delete.extend(sorted_files[1:])
 
