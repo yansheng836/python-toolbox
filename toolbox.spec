@@ -196,37 +196,66 @@ a = Analysis(
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
-    name=f'{APP_NAME}ToolBox-v{APP_VERSION}',  # 包含版本号的文件名
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=True,              # 启用 strip 以移除调试符号
-    upx=True,                # 启用 UPX 压缩
-    upx_exclude=[
-        'vcruntime140.dll',  # Windows 运行时库不压缩
-        'python*.dll',       # Python DLL 不压缩
-        'Qt6Core.dll',       # Qt 核心库不压缩（避免启动问题）
-        'Qt6Gui.dll',
-        'Qt6Widgets.dll',
-    ],
-    runtime_tmpdir=None,
-    console=False,           # GUI 模式
-    disable_windowed_traceback=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    icon='favicon.ico',      # Windows 图标
-    version='version_info.txt',  # 版本信息文件
-)
+# Windows 特定配置
+if sys.platform == 'win32':
+    exe = EXE(
+        pyz,
+        a.scripts,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        [],
+        name=f'{APP_NAME}ToolBox-v{APP_VERSION}',  # 包含版本号的文件名
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=True,              # 启用 strip 以移除调试符号
+        upx=True,                # 启用 UPX 压缩
+        upx_exclude=[
+            'vcruntime140.dll',  # Windows 运行时库不压缩
+            'python*.dll',       # Python DLL 不压缩
+            'Qt6Core.dll',       # Qt 核心库不压缩（避免启动问题）
+            'Qt6Gui.dll',
+            'Qt6Widgets.dll',
+        ],
+        runtime_tmpdir=None,
+        console=False,           # GUI 模式
+        disable_windowed_traceback=False,
+        target_arch=None,
+        codesign_identity=None,
+        entitlements_file=None,
+        icon='favicon.ico',      # Windows 图标
+        version='version_info.txt',  # 版本信息文件
+    )
 
 # macOS 特定配置
 if sys.platform == 'darwin':
+    exe = EXE(
+        pyz,
+        a.scripts,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        [],
+        name=f'{APP_NAME}ToolBox-v{APP_VERSION}',
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=True,
+        upx=True,
+        upx_exclude=[
+            'python*.dll',
+            'Qt6Core.dylib',
+            'Qt6Gui.dylib',
+            'Qt6Widgets.dylib',
+        ],
+        runtime_tmpdir=None,
+        console=False,
+        disable_windowed_traceback=False,
+        target_arch=None,
+        codesign_identity=None,
+        entitlements_file=None,
+        icon='icon.icns',
+    )
+
     app = BUNDLE(
         exe,
         name=f'{APP_NAME}.app',

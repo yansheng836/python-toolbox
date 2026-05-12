@@ -1,4 +1,4 @@
-name: Test
+name: Test and Build
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
 
     steps:
@@ -83,9 +83,74 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: toolbox-build-${{ github.sha }}
+          name: toolbox-windows-${{ github.sha }}
           path: |
             dist/*.exe
             dist/*.docx
+          retention-days: 30
+          if-no-files-found: error
+
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements.txt
+
+      - name: Syntax check - core modules
+        run: |
+          echo "Checking syntax for core modules..."
+          python -m py_compile config.py
+          python -m py_compile toolbox.py
+          python -m py_compile main.py
+          python -m py_compile settings_page.py
+          python -m py_compile build.py
+          echo "OK: Core modules syntax check passed"
+
+      - name: Syntax check - common modules
+        run: |
+          echo "Checking syntax for common modules..."
+          for file in common/*.py; do
+            [ -f "$file" ] && python -m py_compile "$file"
+          done
+          echo "OK: Common modules syntax check passed"
+
+      - name: Syntax check - plugin modules
+        run: |
+          echo "Checking syntax for plugin modules..."
+          for file in plugins/*.py; do
+            [ -f "$file" ] && python -m py_compile "$file"
+          done
+          echo "OK: Plugin modules syntax check passed"
+
+      - name: Verify main.py import
+        run: |
+          python -c "import sys; sys.path.insert(0, '.'); import main; print('Verification passed')"
+
+      - name: Run build_macos.py to verify app bundle generation
+        timeout-minutes: 15
+        run: |
+          echo "Running build_macos.py to verify packaging..."
+          python build_macos.py
+          echo "OK: build_macos.py completed successfully"
+
+      - name: Upload build artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolbox-macos-${{ github.sha }}
+          path: |
+            dist/*.app
           retention-days: 30
           if-no-files-found: error
