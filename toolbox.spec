@@ -253,13 +253,13 @@ if sys.platform == 'darwin':
         target_arch=None,
         codesign_identity=None,
         entitlements_file=None,
-        icon='icon.icns',
+        icon='favicon.ico',
     )
 
     app = BUNDLE(
         exe,
         name=f'{APP_NAME}.app',
-        icon='icon.icns',
+        icon='favicon.ico',
         bundle_identifier='com.yansheng836.toolbox',
         info_plist={
             'CFBundleShortVersionString': APP_VERSION,
