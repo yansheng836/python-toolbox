@@ -123,7 +123,7 @@ def main():
 
     # 步骤 6: 转换并复制用户手册
     print_step(6, "转换用户手册为 DOCX")
-    docx_name = f"用户手册-{version}.docx"
+    docx_name = f"manual-{version}.docx"
     docx_path = Path("dist") / docx_name
 
     try:

@@ -39,8 +39,8 @@ def get_version_info(output_fields):
             exe_name = f"{app_name}ToolBox-v{version}.exe"
             print(f"exe_name={exe_name}", file=out)
         if "docx_name" in output_fields:
-            docx_name = f"用户手册-{version}.docx"
-            print(f"docx_name={docx_name}", file=out)
+            # 输出纯 ASCII 格式，中文在调用处拼接
+            print(f"docx_name=manual-{version}.docx", file=out)
         if "description" in output_fields:
             print(f"description={description}", file=out)
 

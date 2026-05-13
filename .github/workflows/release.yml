@@ -8,6 +8,8 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    env:
+      PYTHONUTF8: 1
     outputs:
       version: ${{ steps.version.outputs.version }}
       exe_name: ${{ steps.version.outputs.exe_name }}
@@ -82,7 +84,7 @@ jobs:
           name: toolbox-windows-${{ github.ref_name }}
           path: |
             dist/*.exe
-            dist/*.docx
+            dist/manual-${{ steps.version.outputs.version }}.docx
           retention-days: 7
 
   build-macos:
@@ -157,6 +159,8 @@ jobs:
 
   create-release:
     runs-on: windows-latest
+    env:
+      PYTHONUTF8: 1
     needs: [build-windows, build-macos]
     permissions:
       contents: write
@@ -209,7 +213,7 @@ jobs:
             - macOS: `.app` 包（请从 macOS 构建下载）
 
             ### 📖 用户手册
-            下载 `用户手册-${{ steps.version.outputs.version }}.docx` 查看详细使用说明。
+            下载 `manual-${{ steps.version.outputs.version }}.docx` 查看详细使用说明。
 
             ### 🔗 相关链接
             - 🌐 [官方网站](https://github.com/yansheng836/python-toolbox)
