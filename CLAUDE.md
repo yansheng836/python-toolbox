@@ -276,7 +276,7 @@ Users should be able to select and copy:
 
 #### Using SelectableLabel
 
-```python
+{% raw %}```python
 from toolbox import SelectableLabel
 
 # GOOD: Informational text uses SelectableLabel
@@ -286,7 +286,7 @@ self.desc_label = SelectableLabel(self.description)
 
 # BAD: Informational text uses QLabel (not copyable)
 self.version_label = QLabel(f"版本: v{APP_VERSION}")
-```
+```{% endraw %}
 
 #### When to Use SelectableLabel
 
@@ -571,7 +571,7 @@ for batch_start in range(0, total, self.BATCH_SIZE):
 3. **Test in BOTH themes** — Every style change must be verified in dark AND light mode
 4. **Message boxes** — Use `MessageUtils.show_info()`, etc. from `common/message_utils.py` instead of raw `QMessageBox`
 5. **Gradient buttons** — Text color must be explicitly set for all states:
-   ```python
+   {% raw %}```python
    # GOOD
    button.setStyleSheet(f"""
        QPushButton {{ color: {Theme.TEXT_PRIMARY}; }}
@@ -579,7 +579,7 @@ for batch_start in range(0, total, self.BATCH_SIZE):
    """)
    # BAD — depends on inheritance
    button.setStyleSheet("background: qlineargradient(...);")
-   ```
+   ```{% endraw %}
 6. **Status labels** — Use appropriate color constants: Success=`Theme.SUCCESS`, Error=`Theme.ERROR`, Warning=`Theme.WARNING`, Info=`Theme.ACCENT_PRIMARY`
 
 ---
