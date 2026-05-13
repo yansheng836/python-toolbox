@@ -44,7 +44,7 @@ def get_version_info(output_fields):
         if "description" in output_fields:
             print(f"description={description}", file=out)
 
-    print(f"Version info written: version={version}, app_name={app_name}")
+    print(f"Version info written: version={version}")
 
 
 if __name__ == "__main__":
