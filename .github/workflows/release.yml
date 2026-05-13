@@ -32,21 +32,8 @@ jobs:
 
       - name: Get version info
         id: version
-        shell: bash
         run: |
-          python -c "
-          import re
-          with open('config.py', 'r', encoding='utf-8') as f:
-              content = f.read()
-          version = re.search(r'APP_VERSION\s*=\s*\"([^\"]+)\"', content).group(1)
-          app_name = re.search(r'APP_NAME\s*=\s*\"([^\"]+)\"', content).group(1)
-          exe_name = f'{app_name}ToolBox-v{version}.exe'
-          docx_name = f'用户手册-{version}.docx'
-          with open('$GITHUB_OUTPUT', 'a') as out:
-              print(f'version={version}', file=out)
-              print(f'exe_name={exe_name}', file=out)
-              print(f'docx_name={docx_name}', file=out)
-          "
+          python scripts/get_version.py version app_name exe_name docx_name
 
       - name: Syntax check - core modules
         shell: bash
@@ -122,16 +109,7 @@ jobs:
       - name: Get version info
         id: version
         run: |
-          python -c "
-          import re
-          with open('config.py', 'r', encoding='utf-8') as f:
-              content = f.read()
-          version = re.search(r'APP_VERSION\s*=\s*\"([^\"]+)\"', content).group(1)
-          app_name = re.search(r'APP_NAME\s*=\s*\"([^\"]+)\"', content).group(1)
-          with open('$GITHUB_OUTPUT', 'a') as out:
-              print(f'version={version}', file=out)
-              print(f'app_name={app_name}', file=out)
-          "
+          python scripts/get_version.py version app_name
 
       - name: Syntax check - core modules
         run: |
@@ -201,20 +179,8 @@ jobs:
 
       - name: Get version info
         id: version
-        shell: bash
         run: |
-          python -c "
-          import re
-          with open('config.py', 'r', encoding='utf-8') as f:
-              content = f.read()
-          version = re.search(r'APP_VERSION\s*=\s*\"([^\"]+)\"', content).group(1)
-          app_name = re.search(r'APP_NAME\s*=\s*\"([^\"]+)\"', content).group(1)
-          description = re.search(r'APP_DESCRIPTION\s*=\s*\"([^\"]+)\"', content).group(1)
-          with open('$GITHUB_OUTPUT', 'a') as out:
-              print(f'version={version}', file=out)
-              print(f'app_name={app_name}', file=out)
-              print(f'description={description}', file=out)
-          "
+          python scripts/get_version.py version app_name description
 
       - name: Create Release
         id: create_release
