@@ -6,35 +6,21 @@ on:
       - 'v*'
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: windows-latest
-            artifact_name: toolbox-windows
-            build_script: build.py
-            output_pattern: |
-              dist/*.exe
-              dist/manual-*.docx
-          - os: macos-latest
-            artifact_name: toolbox-macos
-            build_script: build_macos.py
-            output_pattern: dist/*.app
-
-    env:
-      PYTHONUTF8: 1
-
+  build-windows:
+    runs-on: windows-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
       app_name: ${{ steps.version.outputs.app_name }}
       description: ${{ steps.version.outputs.description }}
 
+    env:
+      PYTHONUTF8: 1
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0  # 获取完整历史，用于计算变更
+          fetch-depth: 0
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -60,10 +46,11 @@ jobs:
           python -m py_compile toolbox.py
           python -m py_compile main.py
           python -m py_compile settings_page.py
-          python -m py_compile ${{ matrix.build_script }}
+          python -m py_compile build.py
           echo "OK: Core modules syntax check passed"
 
       - name: Syntax check - common modules
+        shell: bash
         run: |
           echo "Checking syntax for common modules..."
           for file in common/*.py; do
@@ -72,6 +59,7 @@ jobs:
           echo "OK: Common modules syntax check passed"
 
       - name: Syntax check - plugin modules
+        shell: bash
         run: |
           echo "Checking syntax for plugin modules..."
           for file in plugins/*.py; do
@@ -86,55 +74,14 @@ jobs:
       - name: Build
         timeout-minutes: 15
         run: |
-          echo "Running ${{ matrix.build_script }} to create package..."
-          python ${{ matrix.build_script }}
-          echo "OK: ${{ matrix.build_script }} completed successfully"
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact_name }}-${{ github.ref_name }}
-          path: ${{ matrix.output_pattern }}
-          retention-days: 7
-
-  create-release:
-    runs-on: windows-latest
-    needs: build
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0  # 获取完整历史
-
-      - name: Get version info
-        id: version
-        run: |
-          python scripts/get_version.py version app_name description
+          echo "Running build.py to create package..."
+          python build.py
+          echo "OK: build.py completed successfully"
 
       - name: Generate release notes
         id: notes
         run: |
           python scripts/generate_notes.py ${{ github.ref_name }}
-
-      - name: Download Windows artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: toolbox-windows-${{ github.ref_name }}
-          path: release-files
-
-      - name: Download macOS artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: toolbox-macos-${{ github.ref_name }}
-          path: release-files
-
-      - name: List release files
-        run: |
-          echo "Files to upload:"
-          ls -lh release-files/
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -143,8 +90,84 @@ jobs:
           name: 工具箱 v${{ steps.version.outputs.version }}
           body: ${{ steps.notes.outputs.content }}
           files: |
-            release-files/*.exe
-            release-files/*.app
-            release-files/*.docx
+            dist/*.exe
+            dist/manual-*.docx
           draft: false
           prerelease: false
+
+  build-macos:
+    runs-on: macos-latest
+    needs: build-windows
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements.txt
+
+      - name: Get version info
+        run: |
+          python scripts/get_version.py version
+
+      - name: Syntax check - core modules
+        run: |
+          echo "Checking syntax for core modules..."
+          python -m py_compile config.py
+          python -m py_compile toolbox.py
+          python -m py_compile main.py
+          python -m py_compile settings_page.py
+          python -m py_compile build_macos.py
+          echo "OK: Core modules syntax check passed"
+
+      - name: Syntax check - common modules
+        shell: bash
+        run: |
+          echo "Checking syntax for common modules..."
+          for file in common/*.py; do
+            [ -f "$file" ] && python -m py_compile "$file"
+          done
+          echo "OK: Common modules syntax check passed"
+
+      - name: Syntax check - plugin modules
+        shell: bash
+        run: |
+          echo "Checking syntax for plugin modules..."
+          for file in plugins/*.py; do
+            [ -f "$file" ] && python -m py_compile "$file"
+          done
+          echo "OK: Plugin modules syntax check passed"
+
+      - name: Verify main.py import
+        run: |
+          python -c "import sys; sys.path.insert(0, '.'); import main; print('Verification passed')"
+
+      - name: Build
+        timeout-minutes: 15
+        run: |
+          echo "Running build_macos.py to create .app bundle..."
+          python build_macos.py
+          echo "OK: build_macos.py completed successfully"
+
+      - name: Get version from tag
+        id: tag
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Upload macOS package to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            dist/*.app

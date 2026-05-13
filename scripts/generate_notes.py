@@ -13,11 +13,14 @@ def get_previous_tag(current_tag: str) -> str | None:
     try:
         result = subprocess.run(
             ["git", "tag", "--sort=-creatordate"],
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
+            encoding="utf-8",
             check=True,
         )
-        tags = [t.strip() for t in result.stdout.strip().split("\n") if t.strip()]
+        stdout = result.stdout or ""
+        tags = [t.strip() for t in stdout.strip().split("\n") if t.strip()]
         if current_tag in tags:
             idx = tags.index(current_tag)
             if idx + 1 < len(tags):
@@ -27,7 +30,7 @@ def get_previous_tag(current_tag: str) -> str | None:
         return None
 
 
-def get_commit_log(from_tag: str | None, to_tag: str) -> str:
+def get_commit_log(from_tag: str | None, to_tag: str) -> list:
     """获取两个标签之间的提交日志"""
     if from_tag:
         range_spec = f"{from_tag}..{to_tag}"
@@ -36,16 +39,22 @@ def get_commit_log(from_tag: str | None, to_tag: str) -> str:
 
     result = subprocess.run(
         ["git", "log", range_spec, "--pretty=format:%h|%s|%b"],
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
         check=False,
     )
 
     if result.returncode != 0:
-        return ""
+        return []
+
+    stdout = result.stdout or ""
+    if not stdout.strip():
+        return []
 
     commits = []
-    for line in result.stdout.strip().split("\n"):
+    for line in stdout.strip().split("\n"):
         if not line.strip():
             continue
         parts = line.split("|", 2)
@@ -97,6 +106,8 @@ def generate_release_notes(current_tag: str) -> str:
     """生成完整的 Release Notes"""
     previous_tag = get_previous_tag(current_tag)
     commits = get_commit_log(previous_tag, current_tag)
+    if commits is None:
+        commits = []
     categories = categorize_commits(commits)
 
     # 版本信息
