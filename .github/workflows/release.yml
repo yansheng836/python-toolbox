@@ -1,0 +1,256 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      exe_name: ${{ steps.version.outputs.exe_name }}
+      docx_name: ${{ steps.version.outputs.docx_name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
+          cache: 'pip'
+
+      - name: Install requirements
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements.txt
+
+      - name: Get version info
+        id: version
+        shell: bash
+        run: |
+          python -c "
+          import re
+          with open('config.py', 'r', encoding='utf-8') as f:
+              content = f.read()
+          version = re.search(r'APP_VERSION\s*=\s*\"([^\"]+)\"', content).group(1)
+          app_name = re.search(r'APP_NAME\s*=\s*\"([^\"]+)\"', content).group(1)
+          exe_name = f'{app_name}ToolBox-v{version}.exe'
+          docx_name = f'用户手册-{version}.docx'
+          with open('$GITHUB_OUTPUT', 'a') as out:
+              print(f'version={version}', file=out)
+              print(f'exe_name={exe_name}', file=out)
+              print(f'docx_name={docx_name}', file=out)
+          "
+
+      - name: Syntax check - core modules
+        shell: bash
+        run: |
+          echo "Checking syntax for core modules..."
+          python -m py_compile config.py
+          python -m py_compile toolbox.py
+          python -m py_compile main.py
+          python -m py_compile settings_page.py
+          python -m py_compile build.py
+          echo "OK: Core modules syntax check passed"
+
+      - name: Syntax check - common modules
+        shell: bash
+        run: |
+          echo "Checking syntax for common modules..."
+          for file in common/*.py; do
+            [ -f "$file" ] && python -m py_compile "$file"
+          done
+          echo "OK: Common modules syntax check passed"
+
+      - name: Syntax check - plugin modules
+        shell: bash
+        run: |
+          echo "Checking syntax for plugin modules..."
+          for file in plugins/*.py; do
+            [ -f "$file" ] && python -m py_compile "$file"
+          done
+          echo "OK: Plugin modules syntax check passed"
+
+      - name: Verify main.py import
+        shell: bash
+        run: |
+          python -c "import sys; sys.path.insert(0, '.'); import main; print('Verification passed')"
+
+      - name: Build executable
+        shell: bash
+        run: |
+          echo "Running build.py to create executable..."
+          python build.py
+          echo "OK: build.py completed successfully"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolbox-windows-${{ github.ref_name }}
+          path: |
+            dist/*.exe
+            dist/*.docx
+          retention-days: 7
+
+  build-macos:
+    runs-on: macos-latest
+    needs: build-windows
+    outputs:
+      app_name: ${{ steps.version.outputs.app_name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements.txt
+
+      - name: Get version info
+        id: version
+        run: |
+          python -c "
+          import re
+          with open('config.py', 'r', encoding='utf-8') as f:
+              content = f.read()
+          version = re.search(r'APP_VERSION\s*=\s*\"([^\"]+)\"', content).group(1)
+          app_name = re.search(r'APP_NAME\s*=\s*\"([^\"]+)\"', content).group(1)
+          with open('$GITHUB_OUTPUT', 'a') as out:
+              print(f'version={version}', file=out)
+              print(f'app_name={app_name}', file=out)
+          "
+
+      - name: Syntax check - core modules
+        run: |
+          echo "Checking syntax for core modules..."
+          python -m py_compile config.py
+          python -m py_compile toolbox.py
+          python -m py_compile main.py
+          python -m py_compile settings_page.py
+          python -m py_compile build.py
+          echo "OK: Core modules syntax check passed"
+
+      - name: Syntax check - common modules
+        run: |
+          echo "Checking syntax for common modules..."
+          for file in common/*.py; do
+            [ -f "$file" ] && python -m py_compile "$file"
+          done
+          echo "OK: Common modules syntax check passed"
+
+      - name: Syntax check - plugin modules
+        run: |
+          echo "Checking syntax for plugin modules..."
+          for file in plugins/*.py; do
+            [ -f "$file" ] && python -m py_compile "$file"
+          done
+          echo "OK: Plugin modules syntax check passed"
+
+      - name: Verify main.py import
+        run: |
+          python -c "import sys; sys.path.insert(0, '.'); import main; print('Verification passed')"
+
+      - name: Build macOS app
+        timeout-minutes: 15
+        run: |
+          echo "Running build_macos.py to create .app bundle..."
+          python build_macos.py
+          echo "OK: build_macos.py completed successfully"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: toolbox-macos-${{ github.ref_name }}
+          path: dist/*.app
+          retention-days: 7
+
+  create-release:
+    runs-on: windows-latest
+    needs: [build-windows, build-macos]
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: toolbox-windows-${{ github.ref_name }}
+          path: dist
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: toolbox-macos-${{ github.ref_name }}
+          path: dist
+
+      - name: Get version info
+        id: version
+        shell: bash
+        run: |
+          python -c "
+          import re
+          with open('config.py', 'r', encoding='utf-8') as f:
+              content = f.read()
+          version = re.search(r'APP_VERSION\s*=\s*\"([^\"]+)\"', content).group(1)
+          app_name = re.search(r'APP_NAME\s*=\s*\"([^\"]+)\"', content).group(1)
+          description = re.search(r'APP_DESCRIPTION\s*=\s*\"([^\"]+)\"', content).group(1)
+          with open('$GITHUB_OUTPUT', 'a') as out:
+              print(f'version={version}', file=out)
+              print(f'app_name={app_name}', file=out)
+              print(f'description={description}', file=out)
+          "
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: 工具箱 v${{ steps.version.outputs.version }}
+          body: |
+            ## 📦 工具箱 v${{ steps.version.outputs.version }}
+
+            ### 📝 更新说明
+            ${{ steps.version.outputs.description }}
+
+            ### 📋 功能列表
+            - 🗜️ 图片压缩 — 批量压缩 JPG/PNG/WebP 图片
+            - 🔁 图片格式转换 — 批量转换图片格式
+            - 🧩 图片拼接 — 多张图片横向或纵向拼接
+            - 🖨️ 图片转 PDF — 多张图片合并为 PDF
+            - 🔍 图片缩放 — 批量缩放图片尺寸
+            - 📚 PDF 合并 — 多个 PDF 合并为一个
+            - ✂️ PDF 拆分 — PDF 拆分为图片或单页 PDF
+            - 🧹 文件去重 — 按内容 Hash 查找重复文件
+
+            ### 📥 下载
+            - Windows: `工具箱ToolBox-v${{ steps.version.outputs.version }}.exe`
+            - macOS: `.app` 包（请从 macOS 构建下载）
+
+            ### 📖 用户手册
+            下载 `用户手册-${{ steps.version.outputs.version }}.docx` 查看详细使用说明。
+
+            ### 🔗 相关链接
+            - 🌐 [官方网站](https://github.com/yansheng836/python-toolbox)
+            - 🐛 [问题反馈](https://github.com/yansheng836/python-toolbox/issues)
+            - 📄 [更新日志](https://github.com/yansheng836/python-toolbox/blob/main/CHANGELOG.md)
+          files: |
+            dist/*.exe
+            dist/*.docx
+          draft: false
+          prerelease: false

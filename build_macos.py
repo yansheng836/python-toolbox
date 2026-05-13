@@ -81,10 +81,8 @@ def main():
     print_step(2, "验证打包依赖")
     if not run_command("python verify_packaging.py", "验证依赖"):
         print("\n错误: 依赖验证失败，请检查缺失的模块")
-        response = input("\n是否继续打包? (y/N): ")
-        if response.lower() != 'y':
-            print("打包已取消")
-            return 1
+        print("打包已中止")
+        return 1
 
     # 步骤 3: 清理旧文件（仅清理 build，保留 dist 中的历史版本）
     print_step(3, "清理旧的打包文件")
