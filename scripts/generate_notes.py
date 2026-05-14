@@ -156,7 +156,7 @@ def generate_release_notes(current_tag: str) -> str:
     lines.extend([
         "### 📥 下载",
         "- **Windows**: `*.exe` 安装包",
-        "- **macOS**: `*.app` 应用包",
+        "- **macOS**: `*.dmg` 磁盘镜像（推荐）",
         "- **用户手册**: `manual-{version}.docx`",
         "",
     ])

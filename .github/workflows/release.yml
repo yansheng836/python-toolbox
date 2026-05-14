@@ -158,7 +158,7 @@ jobs:
         run: |
           python -c "import sys; sys.path.insert(0, '.'); import main; print('Verification passed')"
 
-      - name: Build
+      - name: Build .app
         timeout-minutes: 15
         run: |
           echo "Running build_macos.py to create .app bundle..."
@@ -171,22 +171,14 @@ jobs:
           VERSION="${GITHUB_REF#refs/tags/v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Verify .app file exists
-        id: verify
+      - name: Create .dmg
+        id: dmg
         run: |
-          echo "Checking for .app files in dist/..."
-          ls -la dist/
-          APP_FILE=$(find dist -name "*.app" -type d | head -1)
-          if [ -z "$APP_FILE" ]; then
-            echo "ERROR: No .app file found!"
-            exit 1
-          fi
-          echo "Found: $APP_FILE"
-          # 将 .app 打包为 tar.gz 以便上传
-          cd dist
-          tar -czf "toolbox-macos-${{ steps.version.outputs.version }}.tar.gz" "$(basename "$APP_FILE")"
-          cd ..
-          echo "app_archive=dist/toolbox-macos-${{ steps.version.outputs.version }}.tar.gz" >> $GITHUB_OUTPUT
+          echo "Creating .dmg from .app..."
+          python scripts/build_dmg.py "${{ steps.version.outputs.version }}"
+          DMG_NAME="工具箱-v${{ steps.version.outputs.version }}.dmg"
+          echo "dmg_file=$DMG_NAME" >> $GITHUB_OUTPUT
+          echo "OK: .dmg created"
 
       - name: Upload macOS package to Release
         uses: softprops/action-gh-release@v2
@@ -194,4 +186,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
-          files: ${{ steps.verify.outputs.app_archive }}
+          files: ${{ steps.dmg.outputs.dmg_file }}
