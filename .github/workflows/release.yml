@@ -158,35 +158,44 @@ jobs:
         run: |
           python -c "import sys; sys.path.insert(0, '.'); import main; print('Verification passed')"
 
-      - name: Build
+      - name: Build .app
         timeout-minutes: 15
         run: |
           echo "Running build_macos.py to create .app bundle..."
           python build_macos.py
           echo "OK: build_macos.py completed successfully"
 
-      - name: Get version from tag
-        id: version
+      - name: Install create-dmg
         run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Installing create-dmg..."
+          npm install -g create-dmg
+          echo "OK: create-dmg installed"
 
-      - name: Verify .app file exists
-        id: verify
+      - name: Create .dmg
+        id: dmg
         run: |
-          echo "Checking for .app files in dist/..."
-          ls -la dist/
+          echo "Creating .dmg from .app..."
           APP_FILE=$(find dist -name "*.app" -type d | head -1)
           if [ -z "$APP_FILE" ]; then
             echo "ERROR: No .app file found!"
             exit 1
           fi
-          echo "Found: $APP_FILE"
-          # 将 .app 打包为 tar.gz 以便上传
-          cd dist
-          tar -czf "toolbox-macos-${{ steps.version.outputs.version }}.tar.gz" "$(basename "$APP_FILE")"
-          cd ..
-          echo "app_archive=dist/toolbox-macos-${{ steps.version.outputs.version }}.tar.gz" >> $GITHUB_OUTPUT
+          APP_NAME=$(basename "$APP_FILE")
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          DMG_NAME="工具箱-v${VERSION}.dmg"
+
+          echo "App: $APP_FILE"
+          echo "DMG: $DMG_NAME"
+
+          create-dmg \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --app-drop-link 450 185 \
+            "$DMG_NAME" \
+            "$APP_FILE"
+
+          echo "dmg_file=$DMG_NAME" >> $GITHUB_OUTPUT
+          echo "OK: .dmg created"
 
       - name: Upload macOS package to Release
         uses: softprops/action-gh-release@v2
@@ -194,4 +203,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
-          files: ${{ steps.verify.outputs.app_archive }}
+          files: ${{ steps.dmg.outputs.dmg_file }}
