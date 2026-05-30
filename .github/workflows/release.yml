@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           architecture: 'x64'
@@ -86,7 +86,7 @@ jobs:
           python scripts/generate_notes.py ${{ github.ref_name }}
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -112,7 +112,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -188,7 +188,7 @@ jobs:
           echo "OK: .app packaged successfully"
 
       - name: Upload macOS package to Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
