@@ -165,37 +165,27 @@ jobs:
           python build_macos.py
           echo "OK: build_macos.py completed successfully"
 
-      - name: Install create-dmg
+      - name: Package .app
+        id: package
         run: |
-          echo "Installing create-dmg..."
-          npm install -g create-dmg
-          echo "OK: create-dmg installed"
-
-      - name: Create .dmg
-        id: dmg
-        run: |
-          echo "Creating .dmg from .app..."
+          echo "Packaging .app bundle..."
           APP_FILE=$(find dist -name "*.app" -type d | head -1)
           if [ -z "$APP_FILE" ]; then
             echo "ERROR: No .app file found!"
             exit 1
           fi
-          APP_NAME=$(basename "$APP_FILE")
           VERSION="${GITHUB_REF#refs/tags/v}"
-          DMG_NAME="工具箱-v${VERSION}.dmg"
+          ARCHIVE_NAME="工具箱-v${VERSION}-macos.tar.gz"
 
           echo "App: $APP_FILE"
-          echo "DMG: $DMG_NAME"
+          echo "Archive: $ARCHIVE_NAME"
 
-          create-dmg \
-            --window-size 600 400 \
-            --icon-size 100 \
-            --app-drop-link 450 185 \
-            "$DMG_NAME" \
-            "$APP_FILE"
+          cd dist
+          tar czf "../${ARCHIVE_NAME}" "$(basename "$APP_FILE")"
+          cd ..
 
-          echo "dmg_file=$DMG_NAME" >> $GITHUB_OUTPUT
-          echo "OK: .dmg created"
+          echo "archive_file=$ARCHIVE_NAME" >> $GITHUB_OUTPUT
+          echo "OK: .app packaged successfully"
 
       - name: Upload macOS package to Release
         uses: softprops/action-gh-release@v2
@@ -203,4 +193,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
-          files: ${{ steps.dmg.outputs.dmg_file }}
+          files: ${{ steps.package.outputs.archive_file }}
