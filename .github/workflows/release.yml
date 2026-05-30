@@ -99,22 +99,9 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           ZIP_NAME="工具箱ToolBox-win-${VERSION}.zip"
           echo "Creating ${ZIP_NAME}..."
-          python -c "
-import zipfile, os
-v = '${VERSION}'
-zip_path = '${ZIP_NAME}'
-with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-    exe = f'工具箱ToolBox-v{v}.exe'
-    manual = f'manual-{v}.docx'
-    for f in [exe, manual]:
-        fp = os.path.join('dist', f)
-        if os.path.exists(fp):
-            zf.write(fp, f)
-            print(f'  Added: {f}')
-        else:
-            print(f'  Warning: {f} not found')
-print(f'Created: {zip_path}')
-"
+          cd dist
+          7z a "../${ZIP_NAME}" "工具箱ToolBox-v${VERSION}.exe" "manual-${VERSION}.docx"
+          cd ..
           echo "zip_file=${ZIP_NAME}" >> $GITHUB_OUTPUT
 
       - name: Create Release
