@@ -100,7 +100,8 @@ jobs:
         shell: bash
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          ZIP_NAME="工具箱ToolBox-win-${VERSION}.zip"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          ZIP_NAME="工具箱ToolBox-win-${TAG_VERSION}.zip"
           echo "Creating ${ZIP_NAME}..."
           cd dist
           7z a "../${ZIP_NAME}" "工具箱ToolBox-v${VERSION}.exe"
