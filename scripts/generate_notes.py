@@ -38,29 +38,34 @@ def get_commit_log(from_tag: str | None, to_tag: str) -> list:
         range_spec = to_tag
 
     result = subprocess.run(
-        ["git", "log", range_spec, "--pretty=format:%h|%s|%b"],
+        ["git", "log", range_spec, "-z", "--pretty=format:%h|%s|%b"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
         check=False,
     )
 
     if result.returncode != 0:
         return []
 
-    stdout = result.stdout or ""
+    stdout = result.stdout.decode("utf-8", errors="replace")
     if not stdout.strip():
         return []
 
     commits = []
-    for line in stdout.strip().split("\n"):
-        if not line.strip():
+    for entry in stdout.strip().split("\0"):
+        entry = entry.strip()
+        if not entry or "|" not in entry:
             continue
-        parts = line.split("|", 2)
+        parts = entry.split("|", 2)
         sha = parts[0][:7]
         subject = parts[1] if len(parts) > 1 else ""
-        body = parts[2] if len(parts) > 2 else ""
+        body = parts[2].strip() if len(parts) > 2 else ""
+        # 过滤掉 Co-Authored-By 等 git trailer 行
+        if body:
+            body = "\n".join(
+                line for line in body.split("\n")
+                if not line.strip().startswith("Co-Authored-By")
+            )
 
         # 解析 conventional commit 类型
         commit_type = ""
@@ -68,12 +73,15 @@ def get_commit_log(from_tag: str | None, to_tag: str) -> list:
             commit_type = subject.split(":")[0]
             subject = subject.split(":", 1)[1].strip() if ":" in subject else subject
 
-        # 分类整理
+        # 过滤 Co-Authored-By 等非实际变更的行
+        if not subject and not body:
+            continue
+
         commits.append({
             "sha": sha,
             "type": commit_type,
             "subject": subject,
-            "body": body.strip(),
+            "body": body,
         })
 
     return commits
@@ -96,7 +104,9 @@ def categorize_commits(commits: list) -> dict:
         cat_key = c["type"] if c["type"] in categories else "chore"
         item_text = c["subject"]
         if c["body"]:
-            item_text += f"\n  > {c['body']}"
+            body_lines = [line for line in c["body"].split("\n") if line.strip()]
+            indented_body = "\n".join(f"  > {line}" for line in body_lines)
+            item_text += f"\n{indented_body}"
         categories[cat_key]["items"].append(item_text)
 
     return categories
@@ -110,18 +120,25 @@ def generate_release_notes(current_tag: str) -> str:
         commits = []
     categories = categorize_commits(commits)
 
-    # 版本信息
     version = current_tag.lstrip("v")
+
+    # 简要说明
+    summary_parts = []
+    for cat_key in ["feat", "fix", "perf", "refactor"]:
+        if cat_key in categories and categories[cat_key]["items"]:
+            summary_parts.append(f"**{categories[cat_key]['title']}**：{len(categories[cat_key]['items'])} 项")
+    summary = "、".join(summary_parts) if summary_parts else "问题修复与功能改进"
+
     lines = [
-        f"## 📦 工具箱 v{version}",
+        f"{summary}",
         "",
     ]
 
-    # 变更说明
+    lines.append("### 变更日志")
     if previous_tag:
-        lines.append(f"### 📋 变更日志（{previous_tag} → {current_tag}）")
+        lines.append(f"对比范围 `{previous_tag}` → `{current_tag}`")
     else:
-        lines.append("### 📋 变更日志（首次发布）")
+        lines.append("首次发布")
     lines.append("")
 
     # 按分类输出
@@ -129,7 +146,7 @@ def generate_release_notes(current_tag: str) -> str:
     for cat_key, cat_info in categories.items():
         if cat_info["items"]:
             has_content = True
-            lines.append(f"#### {cat_info['title']}")
+            lines.append(f"**{cat_info['title']}**")
             for item in cat_info["items"]:
                 lines.append(f"- {item}")
             lines.append("")
@@ -140,33 +157,40 @@ def generate_release_notes(current_tag: str) -> str:
 
     # 功能列表
     lines.extend([
-        "### 🧰 功能列表",
-        "- 🗜️ 图片压缩 — 批量压缩 JPG/PNG/WebP 图片",
-        "- 🔁 图片格式转换 — 批量转换图片格式",
-        "- 🧩 图片拼接 — 多张图片横向或纵向拼接",
-        "- 🖨️ 图片转 PDF — 多张图片合并为 PDF",
-        "- 🔍 图片缩放 — 批量缩放图片尺寸",
-        "- 📚 PDF 合并 — 多个 PDF 合并为一个",
-        "- ✂️ PDF 拆分 — PDF 拆分为图片或单页 PDF",
-        "- 🧹 文件去重 — 按内容 Hash 查找重复文件",
+        "### 功能列表",
+        "",
+        "| 功能 | 说明 |",
+        "|------|------|",
+        "| 🗜️ 图片压缩 | 批量压缩 JPG/PNG/WebP，可调质量与输出格式 |",
+        "| 🔁 格式转换 | 批量转换图片格式（JPEG/PNG/WebP/BMP/TIFF/GIF） |",
+        "| 🧩 图片拼接 | 多张图片横向或纵向拼接，支持对齐方式 |",
+        "| 🖨️ 图片转 PDF | 多张图片合并为 PDF，支持拖拽排序和压缩 |",
+        "| 🔍 图片缩放 | 按宽度/高度/百分比批量缩放 |",
+        "| 📚 PDF 合并 | 多个 PDF 合并为一个，支持拖拽排序 |",
+        "| ✂️ PDF 拆分 | PDF 拆分为图片或单页 PDF |",
+        "| 🧹 文件去重 | 按内容 Hash 查找重复文件 |",
         "",
     ])
 
     # 下载说明
     lines.extend([
-        "### 📥 下载",
-        "- **Windows**: `*.exe` 安装包",
-        "- **macOS**: `*.dmg` 磁盘镜像（推荐）",
-        "- **用户手册**: `manual-{version}.docx`",
+        "### 下载",
+        "",
+        f"| 平台 | 文件 |",
+        f"|------|------|",
+        f"| Windows | `工具箱ToolBox-v{version}.exe` |",
+        f"| macOS | `工具箱-v{version}-macos.tar.gz`（内含 .app bundle） |",
+        f"| 用户手册 | `manual-{version}.docx` |",
         "",
     ])
 
     # 相关链接
     lines.extend([
-        "### 🔗 相关链接",
-        "- 🌐 [官方网站](https://github.com/yansheng836/python-toolbox)",
-        "- 🐛 [问题反馈](https://github.com/yansheng836/python-toolbox/issues)",
-        "- 📄 [更新日志](https://github.com/yansheng836/python-toolbox/blob/main/CHANGELOG.md)",
+        "### 相关链接",
+        "",
+        "- [官方网站](https://github.com/yansheng836/python-toolbox)",
+        "- [问题反馈](https://github.com/yansheng836/python-toolbox/issues)",
+        "- [更新日志](https://github.com/yansheng836/python-toolbox/blob/main/CHANGELOG.md)",
     ])
 
     return "\n".join(lines)
