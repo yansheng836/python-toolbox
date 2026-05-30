@@ -85,6 +85,38 @@ jobs:
         run: |
           python scripts/generate_notes.py ${{ github.ref_name }}
 
+      - name: Upload manual for macOS
+        uses: actions/upload-artifact@v7
+        with:
+          name: manual-docx
+          path: dist/manual-*.docx
+          retention-days: 1
+
+      - name: Package Windows release
+        id: package_win
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          ZIP_NAME="工具箱ToolBox-win-${VERSION}.zip"
+          echo "Creating ${ZIP_NAME}..."
+          python -c "
+import zipfile, os
+v = '${VERSION}'
+zip_path = '${ZIP_NAME}'
+with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+    exe = f'工具箱ToolBox-v{v}.exe'
+    manual = f'manual-{v}.docx'
+    for f in [exe, manual]:
+        fp = os.path.join('dist', f)
+        if os.path.exists(fp):
+            zf.write(fp, f)
+            print(f'  Added: {f}')
+        else:
+            print(f'  Warning: {f} not found')
+print(f'Created: {zip_path}')
+"
+          echo "zip_file=${ZIP_NAME}" >> $GITHUB_OUTPUT
+
       - name: Create Release
         uses: softprops/action-gh-release@v3
         env:
@@ -93,9 +125,7 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: 工具箱 v${{ steps.version.outputs.version }}
           body: ${{ steps.notes.outputs.content }}
-          files: |
-            dist/*.exe
-            dist/manual-*.docx
+          files: ${{ steps.package_win.outputs.zip_file }}
           draft: false
           prerelease: false
 
@@ -165,26 +195,44 @@ jobs:
           python build_macos.py
           echo "OK: build_macos.py completed successfully"
 
+      - name: Download manual from Windows
+        uses: actions/download-artifact@v8
+        with:
+          name: manual-docx
+          path: dist/
+
       - name: Package .app
         id: package
         run: |
-          echo "Packaging .app bundle..."
+          echo "Packaging .app bundle with manual..."
+          VERSION="${GITHUB_REF#refs/tags/v}"
+
           APP_FILE=$(find dist -name "*.app" -type d | head -1)
           if [ -z "$APP_FILE" ]; then
             echo "ERROR: No .app file found!"
             exit 1
           fi
-          VERSION="${GITHUB_REF#refs/tags/v}"
-          ARCHIVE_NAME="工具箱-v${VERSION}-macos.tar.gz"
 
-          echo "App: $APP_FILE"
+          APP_BASENAME="工具箱ToolBox-v${VERSION}.app"
+          MANUAL_FILE=$(ls dist/manual-*.docx 2>/dev/null | head -1 || echo "")
+          ARCHIVE_NAME="工具箱ToolBox-mac-${VERSION}.tar.gz"
+
+          # Rename .app to match naming convention
+          mv "$APP_FILE" "dist/${APP_BASENAME}"
+
+          echo "App: $APP_BASENAME"
+          echo "Manual: $MANUAL_FILE"
           echo "Archive: $ARCHIVE_NAME"
 
           cd dist
-          tar czf "../${ARCHIVE_NAME}" "$(basename "$APP_FILE")"
+          TAR_FILES="${APP_BASENAME}"
+          if [ -n "$MANUAL_FILE" ]; then
+            TAR_FILES="${TAR_FILES} $(basename "$MANUAL_FILE")"
+          fi
+          tar czf "../${ARCHIVE_NAME}" ${TAR_FILES}
           cd ..
 
-          echo "archive_file=$ARCHIVE_NAME" >> $GITHUB_OUTPUT
+          echo "archive_file=${ARCHIVE_NAME}" >> $GITHUB_OUTPUT
           echo "OK: .app packaged successfully"
 
       - name: Upload macOS package to Release

@@ -155,32 +155,14 @@ def generate_release_notes(current_tag: str) -> str:
         lines.append("_暂无变更记录_")
         lines.append("")
 
-    # 功能列表
-    lines.extend([
-        "### 功能列表",
-        "",
-        "| 功能 | 说明 |",
-        "|------|------|",
-        "| 🗜️ 图片压缩 | 批量压缩 JPG/PNG/WebP，可调质量与输出格式 |",
-        "| 🔁 格式转换 | 批量转换图片格式（JPEG/PNG/WebP/BMP/TIFF/GIF） |",
-        "| 🧩 图片拼接 | 多张图片横向或纵向拼接，支持对齐方式 |",
-        "| 🖨️ 图片转 PDF | 多张图片合并为 PDF，支持拖拽排序和压缩 |",
-        "| 🔍 图片缩放 | 按宽度/高度/百分比批量缩放 |",
-        "| 📚 PDF 合并 | 多个 PDF 合并为一个，支持拖拽排序 |",
-        "| ✂️ PDF 拆分 | PDF 拆分为图片或单页 PDF |",
-        "| 🧹 文件去重 | 按内容 Hash 查找重复文件 |",
-        "",
-    ])
-
     # 下载说明
     lines.extend([
         "### 下载",
         "",
         f"| 平台 | 文件 |",
         f"|------|------|",
-        f"| Windows | `工具箱ToolBox-v{version}.exe` |",
-        f"| macOS | `工具箱-v{version}-macos.tar.gz`（内含 .app bundle） |",
-        f"| 用户手册 | `manual-{version}.docx` |",
+        f"| Windows | `工具箱ToolBox-win-{version}.zip` |",
+        f"| macOS | `工具箱ToolBox-mac-{version}.tar.gz` |",
         "",
     ])
 
