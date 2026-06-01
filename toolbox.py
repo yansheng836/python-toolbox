@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
     QGraphicsDropShadowEffect, QSystemTrayIcon, QMenu, QScrollArea
 )
 from PyQt6.QtCore import (
-    Qt, QPropertyAnimation, QEasingCurve, QSettings, QTimer, QEvent
+    Qt, QPropertyAnimation, QParallelAnimationGroup, QEasingCurve, QSettings, QTimer, QEvent
 )
 from PyQt6.QtGui import (
     QIcon, QPixmap, QColor, QFont, QAction
@@ -815,6 +815,8 @@ class ToolboxWindow(QMainWindow):
 
         self.plugins: Dict[str, ToolPlugin] = {}
         self.current_plugin = None
+        self.sidebar_expanded = True
+        self._sidebar_animating = False
 
         self.setup_ui()
         self.load_plugins()
@@ -831,10 +833,12 @@ class ToolboxWindow(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
+        sidebar_width = UI_CONFIG.get("sidebar_width", 260)
+
         self.sidebar = QFrame()
         self.sidebar.setObjectName("sidebar")
-        self.sidebar.setMaximumWidth(260)
-        self.sidebar.setMinimumWidth(260)
+        self.sidebar.setMaximumWidth(sidebar_width)
+        self.sidebar.setMinimumWidth(sidebar_width)
         # 初始样式会在 apply_theme 中设置
 
         sidebar_layout = QVBoxLayout(self.sidebar)
@@ -842,31 +846,31 @@ class ToolboxWindow(QMainWindow):
         sidebar_layout.setSpacing(SPACING_SMALL)
 
         logo_layout = QHBoxLayout()
-        logo_icon = QLabel()
+        self.logo_icon = QLabel()
         # 加载 favicon.ico 作为 logo
         favicon_path = self._get_favicon_path()
         if favicon_path and os.path.exists(favicon_path):
             pixmap = QPixmap(favicon_path)
             if not pixmap.isNull():
                 scaled_pixmap = pixmap.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                logo_icon.setPixmap(scaled_pixmap)
+                self.logo_icon.setPixmap(scaled_pixmap)
             else:
-                logo_icon.setText("🧰")
-                logo_icon.setStyleSheet("font-size: 28px;")
+                self.logo_icon.setText("🧰")
+                self.logo_icon.setStyleSheet("font-size: 28px;")
         else:
-            logo_icon.setText("🧰")
-            logo_icon.setStyleSheet("font-size: 28px;")
+            self.logo_icon.setText("🧰")
+            self.logo_icon.setStyleSheet("font-size: 28px;")
         self.logo_text = QLabel("工具箱")
-        logo_layout.addWidget(logo_icon)
+        logo_layout.addWidget(self.logo_icon)
         logo_layout.addWidget(self.logo_text)
         logo_layout.addStretch()
         sidebar_layout.addLayout(logo_layout)
 
-        line = QFrame()
-        line.setObjectName("sidebarLine")
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setMaximumHeight(1)
-        sidebar_layout.addWidget(line)
+        self.sidebar_line = QFrame()
+        self.sidebar_line.setObjectName("sidebarLine")
+        self.sidebar_line.setFrameShape(QFrame.Shape.HLine)
+        self.sidebar_line.setMaximumHeight(1)
+        sidebar_layout.addWidget(self.sidebar_line)
 
         # 首页按钮
         self.home_btn = SidebarButton("首页", "🏠")
@@ -886,7 +890,22 @@ class ToolboxWindow(QMainWindow):
         self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sidebar_layout.addWidget(self.version_label)
 
+        # 侧边栏折叠按钮（位于 sidebar 右侧边缘，垂直居中）
+        self.sidebar_toggle_btn = QPushButton("◀")
+        self.sidebar_toggle_btn.setObjectName("sidebarToggle")
+        self.sidebar_toggle_btn.setFixedWidth(36)
+        self.sidebar_toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.sidebar_toggle_btn.setToolTip("收起侧边栏")
+        self.sidebar_toggle_btn.clicked.connect(self._toggle_sidebar)
+
+        # 用于折叠时隐藏的侧边栏子控件列表
+        self._sidebar_children = [
+            self.logo_icon, self.logo_text, self.sidebar_line,
+            self.home_btn, self.nav_widget, self.version_label
+        ]
+
         main_layout.addWidget(self.sidebar)
+        main_layout.addWidget(self.sidebar_toggle_btn)
 
         self.content = QStackedWidget()
         self.content.setStyleSheet("""
@@ -1027,6 +1046,52 @@ class ToolboxWindow(QMainWindow):
                     self.content.setCurrentIndex(index)
                     self.current_plugin = name
 
+    def _toggle_sidebar(self):
+        """切换侧边栏展开/折叠"""
+        if self._sidebar_animating:
+            return
+        sidebar_width = UI_CONFIG.get("sidebar_width", 260)
+        if self.sidebar_expanded:
+            # 折叠：先隐藏子控件，再动画
+            self._set_sidebar_children_visible(False)
+            self._animate_sidebar(sidebar_width, 0, False)
+        else:
+            # 展开：先动画，完成后显示子控件
+            self._animate_sidebar(0, sidebar_width, True)
+
+    def _set_sidebar_children_visible(self, visible):
+        """设置侧边栏子控件可见性"""
+        for w in self._sidebar_children:
+            w.setVisible(visible)
+
+    def _animate_sidebar(self, start, end, expand):
+        """带动画切换侧边栏宽度"""
+        self._sidebar_animating = True
+        self.sidebar_anim = QParallelAnimationGroup(self)
+        for prop in [b"minimumWidth", b"maximumWidth"]:
+            anim = QPropertyAnimation(self.sidebar, prop)
+            anim.setDuration(200)
+            anim.setStartValue(start)
+            anim.setEndValue(end)
+            anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
+            self.sidebar_anim.addAnimation(anim)
+        self.sidebar_anim.finished.connect(
+            lambda e=expand: self._on_sidebar_animation_finished(e)
+        )
+        self.sidebar_anim.start()
+
+    def _on_sidebar_animation_finished(self, expand):
+        """侧边栏动画完成后的处理"""
+        self._sidebar_animating = False
+        self.sidebar_expanded = expand
+        if expand:
+            self._set_sidebar_children_visible(True)
+            self.sidebar_toggle_btn.setText("◀")
+            self.sidebar_toggle_btn.setToolTip("收起侧边栏")
+        else:
+            self.sidebar_toggle_btn.setText("▶")
+            self.sidebar_toggle_btn.setToolTip("展开侧边栏")
+
     def _get_favicon_path(self):
         """获取 favicon.ico 的路径，支持开发模式和打包模式"""
         if getattr(sys, 'frozen', False):
@@ -1054,6 +1119,7 @@ class ToolboxWindow(QMainWindow):
         self.settings.setValue("theme", theme_name)
 
     def apply_theme(self, theme):
+        self._current_theme = theme
         self.setStyleSheet(f"""
             QMainWindow {{ background-color: {theme['bg']}; }}
             QScrollArea {{ border: none; background-color: {theme['bg']}; }}
@@ -1131,6 +1197,24 @@ class ToolboxWindow(QMainWindow):
                 background-color: {theme['surface']};
             }}
         """)
+
+        if hasattr(self, 'sidebar_toggle_btn'):
+            self.sidebar_toggle_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {theme['bg_secondary']};
+                    color: {theme['text_secondary']};
+                    border: none;
+                    border-left: 1px solid {theme['surface']};
+                    border-right: 1px solid {theme['surface']};
+                    border-radius: 0px;
+                    padding: 0px;
+                    font-size: 14px;
+                }}
+                QPushButton:hover {{
+                    background-color: {theme['surface']};
+                    color: {theme['primary']};
+                }}
+            """)
 
         if hasattr(self, 'version_label'):
             self.version_label.setStyleSheet(
