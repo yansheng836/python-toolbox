@@ -92,6 +92,7 @@ class ActionPanel(Card):
         self.status_label = SelectableLabel(status_text)
         self.status_label.setStyleSheet(f"color: {Theme.DARK['text_secondary']};")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_label.setWordWrap(True)
         self.content_layout.addWidget(self.status_label)
 
     def start_task(self, maximum=0, status=""):
