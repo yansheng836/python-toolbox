@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 macOS .dmg 打包脚本
-使用 hdiutil 将 .app 打包为 .dmg 格式
+将 .app 打包为 .dmg 格式（带拖拽安装界面）
 """
 
 import sys
@@ -11,20 +11,23 @@ import subprocess
 from pathlib import Path
 
 
-def create_dmg_with_hdiutil(app_path: str, output_path: str):
-    """使用 hdiutil 创建 .dmg（系统自带，稳定可靠）"""
-    volname = os.path.basename(app_path).replace(".app", "")
+def create_dmg_with_create_dmg(app_path: str, output_path: str, app_name: str):
+    """使用 create-dmg 创建带拖拽界面的 .dmg"""
+    # 获取 app 文件名
+    app_filename = os.path.basename(app_path)
+    # 去掉 .app 后缀
+    app_name_short = app_filename.replace(".app", "")
 
     cmd = [
-        "hdiutil", "create",
-        "-volname", volname,
-        "-srcfolder", app_path,
-        "-ov",
-        "-format", "UDZO",
+        "create-dmg",
+        "--window-size", "600", "400",
+        "--icon-size", "100",
+        "--app-drop-link", "450", "185",
         output_path,
+        app_path,
     ]
 
-    print(f"执行: {' '.join(cmd)}")
+    print(f"执行: create-dmg {app_filename} -> {output_path}")
     result = subprocess.run(cmd, capture_output=True, text=True)
 
     if result.returncode != 0:
@@ -33,42 +36,81 @@ def create_dmg_with_hdiutil(app_path: str, output_path: str):
     return True
 
 
+def create_dmg_with_hdiutil(app_path: str, output_path: str):
+    """使用 hdiutil 创建 .dmg（系统自带）"""
+    volname = os.path.basename(app_path).replace(".app", "")
+    dmg_temp = output_path.replace(".dmg", "_temp.dmg")
+
+    # 创建临时 .dmg
+    cmd = [
+        "hdiutil", "create",
+        "-volname", volname,
+        "-srcfolder", app_path,
+        "-ov",
+        "-format", "UDZO",
+        dmg_temp,
+    ]
+
+    print(f"执行: hdiutil create {volname} -> {dmg_temp}")
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        print(f"错误: {result.stderr}")
+        return False
+
+    # 重命名
+    if os.path.exists(output_path):
+        os.remove(output_path)
+    os.rename(dmg_temp, output_path)
+    return True
+
+
 def main():
     print("=" * 60)
     print("macOS .dmg 打包脚本")
     print("=" * 60)
 
+    # 查找 .app 文件
     dist_dir = Path("dist")
-    dist_dir.mkdir(parents=True, exist_ok=True)
+    if not dist_dir.exists():
+        print("错误: dist 目录不存在")
+        return 1
 
     app_files = list(dist_dir.glob("*.app"))
     if not app_files:
         print("错误: dist 目录中没有 .app 文件")
+        print("请先运行 build_macos.py 生成 .app")
         return 1
 
     app_path = str(app_files[0])
     print(f"找到 .app: {app_path}")
 
-    # 版本号从命令行参数获取（CI 中传递），否则从 config.py 读取
-    version = sys.argv[1] if len(sys.argv) > 1 else ""
-    if not version:
-        config_path = Path("config.py")
-        if config_path.exists():
-            content = config_path.read_text(encoding="utf-8")
-            import re
-            match = re.search(r'APP_VERSION\s*=\s*"([^"]+)"', content)
-            if match:
-                version = match.group(1)
+    # 从 config.py 读取版本号
+    config_path = Path("config.py")
+    version = "0.0.0"
+    if config_path.exists():
+        content = config_path.read_text(encoding="utf-8")
+        import re
+        match = re.search(r'APP_VERSION\s*=\s*"([^"]+)"', content)
+        if match:
+            version = match.group(1)
 
-    if not version:
-        version = "0.0.0"
-
-    dmg_name = f"工具箱-v{version}.dmg"
-    output_path = str(dist_dir / dmg_name)
+    output_path = str(dist_dir / f"工具箱-v{version}.dmg")
     print(f"输出: {output_path}")
 
-    print("\n使用 hdiutil 创建 .dmg...")
-    success = create_dmg_with_hdiutil(app_path, output_path)
+    # 尝试使用 create-dmg（需要安装）
+    create_dmg_result = subprocess.run(
+        ["which", "create-dmg"],
+        capture_output=True,
+    )
+
+    if create_dmg_result.returncode == 0:
+        print("\n使用 create-dmg 创建 .dmg...")
+        success = create_dmg_with_create_dmg(app_path, output_path, "工具箱")
+    else:
+        print("\ncreate-dmg 未安装，使用 hdiutil 创建 .dmg...")
+        print("提示: npm install -g create-dmg 可安装更美观的打包工具")
+        success = create_dmg_with_hdiutil(app_path, output_path)
 
     if success:
         print(f"\n✓ .dmg 创建成功!")

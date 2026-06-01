@@ -34,7 +34,9 @@
       "Bash(cat)",
       "Read(//tmp/**)",
       "Bash(python3 *)",
-      "Bash(xxd)"
+      "Bash(xxd)",
+      "Bash(pip show *)",
+      "Bash(awk '{print $1 \">=\" $2}')"
     ]
   }
 }

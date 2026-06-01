@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           architecture: 'x64'
@@ -73,6 +73,9 @@ jobs:
         run: |
           python -c "import sys; sys.path.insert(0, '.'); import main; print('Verification passed')"
 
+      - name: Install pandoc
+        run: choco install pandoc -y --no-progress
+
       - name: Build
         timeout-minutes: 15
         run: |
@@ -85,17 +88,36 @@ jobs:
         run: |
           python scripts/generate_notes.py ${{ github.ref_name }}
 
+      - name: Upload manual for macOS
+        uses: actions/upload-artifact@v7
+        with:
+          name: manual-docx
+          path: dist/manual-*.docx
+          retention-days: 1
+
+      - name: Package Windows release
+        id: package_win
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          ZIP_NAME="工具箱ToolBox-win-${TAG_VERSION}.zip"
+          echo "Creating ${ZIP_NAME}..."
+          cd dist
+          7z a "../${ZIP_NAME}" "工具箱ToolBox-v${VERSION}.exe"
+          [ -f "manual-${VERSION}.docx" ] && 7z a "../${ZIP_NAME}" "manual-${VERSION}.docx"
+          cd ..
+          echo "zip_file=${ZIP_NAME}" >> $GITHUB_OUTPUT
+
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
           name: 工具箱 v${{ steps.version.outputs.version }}
           body: ${{ steps.notes.outputs.content }}
-          files: |
-            dist/*.exe
-            dist/manual-*.docx
+          files: ${{ steps.package_win.outputs.zip_file }}
           draft: false
           prerelease: false
 
@@ -112,7 +134,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -165,25 +187,50 @@ jobs:
           python build_macos.py
           echo "OK: build_macos.py completed successfully"
 
-      - name: Get version from tag
-        id: version
-        run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Download manual from Windows
+        uses: actions/download-artifact@v8
+        with:
+          name: manual-docx
+          path: dist/
 
-      - name: Create .dmg
-        id: dmg
+      - name: Package .app
+        id: package
         run: |
-          echo "Creating .dmg from .app..."
-          python scripts/build_dmg.py "${{ steps.version.outputs.version }}"
-          DMG_NAME="工具箱-v${{ steps.version.outputs.version }}.dmg"
-          echo "dmg_file=$DMG_NAME" >> $GITHUB_OUTPUT
-          echo "OK: .dmg created"
+          echo "Packaging .app bundle with manual..."
+          VERSION="${GITHUB_REF#refs/tags/v}"
+
+          APP_FILE=$(find dist -name "*.app" -type d | head -1)
+          if [ -z "$APP_FILE" ]; then
+            echo "ERROR: No .app file found!"
+            exit 1
+          fi
+
+          APP_BASENAME="工具箱ToolBox-v${VERSION}.app"
+          MANUAL_FILE=$(ls dist/manual-*.docx 2>/dev/null | head -1 || echo "")
+          ARCHIVE_NAME="工具箱ToolBox-mac-${VERSION}.tar.gz"
+
+          # Rename .app to match naming convention
+          mv "$APP_FILE" "dist/${APP_BASENAME}"
+
+          echo "App: $APP_BASENAME"
+          echo "Manual: $MANUAL_FILE"
+          echo "Archive: $ARCHIVE_NAME"
+
+          cd dist
+          TAR_FILES="${APP_BASENAME}"
+          if [ -n "$MANUAL_FILE" ]; then
+            TAR_FILES="${TAR_FILES} $(basename "$MANUAL_FILE")"
+          fi
+          tar czf "../${ARCHIVE_NAME}" ${TAR_FILES}
+          cd ..
+
+          echo "archive_file=${ARCHIVE_NAME}" >> $GITHUB_OUTPUT
+          echo "OK: .app packaged successfully"
 
       - name: Upload macOS package to Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
-          files: ${{ steps.dmg.outputs.dmg_file }}
+          files: ${{ steps.package.outputs.archive_file }}

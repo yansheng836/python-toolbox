@@ -5,7 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/).
 
-[Unreleased]: https://github.com/yansheng836/python-toolbox/compare/v2.0.3...HEAD
+[Unreleased]: https://github.com/yansheng836/python-toolbox/compare/v2.0.4...HEAD
+[v2.0.4]: https://github.com/yansheng836/python-toolbox/compare/v2.0.3...v2.0.4
 [v2.0.3]: https://github.com/yansheng836/python-toolbox/compare/v2.0.2...v2.0.3
 [v2.0.2]: https://github.com/yansheng836/python-toolbox/compare/v2.0.1...v2.0.2
 [v2.0.1]: https://github.com/yansheng836/python-toolbox/compare/v2.0.0...v2.0.1
@@ -23,6 +24,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 [v1.0.1]: https://github.com/yansheng836/python-toolbox/compare/v1.0.0...v1.0.1
 [v1.0.0]: https://github.com/yansheng836/python-toolbox/compare/v0.0.1...v1.0.0
 [v0.0.1]: https://github.com/yansheng836/python-toolbox/releases/tag/v0.0.1
+
+## [v2.0.4] - 2026-05-30
+
+### Added
+- 文件去重功能增强
+  - 选择文件夹后自动开始扫描
+  - 文件删除后增加自动扫描开关
+- 添加 tag 触发自动打包并创建 GitHub Release
+- 添加 macOS 打包支持（.app → .dmg → tar.gz）
+- 重构 CI/CD 为 Matrix 构建策略（Windows + macOS）
+- 添加 .codacy.yml 配置文件
+
+### Changed
+- 统一 Release 打包规范，优化打包文件名和构建流程
+- 统一进度条样式并去除边框细线
+
+### Fixed
+- 修复 Windows runner 打包问题（pandoc 安装、bash 语法兼容性、中文编码）
+- 修复 release.yml YAML 语法错误（Windows 打包改用 7z）
+- 修复 macOS 打包图标文件不存在问题
+- 修复 CLAUDE.md 中 Liquid 模板冲突
+- 优化 Release Notes 生成逻辑
+- 更新 CI Action 组件版本
 
 ## [v2.0.3] - 2026-05-07
 
