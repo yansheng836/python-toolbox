@@ -4,6 +4,7 @@
 按内容Hash查找重复文件，支持预览后选择规则删除
 """
 import os
+import stat
 import hashlib
 from collections import defaultdict
 
@@ -205,6 +206,12 @@ class FileDeduplicatorWidget(QWidget):
         self.deselect_all_btn.setMaximumWidth(80)
         self.deselect_all_btn.clicked.connect(self._deselect_all)
         select_btn_layout.addWidget(self.deselect_all_btn)
+
+        self.toggle_expand_btn = AnimatedButton("折叠")
+        self.toggle_expand_btn.setMaximumWidth(80)
+        self.toggle_expand_btn.clicked.connect(self._toggle_expand)
+        select_btn_layout.addWidget(self.toggle_expand_btn)
+
         select_btn_layout.addStretch()
         deletion_card.content_layout.addLayout(select_btn_layout)
 
@@ -461,6 +468,10 @@ class FileDeduplicatorWidget(QWidget):
         self.stats_label.setText(
             f"找到 {len(duplicates)} 组重复文件，共 {total_duplicates} 个重复文件，可节省空间: {self.format_size(total_savings)}"
         )
+        # 自动展开所有重复组
+        self.results_tree.expandAll()
+        if hasattr(self, 'toggle_expand_btn'):
+            self.toggle_expand_btn.setText("折叠")
         # 扫描完成后，启用删除按钮
         self.delete_panel.btn.setEnabled(bool(duplicates))
 
@@ -494,7 +505,16 @@ class FileDeduplicatorWidget(QWidget):
         for i in range(self.results_tree.topLevelItemCount()):
             parent = self.results_tree.topLevelItem(i)
             parent.setCheckState(0, Qt.CheckState.Unchecked)
-            parent.setExpanded(False)
+
+    def _toggle_expand(self):
+        """切换展开/折叠所有分组"""
+        expanded = self.results_tree.topLevelItemCount() > 0 and self.results_tree.topLevelItem(0).isExpanded()
+        if expanded:
+            self.results_tree.collapseAll()
+            self.toggle_expand_btn.setText("展开")
+        else:
+            self.results_tree.expandAll()
+            self.toggle_expand_btn.setText("折叠")
 
     def format_size(self, bytes):
         """格式化文件大小"""
@@ -619,6 +639,7 @@ class FileDeduplicatorWidget(QWidget):
             for i, file_path in enumerate(files_to_delete):
                 try:
                     if os.path.exists(file_path):
+                        os.chmod(file_path, stat.S_IWRITE)  # 解除只读，否则删除会失败
                         os.remove(file_path)
                         deleted += 1
                     else:
