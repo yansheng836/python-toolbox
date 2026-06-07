@@ -3,6 +3,7 @@
 ## 问题
 
 原来的代码使用固定像素大小 (`font-size: 32px;`)，导致：
+
 - 窗口较小时图标显得过小
 - 窗口较大时图标不会自动放大
 - 缺乏响应式设计
@@ -10,11 +11,13 @@
 ## 解决方案
 
 ### 1. 使用 QSizePolicy
+
 ```python
 icon_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 ```
 
 ### 2. 使用 QFont 而不是样式表
+
 ```python
 font = icon_label.font()
 font.setPointSize(24)  # 使用点大小而非像素
@@ -23,17 +26,20 @@ icon_label.setFont(font)
 ```
 
 ### 3. 设置最小尺寸
+
 ```python
 icon_label.setMinimumSize(48, 48)  # 确保图标不会过小
 ```
 
 ### 4. 使用布局拉伸因子
+
 ```python
 card_layout.setStretch(0, 2)  # 图标占据更多权重
 card_layout.setStretch(1, 1)  # 文字占据较少权重
 ```
 
 ### 5. 保持宽高比
+
 ```python
 icon_label.setScaledContents(False)  # 防止图标拉伸失真
 ```

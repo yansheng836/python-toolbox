@@ -5,7 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/).
 
-[Unreleased]: https://github.com/yansheng836/python-toolbox/compare/v2.0.4...HEAD
 [v2.0.4]: https://github.com/yansheng836/python-toolbox/compare/v2.0.3...v2.0.4
 [v2.0.3]: https://github.com/yansheng836/python-toolbox/compare/v2.0.2...v2.0.3
 [v2.0.2]: https://github.com/yansheng836/python-toolbox/compare/v2.0.1...v2.0.2
@@ -28,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 ## [v2.0.4] - 2026-05-30
 
 ### Added
+
 - 文件去重功能增强
   - 选择文件夹后自动开始扫描
   - 文件删除后增加自动扫描开关
@@ -37,10 +37,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 - 添加 .codacy.yml 配置文件
 
 ### Changed
+
 - 统一 Release 打包规范，优化打包文件名和构建流程
 - 统一进度条样式并去除边框细线
 
 ### Fixed
+
 - 修复 Windows runner 打包问题（pandoc 安装、bash 语法兼容性、中文编码）
 - 修复 release.yml YAML 语法错误（Windows 打包改用 7z）
 - 修复 macOS 打包图标文件不存在问题
@@ -51,17 +53,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 ## [v2.0.3] - 2026-05-07
 
 ### Added
+
 - 图片拼接支持无限张数，超尺寸自动分批处理
 - 在设置页关于中添加检查更新和问题反馈链接（配置化管理）
 - 新增 LICENSE.txt 许可证文件
 
 ### Changed
+
 - 替换 README 截图预览为实际功能截图
 - 在用户手册各功能标题后添加对应截图
 - README 导航栏添加用户手册链接和许可证说明
 - 精简 TODO 列表，移除必要性较低的待办项
 
 ### Fixed
+
 - 统一所有插件描述文字颜色，修复主题切换时颜色不一致
 - 弹窗按钮文字颜色改为白色，提升浅色主题下可读性
 - 图片拼接进度条改为按每张图片更新，支持百分比显示
@@ -69,10 +74,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 ## [v2.0.2] - 2026-05-06
 
 ### Added
+
 - GitHub Actions 添加打包验证和构建产物上传
 - CI 流程添加 Python 语法检查和 Windows 环境支持
 
 ### Fixed
+
 - 修复 CI 配置中 YAML 语法错误（jobs 拼写、always() 表达式）
 - 修复 CRLF 换行符导致的 YAML 解析错误
 - 修复 build.py 编码问题并优化打包验证流程
@@ -80,6 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 ## [v2.0.1] - 2026-05-06
 
 ### Added
+
 - 实现响应式布局，支持窗口大小自适应
   - 统一插件布局，移除 `addStretch()` 让内容自然填充
   - `FileListPanel` 组件使用 `Expanding` 策略自适应
@@ -92,6 +100,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
   - 使用上下文管理器、显式关闭、批量处理等模式
 
 ### Changed
+
 - 更新 `CLAUDE.md` 新增多项强制性标准
   - 文本可复制性标准（Rule #7）
   - 响应式布局标准（Rule #8）
@@ -99,6 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 - 优化 `toolbox.spec` 使用 `os.path.abspath('.')` 替代 `__file__` 避免未定义错误
 
 ### Fixed
+
 - 修复插件内存泄漏和文件句柄未释放问题
   - 所有图片处理插件改用上下文管理器 `with Image.open() as img:`
   - 显式调用 `img.close()` 释放内存
@@ -115,6 +125,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 ## [v2.0.0] - 2026-05-05
 
 ### Added
+
 - 新增面向非技术用户的 Markdown 格式使用手册（`用户手册.md`）
   - 涵盖全部 8 个功能的详细使用步骤和适用场景
   - 包含界面介绍、通用操作元素、主题切换、常见问题等章节
@@ -133,6 +144,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 - 更新 `CHANGELOG.md`，采用 Keep a Changelog 标准格式
 
 ### Changed
+
 - 更新所有版本号至 v2.0.0
   - `config.py`: APP_VERSION = "2.0.0"
   - `toolbox.py`: ToolPlugin.version = "2.0.0"
@@ -154,6 +166,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
   - 统一管理 `ActionPanel` 导入
 
 ### Fixed
+
 - 修复多个插件未定义名称问题
   - `image_compressor.py`: 添加 `Image` 条件导入
   - `image_format_converter.py`: 添加 `Image` 条件导入
@@ -177,32 +190,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
   - 添加 `FITZ_AVAILABLE` 检查，防止未定义错误
 
 ### Removed
+
 - 移除各插件中重复的导入检查模式
   - 统一使用 `common/utils.py` 中的可用性标志
 
 ## [v1.0.11] - 2026-05-04
 
 ### Changed
+
 - 调整文件去重删除规则下拉框顺序
 - 新增文件名降序规则
 
 ## [v1.0.10] - 2026-05-03
 
 ### Added
+
 - 统一操作按钮样式为 `ActionPanel` 标准
 - 优化 PDF 拆分 PNG 输出质量
 
 ## [v1.0.9] - 2026-05-02
 
 ### Performance
+
 - 优化 PDF 合并及文件列表性能
 
 ### Fixed
+
 - 修复主题合规问题（文本颜色对比度）
 
 ## [v1.0.8] - 2026-05-01
 
 ### Added
+
 - 统一图片压缩、格式转换、拼接功能布局为 `ActionPanel` 标准
   - 统一操作面板交互体验
   - 按钮 + 进度条 + 状态标签一体化
@@ -210,30 +229,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 ## [v1.0.7] - 2026-04-30
 
 ### Fixed
+
 - 添加临时 PDF 和输出 PDF 的空文件验证
 - 防止空文件导致处理失败
 
 ## [v1.0.6] - 2026-04-29
 
 ### Added
+
 - 图片拼接新增"智能缩放"对齐方式（默认）
   - 自动按比例缩放图片以适应拼接画布
 
 ## [v1.0.5] - 2026-04-28
 
 ### Fixed
+
 - 区分 JPG/JPEG 扩展名，保持原格式时保留原始扩展名
 - 修复图片压缩输出文件扩展名不一致问题
 
 ## [v1.0.4] - 2026-04-27
 
 ### Fixed
+
 - 修复图片压缩/缩放/拼接的上移下移功能
   - 改为选中行上下移动，操作更直观
 
 ## [v1.0.3] - 2026-04-26
 
 ### Added
+
 - 将左侧和欢迎页的 emoji logo 替换为 `favicon.ico` 图标
 - 为右侧内容区域添加滚动支持，适配小屏场景
 - 支持手动调整窗口大小，添加窗口最大尺寸配置
@@ -241,12 +265,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 - 添加 push/PR 时运行 main.py 检查（CI/CD）
 
 ### Changed
+
 - 重构 `config.py` 配置顺序，新增 `FONT_SIZE_24` 常量
 - 统一字体大小为全局变量（`FONT_SIZE_12/14/16/20/24`）
 - 将内置图片处理功能提取为独立插件
 - 精简欢迎页布局，缩小 logo/标题/卡片尺寸，改为容器居中布局
 
 ### Fixed
+
 - 修复窗口图标和控制栏图标不显示的问题
 - 修复插件 `get_widget` 缺失和导入失败问题
 - 修复插件实例化失败问题
@@ -256,12 +282,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 - 修复插件 f-string QSS 转义错误
 
 ### Refactored
+
 - 移除所有 Python 文件中未使用的 import
 - 优化 main.py 检查步骤，避免复杂 shell 脚本
 
 ## [v1.0.2] - 2026-04-26
 
 ### Added
+
 - 新增文件去重工具插件 (`plugins/file_deduplicator.py`)
   - 选择文件夹递归扫描所有文件
   - 使用 SHA-256 计算文件内容哈希
@@ -283,6 +311,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 - 更新 `FEATURE_MODULES` 添加新的功能卡片
 
 ### Changed
+
 - 更新 `toolbox.spec` 添加新插件到 hiddenimports
 - 更新 `CLAUDE.md` 插件目录结构
 - 更新 `verify_packaging.py` 添加新插件验证项
@@ -291,18 +320,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 - 更新 `version_info.txt` 版本信息
 
 ### Fixed
+
 - 修复图片压缩功能中拖拽图片无法识别的问题
 - 修复拖拽功能初始化顺序问题
 - 修复图片批量缩放功能的拖拽支持
 - 修复图片拼接工具的拖拽支持
 
 ### Refactored
+
 - 提取拖拽功能为共用工具类，统一处理所有图片输入框 (`toolbox.py`)
 - 统一标题样式使用 `TITLE_STYLES` 配置
 
 ## [v1.0.1] - 2026-04-26
 
 ### Added
+
 - 完善打包配置，添加版本信息和自动化脚本
   - 创建 `generate_version_info.py` 自动从 config.py 生成版本信息文件
   - 创建 `verify_packaging.py` 验证所有依赖模块是否可正确导入
@@ -312,31 +344,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
   - 添加 `version_info.txt` 为 Windows 可执行文件提供版本元数据
 
 ### Changed
+
 - 修改 `toolbox.spec` 从 config.py 读取应用信息（名称、版本、描述、版权）
 - 在 hiddenimports 中添加 `plugins.image_scaler` 解决动态加载插件打包缺失问题
 - 更新 `CLAUDE.md` 添加打包相关命令和注意事项
 - 根据 git tags 更新 CHANGELOG.md，采用 Keep a Changelog 标准格式
 
 ### Fixed
+
 - 修复打包后缺少"图片批量缩放"和"设置"模块的问题（动态导入问题）
 - 修复打包后的可执行文件缺少版本信息和元数据的问题
 
 ### Removed
+
 - 删除 `pyinstaller.bat` 替换为跨平台的 `pyinstaller.sh`
 
 ## [v1.0.0] - 2026-04-25
 
 ### Added
+
 - 添加入口点和菜单系统
 - 添加测试文件并组织结构
 
 ### Changed
+
 - 更新文档并修复打包配置
 - 优化 UI 边框样式，提升视觉效果
 - 将设置按钮移动到侧边栏最后位置
 - 格式化代码
 
 ### Fixed
+
 - 修复所有剩余硬编码颜色问题
 - 修复 SettingsPlugin 中 copyright_label 未定义的错误
 - 修复浅色主题文字可见性问题
@@ -347,11 +385,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 - 修复设置页面插件注册和卡片构造错误
 
 ### Maintenance
+
 - 更新 settings.local.json 并删除测试文件
 
 ## [v0.0.1] - 2026-04-24
 
 ### Added
+
 - 初始化项目
 - 添加图片压缩功能
 - 添加图片转 PDF 功能
@@ -369,6 +409,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 - 添加 TODO 列表到 README
 
 ### Changed
+
 - 优化图片批量缩放 UI 并统一插件样式
 - 优化图片批量缩放设置布局
 - 改进欢迎页面 UI 并添加响应式图标缩放
@@ -379,6 +420,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 - 更换 ico 图标
 
 ### Fixed
+
 - 修复图片批量缩放开始按钮报错问题
 - 修复图片批量缩放功能显示问题
 - 修复插件加载逻辑和图片缩放翻译

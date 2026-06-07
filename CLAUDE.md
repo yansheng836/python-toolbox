@@ -24,7 +24,7 @@ These rules MUST be followed. Violations will cause bugs or maintenance debt.
 
 ## Project Structure
 
-```
+```text
 toolbox/
 ├── main.py                     # Application entry point
 ├── toolbox.py                  # Main app (ToolboxWindow, ToolPlugin, Theme, UI components)
@@ -148,12 +148,14 @@ Each plugin defines its own `*Worker` class (e.g., `CompressionWorker`, `PDFMerg
 **Rule: After modifying any Python file, you MUST run syntax checking before marking the task as complete.**
 
 Required checks:
+
 - **Syntax validation**: `python -m py_compile <file.py>`
 - **Indentation check**: Consistent indentation (4 spaces per level, no tabs)
 - **Import verification**: All used names (`Image`, `fitz`, `img2pdf`, `FONT_WEIGHT_*`, etc.) must be properly imported
 - **Line ending check**: LF (`\n`) only, not CRLF (`\r\n`)
 
 Check command:
+
 ```bash
 # Syntax check a single file
 python -m py_compile <file.py>
@@ -163,6 +165,7 @@ find . -name "*.py" -not -path "./.git/*" -not -path "*/__pycache__/*" -exec pyt
 ```
 
 Common issues to catch:
+
 - `NameError` / `ImportError` — missing imports (e.g., `Image` from `PIL`, `fitz`, `PDF_COLUMNS`)
 - `IndentationError` — mixed tabs/spaces or incorrect indent
 - `SyntaxError` — malformed Python code (missing colons, unclosed brackets)
@@ -268,6 +271,7 @@ except json.JSONDecodeError:
 **Rule: All informational text that users might want to copy MUST use `SelectableLabel` instead of `QLabel`.**
 
 Users should be able to select and copy:
+
 - Version numbers, copyright info, website links
 - File paths, output paths, status messages
 - Error messages, scan results, statistics
@@ -280,12 +284,15 @@ Users should be able to select and copy:
 from toolbox import SelectableLabel
 
 # GOOD: Informational text uses SelectableLabel
+
 self.version_label = SelectableLabel(f"版本: v{APP_VERSION}")
 self.status_label = SelectableLabel("正在处理...")
 self.desc_label = SelectableLabel(self.description)
 
 # BAD: Informational text uses QLabel (not copyable)
+
 self.version_label = QLabel(f"版本: v{APP_VERSION}")
+
 ```{% endraw %}
 
 #### When to Use SelectableLabel
@@ -403,11 +410,13 @@ except Exception as e:
 ```
 
 **Why this matters:**
+
 - Processing many files takes time — don't discover the file is locked AFTER processing
 - User sees "conversion failed" after waiting, then must restart everything
 - Clear error message helps user understand what to do (close the file)
 
 **Check other plugins:**
+
 - ✅ `image_to_pdf.py` — has this check (since commit 79b9b69)
 - ✅ Other plugins — `file_deduplicator.py` only reads files (no output file check needed)
 - ✅ `pdf_merger.py`, `pdf_splitter.py`, etc. — use `QFileDialog` which handles file access natively
@@ -435,17 +444,20 @@ for tf in temp_files:
 ```
 
 **Why this matters:**
+
 - After `shutil.move()` or other operations, the temp file may no longer exist at the expected path
 - Relative paths can resolve incorrectly when working directory changes
 - Batch operations may create duplicate filenames, causing some to be already deleted
 
 **Best practices:**
+
 1. **Use `os.path.abspath()`** — convert all paths to absolute before operations
 2. **Use `os.path.exists()`** — check before delete to avoid errors
 3. **Use `set()` instead of `list`** — for temp_files storage to avoid duplicates
 4. **Use `set.discard()`** — instead of `list.remove()` to avoid ValueError on missing items
 
 **Check other plugins:**
+
 - ✅ `image_to_pdf.py` — fixed in commit 58ec96e (uses `abspath`, `exists`, `set`)
 - ⚠️ `file_deduplicator.py` (line 557) — `os.remove(file_path)` without existence check
 
@@ -572,13 +584,18 @@ for batch_start in range(0, total, self.BATCH_SIZE):
 4. **Message boxes** — Use `MessageUtils.show_info()`, etc. from `common/message_utils.py` instead of raw `QMessageBox`
 5. **Gradient buttons** — Text color must be explicitly set for all states:
    {% raw %}```python
+
    # GOOD
+
    button.setStyleSheet(f"""
        QPushButton {{ color: {Theme.TEXT_PRIMARY}; }}
        QPushButton:hover {{ color: {Theme.TEXT_PRIMARY}; }}
    """)
+
    # BAD — depends on inheritance
+
    button.setStyleSheet("background: qlineargradient(...);")
+
    ```{% endraw %}
 6. **Status labels** — Use appropriate color constants: Success=`Theme.SUCCESS`, Error=`Theme.ERROR`, Warning=`Theme.WARNING`, Info=`Theme.ACCENT_PRIMARY`
 

@@ -11,6 +11,7 @@ python build.py
 ```
 
 这个脚本会自动执行以下步骤：
+
 1. 生成版本信息文件
 2. 验证所有依赖
 3. 清理旧的打包文件
@@ -39,21 +40,26 @@ pyinstaller toolbox.spec
 ## 脚本说明
 
 ### `build.py`
+
 自动化打包脚本，执行完整的打包流程。
 
 **使用场景**: 日常打包，一键完成所有步骤
 
 ### `generate_version_info.py`
+
 从 `config.py` 自动生成 `version_info.txt` 版本信息文件。
 
-**使用场景**: 
+**使用场景**:
+
 - 修改了 `config.py` 中的版本号或应用信息后
 - 需要更新 Windows 可执行文件的属性信息
 
 ### `verify_packaging.py`
+
 验证所有必需的模块是否可以正确导入。
 
 **使用场景**:
+
 - 打包前检查依赖是否完整
 - 添加新插件后验证是否能被正确导入
 - 排查打包后模块缺失的问题
@@ -71,6 +77,7 @@ APP_WEBSITE_URL = "https://github.com/yansheng836/python-toolbox"
 ```
 
 修改后：
+
 1. 运行 `python generate_version_info.py` 更新版本信息
 2. 运行 `python build.py` 重新打包
 
@@ -86,6 +93,7 @@ APP_WEBSITE_URL = "https://github.com/yansheng836/python-toolbox"
 详细的故障排除指南请参考 `PACKAGING_GUIDE.md`。
 
 常见问题：
+
 - **打包后缺少模块**: 检查 `toolbox.spec` 的 `hiddenimports` 配置
 - **版本信息不显示**: 确保 `version_info.txt` 存在且格式正确
 - **文件过大**: 检查 `toolbox.spec` 的 `excludes` 配置，排除不需要的模块

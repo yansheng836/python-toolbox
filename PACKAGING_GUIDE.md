@@ -3,6 +3,7 @@
 ## 问题描述
 
 打包后的应用缺少以下功能模块：
+
 1. **图片批量缩放** (`plugins/image_scaler.py`)
 2. **设置** (`SettingsPlugin` in `toolbox.py`)
 
@@ -102,6 +103,7 @@ dist\工具箱.exe
 ```
 
 检查以下功能是否正常：
+
 - ✓ 应用能正常启动
 - ✓ 右键查看文件属性，版本信息是否正确显示
 - ✓ 侧边栏是否显示"图片批量缩放"
@@ -144,6 +146,7 @@ APP_COPYRIGHT = "© 2026 yansheng836"
 ### Windows 文件属性显示
 
 打包后的 `.exe` 文件右键 → 属性 → 详细信息，会显示：
+
 - 文件描述：批量处理工具，支持图片压缩、PDF转换、格式转换和拼接
 - 产品名称：工具箱
 - 产品版本：1.0.0.0
@@ -154,22 +157,25 @@ APP_COPYRIGHT = "© 2026 yansheng836"
 
 ### Q1: 为什么 `datas` 中已经包含了 `('plugins', 'plugins')`，还需要在 `hiddenimports` 中指定？
 
-**A:** 
+**A:**
+
 - `datas` 只是将文件作为**数据文件**复制到打包目录
 - `hiddenimports` 是告诉 PyInstaller 将模块作为**Python 可导入模块**打包
 - 动态加载的模块需要同时在两个地方指定
 
 ### Q2: 如何添加新的插件？
 
-**A:** 
+**A:**
+
 1. 在 `plugins/` 目录创建新的插件文件（如 `my_plugin.py`）
 2. 在 `toolbox.spec` 的 `hiddenimports` 中添加 `'plugins.my_plugin'`
 3. 重新打包
 
 ### Q3: 设置插件为什么会缺失？
 
-**A:** 
+**A:**
 `SettingsPlugin` 定义在 `toolbox.py` 中，理论上应该被自动包含。但如果仍然缺失，可以：
+
 1. 确保 `toolbox.py` 在 `hiddenimports` 中
 2. 检查 `toolbox.py` 是否在 `datas` 中被正确复制
 
