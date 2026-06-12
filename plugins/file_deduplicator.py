@@ -4,6 +4,7 @@
 按内容Hash查找重复文件，支持预览后选择规则删除
 """
 import os
+import re
 import stat
 import hashlib
 from collections import defaultdict
@@ -182,6 +183,7 @@ class FileDeduplicatorWidget(QWidget):
             "智能识别副本（优先删除含(1)/_copy/_backup等标记的文件，其余按创建时间降序）"
         ])
         left_half.addWidget(self.rule_combo, 1)
+        self.rule_combo.currentIndexChanged.connect(self._sort_by_rule)
 
         # 右半：删除后是否自动扫描（文字在前，勾选框在后，与"启用压缩"样式一致）
         right_half = QHBoxLayout()
@@ -211,6 +213,11 @@ class FileDeduplicatorWidget(QWidget):
         self.toggle_expand_btn.setMaximumWidth(80)
         self.toggle_expand_btn.clicked.connect(self._toggle_expand)
         select_btn_layout.addWidget(self.toggle_expand_btn)
+
+        self.sort_by_rule_btn = AnimatedButton("按规则排序")
+        self.sort_by_rule_btn.setMaximumWidth(100)
+        self.sort_by_rule_btn.clicked.connect(self._sort_by_rule)
+        select_btn_layout.addWidget(self.sort_by_rule_btn)
 
         select_btn_layout.addStretch()
         deletion_card.content_layout.addLayout(select_btn_layout)
@@ -474,6 +481,8 @@ class FileDeduplicatorWidget(QWidget):
             self.toggle_expand_btn.setText("折叠")
         # 扫描完成后，启用删除按钮
         self.delete_panel.btn.setEnabled(bool(duplicates))
+        # 按默认规则排序并标记保留/删除
+        self._sort_by_rule()
 
     def _on_parent_checked(self, item, column):
         """父节点勾选状态变化，联动子节点背景色"""
@@ -516,6 +525,82 @@ class FileDeduplicatorWidget(QWidget):
             self.results_tree.expandAll()
             self.toggle_expand_btn.setText("折叠")
 
+    def _get_sorted_files(self, file_list, rule):
+        """按指定规则排序文件列表，返回排序后的列表"""
+        if rule == 0:
+            return sorted(file_list, key=lambda x: (
+                os.path.getctime(x),
+                os.path.getmtime(x),
+                1 if self._has_copy_keyword(os.path.basename(x)) else 0
+            ))
+        elif rule == 1:
+            return sorted(file_list, key=lambda x: (
+                -os.path.getctime(x),
+                -os.path.getmtime(x),
+                1 if self._has_copy_keyword(os.path.basename(x)) else 0
+            ))
+        elif rule == 2:
+            return sorted(file_list, key=lambda x: os.path.basename(x).lower())
+        elif rule == 3:
+            return sorted(file_list, key=lambda x: os.path.basename(x).lower(), reverse=True)
+        elif rule == 4:
+            return sorted(file_list, key=lambda x: (
+                1 if self._has_copy_keyword(os.path.basename(x)) else 0,
+                os.path.getctime(x),
+                os.path.getmtime(x),
+            ))
+        elif rule == 5:
+            return sorted(file_list, key=lambda x: (
+                1 if self._has_copy_keyword(os.path.basename(x)) else 0,
+                -os.path.getctime(x),
+                -os.path.getmtime(x),
+            ))
+        return file_list
+
+    def _sort_by_rule(self):
+        """按当前选择的删除规则重排树节点，并标记保留/删除"""
+        if not self.duplicates:
+            return
+        rule = self.rule_combo.currentIndex()
+        theme = self.current_theme if hasattr(self, 'current_theme') else self.theme
+
+        for i in range(self.results_tree.topLevelItemCount()):
+            parent = self.results_tree.topLevelItem(i)
+            file_hash = parent.data(0, Qt.ItemDataRole.UserRole)
+            if file_hash not in self.duplicates:
+                continue
+            file_list = self.duplicates[file_hash]
+            if len(file_list) <= 1:
+                continue
+
+            sorted_files = self._get_sorted_files(file_list, rule)
+
+            # 收集现有子项（按文件路径索引）
+            child_map = {}
+            for j in range(parent.childCount()):
+                child = parent.child(j)
+                child_map[child.text(0).removeprefix("✅ 保留: ").removeprefix("❌ 删除: ")] = child
+
+            # 按排序顺序重建子项顺序
+            for idx, file_path in enumerate(sorted_files):
+                child = child_map.get(file_path)
+                if child is None:
+                    continue
+                # 移到第 idx 位
+                parent.removeChild(child)
+                parent.insertChild(idx, child)
+                # 标记保留/删除
+                if idx == 0:
+                    child.setText(0, f"✅ 保留: {file_path}")
+                    child.setForeground(0, QBrush(QColor(theme['success'])))
+                else:
+                    child.setText(0, f"❌ 删除: {file_path}")
+                    child.setForeground(0, QBrush(QColor(theme['error'])))
+
+        self.results_tree.expandAll()
+        if hasattr(self, 'toggle_expand_btn'):
+            self.toggle_expand_btn.setText("折叠")
+
     def format_size(self, bytes):
         """格式化文件大小"""
         for unit in ['B', 'KB', 'MB', 'GB']:
@@ -541,7 +626,6 @@ class FileDeduplicatorWidget(QWidget):
             '-copy-',
             '.temp',
         ]
-        import re
         for kw in keywords:
             if re.search(kw, filename, re.IGNORECASE):
                 return True
@@ -584,34 +668,7 @@ class FileDeduplicatorWidget(QWidget):
             if len(file_list) <= 1:
                 continue
             # 按规则排序
-            if rule == 0:  # 创建时间升序（旧→新），时间相同则按修改时间，再相同则含关键字的放后面
-                sorted_files = sorted(file_list, key=lambda x: (
-                    os.path.getctime(x),
-                    os.path.getmtime(x),
-                    1 if self._has_copy_keyword(os.path.basename(x)) else 0
-                ))
-            elif rule == 1:  # 创建时间降序（新→旧），时间相同则按修改时间降序，再相同则含关键字的放后面
-                sorted_files = sorted(file_list, key=lambda x: (
-                    -os.path.getctime(x),
-                    -os.path.getmtime(x),
-                    1 if self._has_copy_keyword(os.path.basename(x)) else 0
-                ))
-            elif rule == 2:  # 文件名升序
-                sorted_files = sorted(file_list, key=lambda x: os.path.basename(x).lower())
-            elif rule == 3:  # 文件名降序
-                sorted_files = sorted(file_list, key=lambda x: os.path.basename(x).lower(), reverse=True)
-            elif rule == 4:  # 智能识别副本（含关键字的优先删除，其余按创建时间升序）
-                sorted_files = sorted(file_list, key=lambda x: (
-                    1 if self._has_copy_keyword(os.path.basename(x)) else 0,
-                    os.path.getctime(x),
-                    os.path.getmtime(x),
-                ))
-            elif rule == 5:  # 智能识别副本（含关键字的优先删除，其余按创建时间降序）
-                sorted_files = sorted(file_list, key=lambda x: (
-                    1 if self._has_copy_keyword(os.path.basename(x)) else 0,
-                    -os.path.getctime(x),
-                    -os.path.getmtime(x),
-                ))
+            sorted_files = self._get_sorted_files(file_list, rule)
             # 保留第一个，删除后续
             files_to_delete.extend(sorted_files[1:])
 
