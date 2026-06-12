@@ -37,6 +37,13 @@ class FileDeduplicationWorker(QThread):
         self.folder_path = folder_path
         self.cancel_requested = False
 
+    # Windows 保留设备名称，打开这些名称的文件会阻塞或行为异常
+    WINDOWS_RESERVED_NAMES = frozenset({
+        'CON', 'PRN', 'AUX', 'NUL',
+        'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
+        'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9',
+    })
+
     def run(self):
         try:
             self.status.emit("正在扫描文件夹...")
@@ -47,6 +54,10 @@ class FileDeduplicationWorker(QThread):
                     self.finished.emit(False, "扫描已取消")
                     return
                 for file in files:
+                    # 跳过 Windows 保留设备名（如 con.log），open() 会阻塞
+                    name_without_ext = os.path.splitext(file)[0].upper()
+                    if name_without_ext in self.WINDOWS_RESERVED_NAMES:
+                        continue
                     file_path = os.path.join(root, file)
                     try:
                         file_size = os.path.getsize(file_path)
@@ -73,10 +84,38 @@ class FileDeduplicationWorker(QThread):
                 f"大小唯一文件已排除，需计算Hash: {candidate_count}/{total_files} 个文件"
             )
 
-            # 第二遍：只对大小相同的文件计算Hash
-            hash_to_files = defaultdict(list)
+            # 第二轮：快速Hash（首尾各64KB + 文件大小），排除明显不同的文件
+            quick_hash_to_files = defaultdict(list)
             scanned = 0
             for file_path in size_candidates:
+                if self.cancel_requested:
+                    self.finished.emit(False, "扫描已取消")
+                    return
+                try:
+                    quick_hash = self.compute_quick_hash(file_path)
+                    if quick_hash:
+                        quick_hash_to_files[quick_hash].append(file_path)
+                except Exception as e:
+                    print(f"compute_quick_hash error: {e}")
+                scanned += 1
+                self.progress.emit(scanned, candidate_count)
+
+            # 只对快速Hash相同的文件计算完整Hash
+            full_hash_candidates = []
+            for quick_hash, files in quick_hash_to_files.items():
+                if len(files) > 1:
+                    full_hash_candidates.extend(files)
+
+            full_count = len(full_hash_candidates)
+            if full_count > 0:
+                self.status.emit(
+                    f"快速Hash筛选完成，需完整Hash: {full_count}/{candidate_count} 个文件"
+                )
+
+            # 第三轮：完整Hash
+            hash_to_files = defaultdict(list)
+            scanned = 0
+            for file_path in full_hash_candidates:
                 if self.cancel_requested:
                     self.finished.emit(False, "扫描已取消")
                     return
@@ -88,7 +127,7 @@ class FileDeduplicationWorker(QThread):
                     print(f"compute_file_hash error: {e}")
                     self.error.emit(f"无法读取文件 {file_path}: {str(e)}")
                 scanned += 1
-                self.progress.emit(scanned, candidate_count)
+                self.progress.emit(scanned, full_count)
 
             # 过滤出重复文件（Hash对应多个文件）
             duplicates = {h: files for h, files in hash_to_files.items() if len(files) > 1}
@@ -99,7 +138,7 @@ class FileDeduplicationWorker(QThread):
             self.finished.emit(False, f"扫描失败: {str(e)}")
 
     def compute_file_hash(self, file_path, chunk_size=65536):
-        """计算文件的SHA-256哈希值"""
+        """计算文件的完整SHA-256哈希值"""
         hash_sha256 = hashlib.sha256()
         try:
             with open(file_path, 'rb') as f:
@@ -108,6 +147,23 @@ class FileDeduplicationWorker(QThread):
                         return None
                     hash_sha256.update(chunk)
             return hash_sha256.hexdigest()
+        except Exception:
+            return None
+
+    def compute_quick_hash(self, file_path, head_size=65536):
+        """快速Hash：读取首尾各head_size字节 + 文件大小，用于初筛"""
+        try:
+            file_size = os.path.getsize(file_path)
+            hash_obj = hashlib.sha256()
+            hash_obj.update(str(file_size).encode())
+            with open(file_path, 'rb') as f:
+                head = f.read(head_size)
+                hash_obj.update(head)
+                if file_size > head_size:
+                    f.seek(-head_size, 2)
+                    tail = f.read(head_size)
+                    hash_obj.update(tail)
+            return hash_obj.hexdigest()
         except Exception:
             return None
 

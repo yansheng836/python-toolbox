@@ -19,6 +19,7 @@ These rules MUST be followed. Violations will cause bugs or maintenance debt.
 | 9 | When writing/overwriting output files, check if the file is locked/occupied before processing | [File Operations](#file-operations-mandatory) |
 | 10 | When deleting temporary files, check if the file exists first to avoid error spam | [File Operations](#file-operations-mandatory) |
 | 11 | When processing files/images, use context managers and release resources properly | [Performance Optimization](#performance-optimization-mandatory) |
+| 12 | When scanning/opening files, skip Windows reserved device names (CON, PRN, AUX, NUL, COMx, LPTx) | [File Operations](#file-operations-mandatory) |
 
 ---
 
@@ -54,7 +55,7 @@ toolbox/
 │   ├── image_format_converter.py  # Batch image format conversion
 │   ├── pdf_merger.py         # Merge multiple PDFs into one
 │   ├── pdf_splitter.py        # Split PDF into per-page PDFs or images
-│   └── file_deduplicator.py  # File deduplication by content hash
+│   └── file_deduplicator.py  # File deduplication (size→quick hash→full hash)
 │
 └── test/                      # Test files
     ├── test_button.py          # Button UI component tests
@@ -459,7 +460,30 @@ for tf in temp_files:
 **Check other plugins:**
 
 - ✅ `image_to_pdf.py` — fixed in commit 58ec96e (uses `abspath`, `exists`, `set`)
-- ⚠️ `file_deduplicator.py` (line 557) — `os.remove(file_path)` without existence check
+- ✅ `file_deduplicator.py` — uses `os.path.exists()` before delete, skips reserved device names
+
+#### Rule 12: Skip Windows Reserved Device Names
+
+**When scanning or opening files by path, skip files whose basename (without extension) is a Windows reserved device name.**
+
+On Windows, names like `CON`, `PRN`, `AUX`, `NUL`, `COM1`-`COM9`, `LPT1`-`LPT9` are device names. Opening `con.log` causes `open()` to block indefinitely (interpreted as console device input). This applies regardless of file extension or directory depth.
+
+```python
+# GOOD: Skip reserved device names before opening
+WINDOWS_RESERVED_NAMES = frozenset({
+    'CON', 'PRN', 'AUX', 'NUL',
+    'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
+    'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9',
+})
+
+name_without_ext = os.path.splitext(filename)[0].upper()
+if name_without_ext in WINDOWS_RESERVED_NAMES:
+    continue  # Skip this file
+
+# BAD: Opening without checking
+with open(file_path, 'rb') as f:  # Blocks forever if file is named con.log
+    data = f.read()
+```
 
 ---
 
