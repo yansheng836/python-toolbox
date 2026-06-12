@@ -539,6 +539,7 @@ class FileDeduplicatorWidget(QWidget):
             '-备份',
             '_copy_',
             '-copy-',
+            '.temp',
         ]
         import re
         for kw in keywords:
