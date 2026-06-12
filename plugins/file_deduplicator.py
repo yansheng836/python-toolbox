@@ -40,7 +40,7 @@ class FileDeduplicationWorker(QThread):
     def run(self):
         try:
             self.status.emit("正在扫描文件夹...")
-            # 第一遍：收集所有文件
+            # 第一遍：收集所有文件及大小
             all_files = []
             for root, dirs, files in os.walk(self.folder_path):
                 if self.cancel_requested:
@@ -48,14 +48,35 @@ class FileDeduplicationWorker(QThread):
                     return
                 for file in files:
                     file_path = os.path.join(root, file)
-                    all_files.append(file_path)
+                    try:
+                        file_size = os.path.getsize(file_path)
+                    except OSError:
+                        continue
+                    all_files.append((file_path, file_size))
             total_files = len(all_files)
-            self.status.emit(f"找到 {total_files} 个文件，开始计算Hash...")
+            self.status.emit(f"找到 {total_files} 个文件，按大小分组...")
 
-            # 第二遍：计算每个文件的Hash
+            # 按文件大小分组，只保留大小相同的文件（大小唯一不可能重复）
+            all_files.sort(key=lambda x: x[1])
+            size_candidates = []
+            i = 0
+            while i < len(all_files):
+                j = i + 1
+                while j < len(all_files) and all_files[j][1] == all_files[i][1]:
+                    j += 1
+                if j - i > 1:
+                    size_candidates.extend(fp for fp, _ in all_files[i:j])
+                i = j
+
+            candidate_count = len(size_candidates)
+            self.status.emit(
+                f"大小唯一文件已排除，需计算Hash: {candidate_count}/{total_files} 个文件"
+            )
+
+            # 第二遍：只对大小相同的文件计算Hash
             hash_to_files = defaultdict(list)
             scanned = 0
-            for file_path in all_files:
+            for file_path in size_candidates:
                 if self.cancel_requested:
                     self.finished.emit(False, "扫描已取消")
                     return
@@ -67,7 +88,7 @@ class FileDeduplicationWorker(QThread):
                     print(f"compute_file_hash error: {e}")
                     self.error.emit(f"无法读取文件 {file_path}: {str(e)}")
                 scanned += 1
-                self.progress.emit(scanned, total_files)
+                self.progress.emit(scanned, candidate_count)
 
             # 过滤出重复文件（Hash对应多个文件）
             duplicates = {h: files for h, files in hash_to_files.items() if len(files) > 1}
