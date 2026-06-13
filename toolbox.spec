@@ -153,6 +153,8 @@ a = Analysis(
         'PyQt6.QtWebEngineWidgets',
         'PyQt6.QtNetwork',
         'PyQt6.QtNetworkAuth',
+        'PyQt6.QtPdf',
+        'PyQt6.QtPdfWidgets',
         'PyQt6.QtSql',
         'PyQt6.QtTest',
         'PyQt6.QtXml',
@@ -193,6 +195,16 @@ a = Analysis(
     cipher=block_cipher,
     noarchive=False,
 )
+
+# 排除不需要的 Qt6 C++ DLL 和软件 OpenGL 回退
+# Qt6Pdf.dll — 项目使用 img2pdf/PyMuPDF，无需 Qt PDF 渲染引擎
+# Qt6Network.dll — 项目无任何网络功能，插件级别的依赖无关紧要
+# opengl32sw.dll — 多数 Windows 系统有硬件 OpenGL，无需软件回退
+_excluded_dlls = frozenset({'Qt6Pdf.dll', 'Qt6Network.dll', 'opengl32sw.dll'})
+a.binaries = [
+    entry for entry in a.binaries
+    if os.path.basename(entry[0]) not in _excluded_dlls
+]
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
