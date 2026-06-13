@@ -36,7 +36,22 @@
       "Bash(python3 *)",
       "Bash(xxd)",
       "Bash(pip show *)",
-      "Bash(awk '{print $1 \">=\" $2}')"
+      "Bash(awk '{print $1 \">=\" $2}')",
+      "Bash(rm -rf build/)",
+      "Bash(rm -rf build)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash(rm *)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c \"case \\$CLAUDE_TOOL_INPUT in *rm*-rf*dist*|*rm*-rf*./dist*) echo '====== ERROR: 禁止删除 dist/ 目录下的内容 ======'; exit 1;; esac\""
+          }
+        ]
+      }
     ]
   }
 }

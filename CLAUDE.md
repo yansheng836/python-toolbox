@@ -100,6 +100,11 @@ pyinstaller toolbox.spec
 
 # Build with UPX compression
 pyinstaller --upx-dir=/path/to/upx toolbox.spec
+
+# Clean build artifacts (only build/, NOT dist/)
+rm -rf build/
+
+# ⚠️ 不要删除 dist/ 目录 — 用户可能在其中存放自定义构建产物
 ```
 
 ---
