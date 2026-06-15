@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/).
 
+[v2.0.5]: https://github.com/yansheng836/python-toolbox/compare/v2.0.4...v2.0.5
 [v2.0.4]: https://github.com/yansheng836/python-toolbox/compare/v2.0.3...v2.0.4
 [v2.0.3]: https://github.com/yansheng836/python-toolbox/compare/v2.0.2...v2.0.3
 [v2.0.2]: https://github.com/yansheng836/python-toolbox/compare/v2.0.1...v2.0.2
@@ -23,6 +24,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 [v1.0.1]: https://github.com/yansheng836/python-toolbox/compare/v1.0.0...v1.0.1
 [v1.0.0]: https://github.com/yansheng836/python-toolbox/compare/v0.0.1...v1.0.0
 [v0.0.1]: https://github.com/yansheng836/python-toolbox/releases/tag/v0.0.1
+
+## [v2.0.5] - 2026-06-15
+
+### Added
+
+- 文件去重支持按规则排序预览保留/删除标记
+- 文件去重副本标识新增 .temp 后缀支持
+- 侧边栏支持点击箭头折叠/展开
+- 文件去重新增快速 Hash 二级筛选，提升去重效率
+- 文件去重扫描按文件大小预筛选，大幅减少 Hash 计算量
+
+### Changed
+
+- 打包精简，排除 Qt6Pdf、Qt6Network、opengl32sw 三个非必需 DLL
+- 禁止删除 dist/ 目录，新增 CLAUDE.md 说明和 settings.local.json hook 保护
+
+### Fixed
+
+- 文件去重跳过 Windows 保留设备名，避免 open() 阻塞
+- 文件去重支持只读文件删除
+- 状态标签启用自动换行防止长文本撑大布局
+- 修复所有 markdown 文件 lint 错误，新增 .markdownlint.json 配置
 
 ## [v2.0.4] - 2026-05-30
 

@@ -30,11 +30,17 @@ toolbox/
 ├── main.py                     # Application entry point
 ├── toolbox.py                  # Main app (ToolboxWindow, ToolPlugin, Theme, UI components)
 ├── config.py                   # Global config (app info, UI, theme, welcome page)
+├── menu_system.py              # Menu system component
+├── settings_page.py            # Settings page UI (Card, SettingsPage)
 ├── requirements.txt            # Python dependencies
 ├── toolbox.spec                # PyInstaller build spec
 ├── generate_version_info.py    # Version info generator (pre-build)
 ├── verify_packaging.py        # Packaging dependency verifier
+├── build.py                   # Windows build script
+├── build_macos.py             # macOS build script
 ├── favicon.ico                # Application icon
+├── CHANGELOG.md               # Version changelog
+├── .markdownlint.json         # Markdown lint configuration
 │
 ├── common/                    # Shared components
 │   ├── __init__.py
@@ -56,6 +62,11 @@ toolbox/
 │   ├── pdf_merger.py         # Merge multiple PDFs into one
 │   ├── pdf_splitter.py        # Split PDF into per-page PDFs or images
 │   └── file_deduplicator.py  # File deduplication (size→quick hash→full hash)
+│
+├── scripts/                   # Build and release scripts
+│   ├── build_dmg.py           # macOS .dmg packaging
+│   ├── generate_notes.py      # Release notes generator
+│   └── get_version.py         # Version info extractor
 │
 └── test/                      # Test files
     ├── test_button.py          # Button UI component tests
@@ -129,12 +140,16 @@ rm -rf build/
 |----------|---------|
 | `APP_NAME`, `APP_VERSION`, `APP_DESCRIPTION`, `APP_COPYRIGHT` | Basic app info |
 | `APP_WEBSITE_URL`, `APP_WEBSITE_LINK_TEXT` | Website link in settings |
-| `FEATURE_MODULES` | Feature cards shown on welcome page |
+| `APP_UPDATE_URL`, `APP_ISSUE_URL` | Update check and issue report URLs |
+| `PLUGIN_MODULES` | Plugin list with name, icon, description, order, module, class |
+| `FEATURE_MODULES` | Feature cards on welcome page (derived from `PLUGIN_MODULES`) |
 | `UI_CONFIG` | Window size, sidebar width, corner radius |
 | `THEME_CONFIG` | Default theme and color settings |
 | `WELCOME_CONFIG` | Welcome page text content |
 | `SPACING_SMALL`, `SPACING_MEDIUM` | Spacing constants for UI |
-| `FONT_SIZE_*`, `FONT_WEIGHT_*` | Font constants for UI |
+| `FONT_SIZE_*` (`12`–`24`) | Font size constants |
+| `FONT_WEIGHT_*` (`600`–`800`) | Font weight constants |
+| `TITLE_STYLES` | Title font size and weight |
 
 ### Threading
 
@@ -715,6 +730,14 @@ PyInstaller cannot auto-detect modules loaded via `importlib`. All plugins in `p
 4. Rebuild with `pyinstaller toolbox.spec`
 
 See `PACKAGING_GUIDE.md` for detailed troubleshooting.
+
+### macOS Packaging
+
+macOS 打包通过 `build_macos.py` 和 `scripts/build_dmg.py` 实现，支持 `.dmg` 和 `.tar.gz` 格式。
+
+**流程：** `build_macos.py` → PyInstaller `.app` → `scripts/build_dmg.py` → `.dmg`
+
+CI 自动构建通过 `release.yml` 触发（Windows + macOS Matrix 策略）。
 
 ### Key Dependencies
 

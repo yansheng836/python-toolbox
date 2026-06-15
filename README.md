@@ -185,24 +185,27 @@ class MyTool(ToolPlugin):
         layout.addWidget(QLabel("Hello, World!"))
         return widget
 
-    def apply_theme(self, theme):
-        """响应主题切换（可选）"""
+    def update_theme(self, theme):
+        """响应主题切换（必须实现）"""
         pass
 ```
 
 ### 插件配置
 
-在 `config.py` 的 `PLUGIN_MODULES` 中添加配置：
+在 `config.py` 的 `PLUGIN_MODULES` 列表中添加配置：
 
 ```python
-{
-    "name": "我的工具",
-    "icon": "🔧",
-    "description": "工具描述",
-    "order": 30,  # 排序权重，越小越靠前
-    "module": "plugins.my_tool",
-    "class": "MyTool",
-}
+PLUGIN_MODULES = [
+    # ... 其他插件 ...
+    {
+        "name": "我的工具",
+        "icon": "🔧",
+        "description": "工具描述",
+        "order": 30,  # 排序权重，越小越靠前
+        "module": "plugins.my_tool",
+        "class": "MyTool",
+    },
+]
 ```
 
 ### 现有插件
