@@ -6,7 +6,7 @@ Pillow>=12.2.0
 
 # PDF Conversion (multiple backends for reliability)
 img2pdf>=0.6.3
-PyMuPDF>=1.27.2.3
+PyMuPDF>=1.28.0
 
 # Build Tool
 pyinstaller>=6.21.0
