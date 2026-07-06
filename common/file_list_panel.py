@@ -56,6 +56,7 @@ class FileListPanel(QWidget):
         super().__init__(parent)
         self.files = []
         self._text_secondary = "#94a3b8"  # 默认次级文本颜色（深色模式）
+        self.setAcceptDrops(True)  # 允许整个面板接收拖拽事件
         self.columns = columns or [("文件名", lambda f: os.path.basename(f))]
         self.file_filter = file_filter
         self.button_class = button_class
@@ -113,7 +114,10 @@ class FileListPanel(QWidget):
         self.table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         # 启用拖拽支持
         self.table.setAcceptDrops(True)
+        self.watermark_widget.setAcceptDrops(True)
+        # 事件过滤器安装在表格和水印上，两者切换可见时都能处理拖拽
         self.table.installEventFilter(self)
+        self.watermark_widget.installEventFilter(self)
         self.table_container.addWidget(self.table)
 
         # 按钮区域
@@ -351,9 +355,9 @@ class FileListPanel(QWidget):
         return ext in self._allowed_extensions
 
     def eventFilter(self, obj, event):
-        """事件过滤器：处理表格的拖拽事件"""
-        if obj is self.table:
-            if event.type() == QEvent.Type.DragEnter:
+        """事件过滤器：处理表格和水印的拖拽事件"""
+        if obj is self.table or obj is self.watermark_widget:
+            if event.type() in (QEvent.Type.DragEnter, QEvent.Type.DragMove):
                 return self._handle_drag_enter(event)
             elif event.type() == QEvent.Type.Drop:
                 return self._handle_drop(event)
