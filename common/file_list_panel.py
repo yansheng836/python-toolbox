@@ -6,8 +6,8 @@
 import os
 import re
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout,
-    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QSizePolicy
+    QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget,
+    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QSizePolicy, QLabel
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent
 
@@ -55,6 +55,7 @@ class FileListPanel(QWidget):
         """
         super().__init__(parent)
         self.files = []
+        self._text_secondary = "#94a3b8"  # 默认次级文本颜色（深色模式）
         self.columns = columns or [("文件名", lambda f: os.path.basename(f))]
         self.file_filter = file_filter
         self.button_class = button_class
@@ -68,6 +69,34 @@ class FileListPanel(QWidget):
     def _setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+
+        # 表格容器：用堆叠布局切换水印和表格
+        self.table_container = QStackedWidget()
+        self.table_container.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
+        layout.addWidget(self.table_container)
+
+        # 水印页面（空表格时显示）
+        self.watermark_widget = QWidget()
+        watermark_layout = QVBoxLayout(self.watermark_widget)
+        watermark_layout.setContentsMargins(0, 0, 0, 0)
+        watermark_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.watermark_label = QLabel(
+            "拖拽文件到此处，或点击下方「添加文件」"
+        )
+        self.watermark_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.watermark_label.setStyleSheet(
+            f"font-size: 14px; color: {self._text_secondary}; padding: 20px;"
+        )
+        self.watermark_widget.setMinimumHeight(self.table_min_height)
+        self.watermark_widget.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
+        watermark_layout.addWidget(self.watermark_label)
+
+        self.table_container.addWidget(self.watermark_widget)
 
         # 表格
         self.table = QTableWidget()
@@ -85,9 +114,9 @@ class FileListPanel(QWidget):
         # 启用拖拽支持
         self.table.setAcceptDrops(True)
         self.table.installEventFilter(self)
-        layout.addWidget(self.table)
+        self.table_container.addWidget(self.table)
 
-        # 按钮（按 show_buttons 顺序添加）
+        # 按钮区域
         btn_layout = QHBoxLayout()
         for btn_key in self.show_buttons:
             if btn_key == "add":
@@ -111,6 +140,15 @@ class FileListPanel(QWidget):
             elif btn_key == "sort_time":
                 self.sort_time_btn = self._create_btn("按创建时间排序", "sort_time")
                 btn_layout.addWidget(self.sort_time_btn)
+
+        # 拖拽提示标签
+        self.drag_hint = QLabel("💡 支持拖拽")
+        self.drag_hint.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        self.drag_hint.setStyleSheet(
+            f"font-size: 12px; color: {self._text_secondary};"
+        )
+        btn_layout.addWidget(self.drag_hint)
+
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
 
@@ -290,6 +328,8 @@ class FileListPanel(QWidget):
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.table.setItem(row, col_idx, item)
         self.table.setUpdatesEnabled(True)
+        # 切换水印可见性
+        self.table_container.setCurrentIndex(0 if not self.files else 1)
 
     def _parse_filter_extensions(self, file_filter):
         """从 file_filter 解析允许的文件扩展名列表"""
@@ -351,6 +391,16 @@ class FileListPanel(QWidget):
 
     def update_theme(self, theme):
         """更新表格主题样式"""
+        self._text_secondary = theme['text_secondary']
+        self.watermark_widget.setStyleSheet(
+            f"background-color: {theme['bg']}; border: 1px solid {theme['surface']}; border-radius: 8px;"
+        )
+        self.watermark_label.setStyleSheet(
+            f"font-size: 14px; color: {theme['text_secondary']}; padding: 20px;"
+        )
+        self.drag_hint.setStyleSheet(
+            f"font-size: 12px; color: {theme['text_secondary']};"
+        )
         self.table.setStyleSheet(f"""
             QTableWidget {{
                 background-color: {theme['bg']};
