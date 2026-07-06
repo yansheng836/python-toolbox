@@ -171,6 +171,44 @@ class FileDeduplicationWorker(QThread):
         self.cancel_requested = True
 
 
+class DirectoryDropLineEdit(QLineEdit):
+    """支持从文件管理器拖拽文件夹的输入框（内置只读）"""
+
+    directory_dropped = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setReadOnly(True)
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                if url.isLocalFile() and os.path.isdir(url.toLocalFile()):
+                    event.acceptProposedAction()
+                    return
+        event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                if url.isLocalFile() and os.path.isdir(url.toLocalFile()):
+                    event.acceptProposedAction()
+                    return
+        event.ignore()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasUrls():
+            for url in event.mimeData().urls():
+                if url.isLocalFile() and os.path.isdir(url.toLocalFile()):
+                    dir_path = url.toLocalFile()
+                    self.setText(dir_path)
+                    self.directory_dropped.emit(dir_path)
+                    event.acceptProposedAction()
+                    return
+        event.ignore()
+
+
 class FileDeduplicatorWidget(QWidget):
     """文件去重工具主界面"""
 
@@ -201,10 +239,11 @@ class FileDeduplicatorWidget(QWidget):
         layout.addWidget(self.desc_label)
 
         # 文件夹选择卡片
-        folder_card = Card(title="选择扫描文件夹")
+        folder_card = Card(title="选择扫描文件夹（支持拖拽）")
         folder_layout = QHBoxLayout()
-        self.folder_display = QLineEdit()
-        self.folder_display.setPlaceholderText("选择要扫描的文件夹...")
+        self.folder_display = DirectoryDropLineEdit()
+        self.folder_display.setPlaceholderText("选择要扫描的文件夹，或将文件夹拖拽到此...")
+        self.folder_display.directory_dropped.connect(self.on_folder_dropped)
         folder_layout.addWidget(self.folder_display)
 
         self.browse_btn = AnimatedButton("浏览")
@@ -459,11 +498,20 @@ class FileDeduplicatorWidget(QWidget):
             self.selected_folder if self.selected_folder else ""
         )
         if dir_path:
-            self.selected_folder = dir_path
-            self.folder_display.setText(dir_path)
-            self.scan_panel.btn.setEnabled(True)
-            self.scan_panel.update_status(f"已选择文件夹: {dir_path}")
+            self._set_folder(dir_path)
             self.start_scan()
+
+    def on_folder_dropped(self, dir_path):
+        """处理拖拽文件夹事件"""
+        self._set_folder(dir_path)
+        self.start_scan()
+
+    def _set_folder(self, dir_path):
+        """设置文件夹路径并更新UI状态"""
+        self.selected_folder = dir_path
+        self.folder_display.setText(dir_path)
+        self.scan_panel.btn.setEnabled(True)
+        self.scan_panel.update_status(f"已选择文件夹: {dir_path}")
 
     def start_scan(self):
         """开始扫描"""
