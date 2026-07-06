@@ -2,7 +2,7 @@
 PyQt6>=6.11.0
 
 # Image Processing
-Pillow>=12.2.0
+Pillow>=12.3.0
 
 # PDF Conversion (multiple backends for reliability)
 img2pdf>=0.6.3
