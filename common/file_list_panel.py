@@ -124,7 +124,7 @@ class FileListPanel(QWidget):
         btn_layout = QHBoxLayout()
         for btn_key in self.show_buttons:
             if btn_key == "add":
-                self.add_btn = self._create_btn("添加文件", "add")
+                self.add_btn = self._create_btn("添加文件(💡支持拖拽)", "add")
                 btn_layout.addWidget(self.add_btn)
             elif btn_key == "remove":
                 self.remove_btn = self._create_btn("删除选中", "remove")
@@ -144,14 +144,6 @@ class FileListPanel(QWidget):
             elif btn_key == "sort_time":
                 self.sort_time_btn = self._create_btn("按创建时间排序", "sort_time")
                 btn_layout.addWidget(self.sort_time_btn)
-
-        # 拖拽提示标签
-        self.drag_hint = QLabel("💡 支持拖拽")
-        self.drag_hint.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-        self.drag_hint.setStyleSheet(
-            f"font-size: 12px; color: {self._text_secondary};"
-        )
-        btn_layout.addWidget(self.drag_hint)
 
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
@@ -401,9 +393,6 @@ class FileListPanel(QWidget):
         )
         self.watermark_label.setStyleSheet(
             f"font-size: 14px; color: {theme['text_secondary']}; padding: 20px;"
-        )
-        self.drag_hint.setStyleSheet(
-            f"font-size: 12px; color: {theme['text_secondary']};"
         )
         self.table.setStyleSheet(f"""
             QTableWidget {{
