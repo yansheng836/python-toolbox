@@ -27,10 +27,10 @@ from PyQt6.QtWidgets import (
     QGraphicsDropShadowEffect, QSystemTrayIcon, QMenu, QScrollArea
 )
 from PyQt6.QtCore import (
-    Qt, QPropertyAnimation, QParallelAnimationGroup, QEasingCurve, QSettings, QTimer, QEvent
+    Qt, QSize, QPropertyAnimation, QParallelAnimationGroup, QEasingCurve, QSettings, QTimer, QEvent
 )
 from PyQt6.QtGui import (
-    QIcon, QPixmap, QColor, QFont, QAction
+    QIcon, QPixmap, QColor, QFont, QAction, QPainter, QPainterPath, QPen
 )
 
 
@@ -817,6 +817,7 @@ class ToolboxWindow(QMainWindow):
         self.current_plugin = None
         self.sidebar_expanded = True
         self._sidebar_animating = False
+        self._current_theme = Theme.DARK  # 初始默认主题，apply_theme 中会更新
 
         self.setup_ui()
         self.load_plugins()
@@ -891,12 +892,15 @@ class ToolboxWindow(QMainWindow):
         sidebar_layout.addWidget(self.version_label)
 
         # 侧边栏折叠按钮（位于 sidebar 右侧边缘，垂直居中）
-        self.sidebar_toggle_btn = QPushButton("◀")
+        self.sidebar_toggle_btn = QPushButton()
         self.sidebar_toggle_btn.setObjectName("sidebarToggle")
         self.sidebar_toggle_btn.setFixedWidth(36)
+        self.sidebar_toggle_btn.setIconSize(QSize(22, 22))
         self.sidebar_toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.sidebar_toggle_btn.setToolTip("收起侧边栏")
         self.sidebar_toggle_btn.clicked.connect(self._toggle_sidebar)
+        self.sidebar_toggle_btn.installEventFilter(self)
+        self._set_toggle_icon()
 
         # 用于折叠时隐藏的侧边栏子控件列表
         self._sidebar_children = [
@@ -1086,11 +1090,10 @@ class ToolboxWindow(QMainWindow):
         self.sidebar_expanded = expand
         if expand:
             self._set_sidebar_children_visible(True)
-            self.sidebar_toggle_btn.setText("◀")
             self.sidebar_toggle_btn.setToolTip("收起侧边栏")
         else:
-            self.sidebar_toggle_btn.setText("▶")
             self.sidebar_toggle_btn.setToolTip("展开侧边栏")
+        self._set_toggle_icon()
 
     def _get_favicon_path(self):
         """获取 favicon.ico 的路径，支持开发模式和打包模式"""
@@ -1111,6 +1114,70 @@ class ToolboxWindow(QMainWindow):
             # 同时设置应用程序图标
             if self._app:
                 self._app.setWindowIcon(icon)
+
+    def _create_chevron_icon(self, direction, color, size=24):
+        """用 QPainter 绘制 chevron 箭头图标（含微妙的圆角容器背景）"""
+        # 用更大尺寸绘制（分辨率 > setIconSize 的 22px），
+        # 缩放后边缘更平滑（oversampling）
+        draw_size = size + 4
+        pixmap = QPixmap(draw_size, draw_size)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+        # —— 画圆角容器背景（pill / badge 样式）——
+        bg_color = QColor(color)
+        bg_color.setAlphaF(0.12)
+        painter.setBrush(bg_color)
+        painter.setPen(Qt.PenStyle.NoPen)
+
+        cw = draw_size - 4          # 容器宽
+        ch = draw_size - 10         # 容器高
+        cx = int((draw_size - cw) / 2)
+        cy = int((draw_size - ch) / 2)
+        painter.drawRoundedRect(cx, cy, cw, ch, 5, 5)
+
+        # —— 画箭头主体 ——
+        pen = QPen(QColor(color), 3.5)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        painter.setPen(pen)
+
+        path = QPainterPath()
+        padding = 6
+        mid = draw_size / 2
+        if direction == 'left':
+            path.moveTo(draw_size - padding, padding + 1)
+            path.lineTo(padding + 1, mid)
+            path.lineTo(draw_size - padding, draw_size - padding - 1)
+        else:
+            path.moveTo(padding + 1, padding + 1)
+            path.lineTo(draw_size - padding, mid)
+            path.lineTo(padding + 1, draw_size - padding - 1)
+
+        painter.drawPath(path)
+        painter.end()
+
+        return QIcon(pixmap)
+
+    def _set_toggle_icon(self, hover=False):
+        """根据当前状态设置折叠按钮图标"""
+        theme = self._current_theme
+        # 默认用 primary 色（蓝色/紫色），hover 加亮
+        color = theme['primary_hover'] if hover else theme['primary']
+        direction = 'left' if self.sidebar_expanded else 'right'
+        self.sidebar_toggle_btn.setIcon(
+            self._create_chevron_icon(direction, color))
+
+    def eventFilter(self, obj, event):
+        """事件过滤器：用于折叠按钮悬停时图标颜色变化"""
+        if obj is self.sidebar_toggle_btn:
+            if event.type() == QEvent.Type.Enter:
+                self._set_toggle_icon(hover=True)
+            elif event.type() == QEvent.Type.Leave:
+                self._set_toggle_icon(hover=False)
+        return super().eventFilter(obj, event)
 
     def init_theme(self):
         theme_name = "dark"
@@ -1199,22 +1266,23 @@ class ToolboxWindow(QMainWindow):
         """)
 
         if hasattr(self, 'sidebar_toggle_btn'):
+            # 将 primary 色转为半透明 rgba，作为 hover 背景
+            c = QColor(theme['primary'])
+            hover_bg = f"rgba({c.red()}, {c.green()}, {c.blue()}, 0.12)"
             self.sidebar_toggle_btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {theme['bg_secondary']};
-                    color: {theme['text_secondary']};
                     border: none;
                     border-left: 1px solid {theme['surface']};
                     border-right: 1px solid {theme['surface']};
                     border-radius: 0px;
                     padding: 0px;
-                    font-size: 14px;
                 }}
                 QPushButton:hover {{
-                    background-color: {theme['surface']};
-                    color: {theme['primary']};
+                    background-color: {hover_bg};
                 }}
             """)
+            self._set_toggle_icon()
 
         if hasattr(self, 'version_label'):
             self.version_label.setStyleSheet(
