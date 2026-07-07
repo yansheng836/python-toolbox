@@ -24,7 +24,8 @@ from config import (
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QStackedWidget, QFrame,
-    QGraphicsDropShadowEffect, QSystemTrayIcon, QMenu, QScrollArea
+    QGraphicsDropShadowEffect, QGraphicsOpacityEffect,
+    QSystemTrayIcon, QMenu, QScrollArea
 )
 from PyQt6.QtCore import (
     Qt, QSize, QPropertyAnimation, QParallelAnimationGroup, QEasingCurve, QSettings, QTimer, QEvent
@@ -1056,11 +1057,10 @@ class ToolboxWindow(QMainWindow):
             return
         sidebar_width = UI_CONFIG.get("sidebar_width", 260)
         if self.sidebar_expanded:
-            # 折叠：先隐藏子控件，再动画
-            self._set_sidebar_children_visible(False)
+            # 折叠：宽度动画 + 子控件同步淡出
             self._animate_sidebar(sidebar_width, 0, False)
         else:
-            # 展开：先动画，完成后显示子控件
+            # 展开：先宽度动画，完成后淡入子控件
             self._animate_sidebar(0, sidebar_width, True)
 
     def _set_sidebar_children_visible(self, visible):
@@ -1069,9 +1069,12 @@ class ToolboxWindow(QMainWindow):
             w.setVisible(visible)
 
     def _animate_sidebar(self, start, end, expand):
-        """带动画切换侧边栏宽度"""
+        """带动画切换侧边栏宽度（折叠时同步淡出子控件）"""
         self._sidebar_animating = True
+
         self.sidebar_anim = QParallelAnimationGroup(self)
+
+        # —— 宽度动画 ——
         for prop in [b"minimumWidth", b"maximumWidth"]:
             anim = QPropertyAnimation(self.sidebar, prop)
             anim.setDuration(200)
@@ -1079,6 +1082,19 @@ class ToolboxWindow(QMainWindow):
             anim.setEndValue(end)
             anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
             self.sidebar_anim.addAnimation(anim)
+
+        # —— 折叠时同步淡出子控件 ——
+        if not expand:
+            for w in self._sidebar_children:
+                effect = QGraphicsOpacityEffect(w)
+                w.setGraphicsEffect(effect)
+                anim = QPropertyAnimation(effect, b"opacity")
+                anim.setDuration(150)
+                anim.setStartValue(1.0)
+                anim.setEndValue(0.0)
+                anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+                self.sidebar_anim.addAnimation(anim)
+
         self.sidebar_anim.finished.connect(
             lambda e=expand: self._on_sidebar_animation_finished(e)
         )
@@ -1086,14 +1102,46 @@ class ToolboxWindow(QMainWindow):
 
     def _on_sidebar_animation_finished(self, expand):
         """侧边栏动画完成后的处理"""
-        self._sidebar_animating = False
         self.sidebar_expanded = expand
+
         if expand:
+            # 重新锁定动画状态，防止淡入期间重复触发
+            self._sidebar_animating = True
+            # 设置可见后淡入
             self._set_sidebar_children_visible(True)
+            self._expand_fadein_anims = QParallelAnimationGroup(self)
+            for w in self._sidebar_children:
+                effect = QGraphicsOpacityEffect(w)
+                w.setGraphicsEffect(effect)
+                anim = QPropertyAnimation(effect, b"opacity", self)
+                anim.setDuration(150)
+                anim.setStartValue(0.0)
+                anim.setEndValue(1.0)
+                anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+                self._expand_fadein_anims.addAnimation(anim)
+            self._expand_fadein_anims.finished.connect(
+                self._cleanup_expand_effects
+            )
+            self._expand_fadein_anims.start()
             self.sidebar_toggle_btn.setToolTip("收起侧边栏")
         else:
+            self._sidebar_animating = False
+            # 子控件已在动画中淡出，此时彻底隐藏
+            self._set_sidebar_children_visible(False)
+            # 移除透明度效果，恢复常规渲染
+            for w in self._sidebar_children:
+                w.setGraphicsEffect(None)
             self.sidebar_toggle_btn.setToolTip("展开侧边栏")
+
+        # 更新折叠态的按钮装饰线
+        self._update_toggle_button_style()
         self._set_toggle_icon()
+
+    def _cleanup_expand_effects(self):
+        """淡入动画完成后清理 opacity effect，恢复常规渲染"""
+        for w in self._sidebar_children:
+            w.setGraphicsEffect(None)
+        self._sidebar_animating = False
 
     def _get_favicon_path(self):
         """获取 favicon.ico 的路径，支持开发模式和打包模式"""
@@ -1169,6 +1217,34 @@ class ToolboxWindow(QMainWindow):
         direction = 'left' if self.sidebar_expanded else 'right'
         self.sidebar_toggle_btn.setIcon(
             self._create_chevron_icon(direction, color))
+
+    def _update_toggle_button_style(self):
+        """根据折叠/展开状态更新按钮样式"""
+        theme = self._current_theme
+        c = QColor(theme['primary'])
+        hover_bg = f"rgba({c.red()}, {c.green()}, {c.blue()}, 0.12)"
+        pressed_bg = f"rgba({c.red()}, {c.green()}, {c.blue()}, 0.22)"
+        # 折叠态：左侧加 primary 色装饰线，提示可点击展开
+        if self.sidebar_expanded:
+            left_border = f"1px solid {theme['surface']}"
+        else:
+            left_border = f"2px solid {theme['primary']}"
+        self.sidebar_toggle_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {theme['bg_secondary']};
+                border: none;
+                border-left: {left_border};
+                border-right: 1px solid {theme['surface']};
+                border-radius: 0px;
+                padding: 0px;
+            }}
+            QPushButton:hover {{
+                background-color: {hover_bg};
+            }}
+            QPushButton:pressed {{
+                background-color: {pressed_bg};
+            }}
+        """)
 
     def eventFilter(self, obj, event):
         """事件过滤器：用于折叠按钮悬停时图标颜色变化"""
@@ -1266,22 +1342,7 @@ class ToolboxWindow(QMainWindow):
         """)
 
         if hasattr(self, 'sidebar_toggle_btn'):
-            # 将 primary 色转为半透明 rgba，作为 hover 背景
-            c = QColor(theme['primary'])
-            hover_bg = f"rgba({c.red()}, {c.green()}, {c.blue()}, 0.12)"
-            self.sidebar_toggle_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {theme['bg_secondary']};
-                    border: none;
-                    border-left: 1px solid {theme['surface']};
-                    border-right: 1px solid {theme['surface']};
-                    border-radius: 0px;
-                    padding: 0px;
-                }}
-                QPushButton:hover {{
-                    background-color: {hover_bg};
-                }}
-            """)
+            self._update_toggle_button_style()
             self._set_toggle_icon()
 
         if hasattr(self, 'version_label'):
@@ -1369,6 +1430,12 @@ class ToolboxWindow(QMainWindow):
         settings_action.setShortcut('Ctrl+S')
         settings_action.triggered.connect(self.show_settings)
         tools_menu.addAction(settings_action)
+
+        view_menu = menubar.addMenu('视图')
+        toggle_sidebar_action = QAction('切换侧边栏', self)
+        toggle_sidebar_action.setShortcut('Ctrl+B')
+        toggle_sidebar_action.triggered.connect(self._toggle_sidebar)
+        view_menu.addAction(toggle_sidebar_action)
 
     def show_settings(self):
         self.switch_plugin("设置")
