@@ -862,7 +862,7 @@ class ToolboxWindow(QMainWindow):
         else:
             self.logo_icon.setText("🧰")
             self.logo_icon.setStyleSheet("font-size: 28px;")
-        self.logo_text = QLabel("工具箱")
+        self.logo_text = SelectableLabel("工具箱")
         logo_layout.addWidget(self.logo_icon)
         logo_layout.addWidget(self.logo_text)
         logo_layout.addStretch()
@@ -888,7 +888,7 @@ class ToolboxWindow(QMainWindow):
 
         sidebar_layout.addStretch()
 
-        self.version_label = QLabel(f"v{APP_VERSION}")
+        self.version_label = SelectableLabel(f"v{APP_VERSION}")
         self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sidebar_layout.addWidget(self.version_label)
 

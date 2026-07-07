@@ -30,7 +30,7 @@ toolbox/
 ├── main.py                     # Application entry point
 ├── toolbox.py                  # Main app (ToolboxWindow, ToolPlugin, Theme, UI components)
 ├── config.py                   # Global config (app info, UI, theme, welcome page)
-├── menu_system.py              # Menu system component
+├── menu_system.py              # Menu system (legacy demo, not imported by the app)
 ├── settings_page.py            # Settings page UI (Card, SettingsPage)
 ├── requirements.txt            # Python dependencies
 ├── toolbox.spec                # PyInstaller build spec
@@ -126,7 +126,7 @@ rm -rf build/
 
 ### Core Structure
 
-- **`ToolboxWindow`** — main window; owns the sidebar (`QVBoxLayout`) and a `QStackedWidget` for tool pages
+- **`ToolboxWindow`** — main window; owns the sidebar (supports collapse/expand with animated width transition and child fade-in/out), a toggle button (chevron icon drawn via QPainter, `Ctrl+B` shortcut), and a `QStackedWidget` for tool pages
 - **`Theme`** — dark/light color palette constants; applied via Qt stylesheets
 - **`ToolPlugin`** (abstract base) — all tools inherit this; must implement `create_ui() -> QWidget` and `update_theme(theme)`
 - **Built-in tools**: `ImageCompressor`, `ImageToPDF`, `FormatConverter`, `ImageStitcher`, `PDFMerger`, `PDFSplitter`
@@ -211,6 +211,7 @@ Common issues to catch:
 | `Card` | `toolbox.py` | Card container with title/content layout |
 | `DragDropHandler` | `toolbox.py` | Drag-and-drop utility |
 | `SidebarButton` | `toolbox.py` | Sidebar navigation button |
+| `SidebarToggleIcon` | `toolbox.py` | Chevron icon rendered via `QPainter` for sidebar collapse button |
 | `FileListPanel` | `common/file_list_panel.py` | Reusable file list table with buttons |
 | `ActionPanel` | `common/action_panel.py` | Button + progress bar + status label |
 | `BaseWorker` | `common/base_worker.py` | Base QThread worker with standard signals |
