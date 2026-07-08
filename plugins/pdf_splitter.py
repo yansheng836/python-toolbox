@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
+    QWidget, QVBoxLayout, QHBoxLayout, QFileDialog,
     QComboBox, QSpinBox, QSlider, QRadioButton, QButtonGroup, QFormLayout, QLineEdit
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
@@ -166,18 +166,21 @@ class PDFSplitterWidget(QWidget):
         format_layout.addWidget(self.image_radio)
         format_layout.addStretch()
         self.pdf_radio.toggled.connect(self.on_format_changed)
-        settings_layout.addRow("输出格式:", format_layout)
+        self.format_label = SelectableLabel("输出格式:")
+        settings_layout.addRow(self.format_label, format_layout)
 
         self.pages_spin = QSpinBox()
         self.pages_spin.setRange(1, 1000)
         self.pages_spin.setValue(1)
         self.pages_spin.setSuffix(" 页/文件")
-        settings_layout.addRow("拆分页数:", self.pages_spin)
+        self.pages_label = SelectableLabel("拆分页数:")
+        settings_layout.addRow(self.pages_label, self.pages_spin)
 
         self.image_format_combo = QComboBox()
         self.image_format_combo.addItems(["JPG", "JPEG", "PNG", "WebP"])
         self.image_format_combo.setVisible(False)
-        settings_layout.addRow("图片格式:", self.image_format_combo)
+        self.image_format_label = SelectableLabel("图片格式:")
+        settings_layout.addRow(self.image_format_label, self.image_format_combo)
 
         # 图片质量：滚动条 + 百分比标签（参考图片压缩功能）
         quality_widget = QWidget()
@@ -186,14 +189,15 @@ class PDFSplitterWidget(QWidget):
         self.quality_slider = QSlider(Qt.Orientation.Horizontal)
         self.quality_slider.setRange(1, 100)
         self.quality_slider.setValue(85)
-        self.quality_label = QLabel("85%")
+        self.quality_label = SelectableLabel("85%")
         self.quality_slider.valueChanged.connect(
             lambda v: self.quality_label.setText(f"{v}%")
         )
         quality_h_layout.addWidget(self.quality_slider)
         quality_h_layout.addWidget(self.quality_label)
         self.quality_widget = quality_widget
-        settings_layout.addRow("图片质量:", self.quality_widget)
+        self.quality_row_label = SelectableLabel("图片质量:")
+        settings_layout.addRow(self.quality_row_label, self.quality_widget)
         self.quality_widget.setVisible(False)
 
         settings_card.content_layout.addLayout(settings_layout)
@@ -201,7 +205,7 @@ class PDFSplitterWidget(QWidget):
 
         output_card = Card(title="输出设置")
         output_layout = QHBoxLayout()
-        self.output_label = QLabel("输出目录:")
+        self.output_label = SelectableLabel("输出目录:")
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("默认原文件目录")
         self.browse_btn = AnimatedButton("浏览")

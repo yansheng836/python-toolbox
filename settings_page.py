@@ -11,7 +11,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor
 
 from config import FONT_SIZE_12, FONT_SIZE_16, FONT_SIZE_18, FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800
-from toolbox import Theme
+from toolbox import Theme, SelectableLabel
 
 
 class Card(QFrame):
@@ -30,7 +30,7 @@ class Card(QFrame):
         layout.setSpacing(12)
 
         if self.title:
-            title_label = QLabel(self.title)
+            title_label = SelectableLabel(self.title)
             title_label.setObjectName("cardTitle")
             title_label.setStyleSheet(f"""
                 font-size: {FONT_SIZE_18};
@@ -103,7 +103,7 @@ class SettingsPlugin:
         layout.setSpacing(24)
 
         # 标题
-        title = QLabel("⚙️ 设置")
+        title = SelectableLabel("⚙️ 设置")
         title.setStyleSheet(f"""
             font-size: 32px;
             font-weight: {FONT_WEIGHT_800};
@@ -123,7 +123,7 @@ class SettingsPlugin:
         general_card = Card("通用设置", theme=self.theme)
 
         # 主题设置
-        theme_label = QLabel("外观:")
+        theme_label = SelectableLabel("外观:")
         theme_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600}; color: {self.theme['text']};")
         general_card.content_layout.addWidget(theme_label)
 
@@ -176,20 +176,20 @@ class SettingsPlugin:
         about_card = Card("关于", theme=self.theme)
 
         # 版本信息
-        version_label = QLabel(f"版本: v{self.version}")
+        version_label = SelectableLabel(f"版本: v{self.version}")
         version_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600}; color: {self.theme['text']};")
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(version_label)
 
         # 功能描述
-        desc_label = QLabel("批量处理工具，支持图片压缩、PDF转换、格式转换和拼接")
+        desc_label = SelectableLabel("批量处理工具，支持图片压缩、PDF转换、格式转换和拼接")
         desc_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_16};")
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(desc_label)
 
         # 官方网站
-        website_label = QLabel(
+        website_label = SelectableLabel(
             f"<a href='https://www.example.com' style='color: {self.theme['primary']}; text-decoration: none;'>🌐 访问官方网站</a>")
         website_label.setOpenExternalLinks(True)
         website_label.setStyleSheet(f"""
@@ -201,7 +201,7 @@ class SettingsPlugin:
         about_card.content_layout.addWidget(website_label)
 
         # 版权信息
-        copyright_label = QLabel("© 2023 工具箱开发团队")
+        copyright_label = SelectableLabel("© 2023 工具箱开发团队")
         copyright_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_12};")
         copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(copyright_label)

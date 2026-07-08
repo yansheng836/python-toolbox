@@ -87,6 +87,11 @@ class FileListPanel(QWidget):
         self.watermark_label = QLabel(
             "拖拽文件到此处，或点击下方「添加文件」"
         )
+        self.watermark_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+            | Qt.TextInteractionFlag.LinksAccessibleByMouse
+        )
+        self.watermark_label.setCursor(Qt.CursorShape.IBeamCursor)
         self.watermark_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.watermark_label.setStyleSheet(
             f"font-size: 14px; color: {self._text_secondary}; padding: 20px;"

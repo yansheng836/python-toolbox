@@ -10,7 +10,7 @@ import hashlib
 from collections import defaultdict
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QComboBox, QTreeWidget, QTreeWidgetItem,
+    QWidget, QVBoxLayout, QComboBox, QTreeWidget, QTreeWidgetItem,
     QFileDialog, QLineEdit, QHBoxLayout, QCheckBox
 )
 
@@ -288,7 +288,7 @@ class FileDeduplicatorWidget(QWidget):
 
         # 左半：删除规则下拉框
         left_half = QHBoxLayout()
-        left_half.addWidget(QLabel("删除规则:"))
+        left_half.addWidget(SelectableLabel("删除规则:"))
         self.rule_combo = QComboBox()
         self.rule_combo.addItems([
             "按创建时间升序排序（旧→新，时间相同按修改时间，含副本标记的放后面）",
@@ -303,7 +303,7 @@ class FileDeduplicatorWidget(QWidget):
 
         # 右半：删除后是否自动扫描（文字在前，勾选框在后，与"启用压缩"样式一致）
         right_half = QHBoxLayout()
-        self.auto_rescan_label = QLabel("删除后自动扫描")
+        self.auto_rescan_label = SelectableLabel("删除后自动扫描")
         right_half.addWidget(self.auto_rescan_label)
         self.auto_rescan_checkbox = QCheckBox()
         self.auto_rescan_checkbox.setChecked(False)

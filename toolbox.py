@@ -180,7 +180,7 @@ class Card(QFrame):
         layout.setSpacing(SPACING_SMALL)
 
         if self.title:
-            self.title_label = QLabel(self.title)
+            self.title_label = SelectableLabel(self.title)
             self.title_label.setObjectName("cardTitle")
             self.title_label.setStyleSheet(
                 f"font-size: {FONT_SIZE_20}; font-weight: {FONT_WEIGHT_700};")
@@ -636,7 +636,7 @@ class SettingsPlugin(ToolPlugin):
         layout.setContentsMargins(40, 40, 40, 40)
         layout.setSpacing(24)
 
-        self.title_label = QLabel(f"{self.icon} {self.name}")
+        self.title_label = SelectableLabel(f"{self.icon} {self.name}")
         self.title_label.setStyleSheet(
             f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};")
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -650,7 +650,7 @@ class SettingsPlugin(ToolPlugin):
 
         general_card = Card(title="通用设置")
 
-        self.theme_label = QLabel("外观:")
+        self.theme_label = SelectableLabel("外观:")
         self.theme_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};")
         general_card.content_layout.addWidget(self.theme_label)
 

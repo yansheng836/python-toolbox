@@ -7,7 +7,7 @@ import os
 import sys
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QWidget, QVBoxLayout, QHBoxLayout,
     QComboBox, QLineEdit, QGridLayout
 )
 
@@ -236,7 +236,7 @@ class FormatConverter(ToolPlugin):
         settings_layout.setSpacing(SPACING_SMALL)
         settings_card.content_layout.addLayout(settings_layout)
 
-        settings_layout.addWidget(QLabel("目标格式:"), 0, 0)
+        settings_layout.addWidget(SelectableLabel("目标格式:"), 0, 0)
         self.fmt_combo = QComboBox()
         self.fmt_combo.addItems(self.FORMATS)
         self.fmt_combo.setStyleSheet(f"""
@@ -250,7 +250,7 @@ class FormatConverter(ToolPlugin):
         """)
         settings_layout.addWidget(self.fmt_combo, 0, 1)
 
-        settings_layout.addWidget(QLabel("输出目录:"), 1, 0)
+        settings_layout.addWidget(SelectableLabel("输出目录:"), 1, 0)
         out_row = QHBoxLayout()
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("默认保存到原图目录")

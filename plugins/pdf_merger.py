@@ -13,7 +13,7 @@ from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STY
 from config import SPACING_SMALL
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
+    QWidget, QVBoxLayout, QHBoxLayout, QFileDialog,
     QLineEdit
 )
 from PyQt6.QtCore import QThread, pyqtSignal
@@ -123,7 +123,7 @@ class PDFMergerWidget(QWidget):
         # 输出设置
         output_card = Card(title="输出设置")
         output_layout = QHBoxLayout()
-        output_layout.addWidget(QLabel("输出文件:"))
+        output_layout.addWidget(SelectableLabel("输出文件:"))
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("选择输出文件路径...")
         self.output_path.setStyleSheet(f"""

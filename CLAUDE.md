@@ -14,7 +14,7 @@ These rules MUST be followed. Violations will cause bugs or maintenance debt.
 | 4 | All Python files MUST use UTF-8 encoding and LF (`\n`) line endings | [File Encoding](#file-encoding-and-line-endings) |
 | 5 | Only catch meaningful exceptions; always report errors; no try-catch for project-internal imports | [Exception Handling](#exception-handling-mandatory) |
 | 6 | Module availability flags (`PIL_AVAILABLE`, etc.) must be imported from `common/utils.py`, never re-declared | [Exception Handling](#exception-handling-mandatory) |
-| 7 | Informational text MUST use `SelectableLabel` to support copying | [Text Copyability](#text-copyability-mandatory) |
+| 7 | 所有文本展示内容优先使用 `SelectableLabel`（交互控件除外）| [Text Copyability](#text-copyability-mandatory) |
 | 8 | UI components MUST support responsive layout (Expanding策略, 动态高度) | [Responsive Layout](#responsive-layout-mandatory) |
 | 9 | When writing/overwriting output files, check if the file is locked/occupied before processing | [File Operations](#file-operations-mandatory) |
 | 10 | When deleting temporary files, check if the file exists first to avoid error spam | [File Operations](#file-operations-mandatory) |
@@ -211,13 +211,16 @@ Check command:
 # Syntax check a single file
 python -m py_compile <file.py>
 
-# Check all Python files in the project
+# Syntax check all Python files in the project
 find . -name "*.py" -not -path "./.git/*" -not -path "*/__pycache__/*" -exec python -m py_compile {} \;
+
+# Static analysis — catches NameError / undefined names missed by py_compile
+python -m pyflakes <file.py>
 ```
 
 Common issues to catch:
 
-- `NameError` / `ImportError` — missing imports (e.g., `Image` from `PIL`, `fitz`, `PDF_COLUMNS`)
+- `NameError` / `ImportError` — missing imports (e.g., `Image` from `PIL`, `fitz`, `PDF_COLUMNS`, `pyqtSignal`)
 - `IndentationError` — mixed tabs/spaces or incorrect indent
 - `SyntaxError` — malformed Python code (missing colons, unclosed brackets)
 - Method definitions missing `:` (e.g., `def update_theme(self, theme)` — colon required)
@@ -320,49 +323,67 @@ except json.JSONDecodeError:
 
 ### Text Copyability (MANDATORY)
 
-**Rule: All informational text that users might want to copy MUST use `SelectableLabel` instead of `QLabel`.**
+**Rule: All文本展示内容，只要不是交互式控件（按钮、复选框等），尽量使用 `SelectableLabel` 替代 `QLabel`，确保用户可以选中复制。**
 
-Users should be able to select and copy:
+#### 必须使用 SelectableLabel 的场景
 
-- Version numbers, copyright info, website links
-- File paths, output paths, status messages
-- Error messages, scan results, statistics
-- Plugin titles and descriptions
-- Welcome page content
+| 场景 | 示例 |
+|------|------|
+| 版本号、版权信息、官网链接 | `f"版本: v{APP_VERSION}"` |
+| 文件路径、输出路径、状态消息 | `SelectableLabel("拖拽文件到此处...")` |
+| 错误消息、扫描结果、统计数据 | `SelectableLabel("成功处理 5 张图片")` |
+| 插件标题和描述 | `SelectableLabel(f"{self.icon} {self.name}")` |
+| 卡片标题 | `Card(title="选择图片")` — Card 内部已用 SelectableLabel |
+| 表单/设置字段标签 | `SelectableLabel("输出格式:")` 替代 `QLabel("输出格式:")` |
+| 设置页面各项文字 | 外观、版本号、功能描述、版权等 |
+| 水印/占位提示文字 | FileListPanel 水印文字（设置 `setTextInteractionFlags`） |
+| QFormLayout 行标签 | 用显式 `SelectableLabel` 替代直接传字符串 |
+| 百分比/数值标签 | `self.quality_label = SelectableLabel("75%")` |
 
-#### Using SelectableLabel
+#### 不需要改为 SelectableLabel 的场景
 
+| 场景 | 原因 |
+|------|------|
+| 导航按钮（QPushButton） | 选中文本会干扰点击导航，保持不可复制 |
+| AnimatedButton 等按钮文字 | 按钮是交互控件，不适用 |
+| 复选框/单选按钮文字 | 交互式控件，不可复制是正常行为 |
+
+#### 使用方式
+
+**方式一：直接使用 SelectableLabel（推荐）**
 {% raw %}```python
 from toolbox import SelectableLabel
 
-# GOOD: Informational text uses SelectableLabel
-
 self.version_label = SelectableLabel(f"版本: v{APP_VERSION}")
-self.status_label = SelectableLabel("正在处理...")
-self.desc_label = SelectableLabel(self.description)
-
-# BAD: Informational text uses QLabel (not copyable)
-
-self.version_label = QLabel(f"版本: v{APP_VERSION}")
-
+self.format_label = SelectableLabel("输出格式:")
 ```{% endraw %}
 
-#### When to Use SelectableLabel
+**方式二：QFormLayout 行标签（不要直接传字符串）**
+{% raw %}```python
+# BAD — QFormLayout 内部生成不可选的 QLabel
+settings_layout.addRow("输出格式:", format_layout)
 
-| Use SelectableLabel | Use QLabel |
-|---------------------|------------|
-| Version numbers, copyright | Button text |
-| File paths, output paths | Form field labels ("输出格式:") |
-| Status messages, error messages | Decorative icons |
-| Statistics, scan results | Section titles (unless user needs to copy) |
-| Plugin titles/descriptions | - |
+# GOOD — 使用显式 SelectableLabel
+self.format_label = SelectableLabel("输出格式:")
+settings_layout.addRow(self.format_label, format_layout)
+```{% endraw %}
 
-#### SelectableLabel Features
+**方式三：FileListPanel 等通用组件（无法导入 SelectableLabel 时）**
+{% raw %}```python
+self.watermark_label = QLabel("拖拽文件到此处...")
+self.watermark_label.setTextInteractionFlags(
+    Qt.TextInteractionFlag.TextSelectableByMouse
+    | Qt.TextInteractionFlag.LinksAccessibleByMouse
+)
+self.watermark_label.setCursor(Qt.CursorShape.IBeamCursor)
+```{% endraw %}
 
-- Supports text selection with mouse (`TextSelectableByMouse`)
-- Supports clickable links (`LinksAccessibleByMouse`)
-- Shows I-beam cursor on hover
-- Works with all existing QLabel styling
+#### SelectableLabel 特性
+
+- 支持鼠标选中文本（`TextSelectableByMouse`）
+- 支持点击链接（`LinksAccessibleByMouse`）
+- 悬停时显示 I-Beam 光标
+- 兼容所有 QLabel 样式设置
 
 ### Responsive Layout (MANDATORY)
 

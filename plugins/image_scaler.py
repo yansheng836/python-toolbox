@@ -18,7 +18,7 @@ from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STY
 from config import SPACING_SMALL
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
+    QWidget, QVBoxLayout, QHBoxLayout, QFileDialog,
     QSpinBox, QComboBox, QLineEdit,
     QGridLayout, QCheckBox
 )
@@ -205,7 +205,7 @@ class ImageScalerWidget(QWidget):
         scale_layout = QHBoxLayout(scale_widget)
         scale_layout.setContentsMargins(0, 0, 0, 0)
         scale_layout.setSpacing(SPACING_SMALL)
-        scale_layout.addWidget(QLabel("缩放方式:"))
+        scale_layout.addWidget(SelectableLabel("缩放方式:"))
         self.scale_type_combo = QComboBox()
         self.scale_type_combo.addItems(["百分比缩放", "指定宽度", "指定高度"])
         self.scale_type_combo.setStyleSheet(combo_style)
@@ -221,7 +221,7 @@ class ImageScalerWidget(QWidget):
         zoom_layout = QHBoxLayout(self.zoom_row_widget)
         zoom_layout.setContentsMargins(0, 0, 0, 0)
         zoom_layout.setSpacing(SPACING_SMALL)
-        zoom_layout.addWidget(QLabel("缩放值:"))
+        zoom_layout.addWidget(SelectableLabel("缩放值:"))
         self.scale_value_input = QSpinBox()
         self.scale_value_input.setRange(1, 200)
         self.scale_value_input.setValue(50)
@@ -235,7 +235,7 @@ class ImageScalerWidget(QWidget):
         width_layout = QHBoxLayout(self.width_row_widget)
         width_layout.setContentsMargins(0, 0, 0, 0)
         width_layout.setSpacing(SPACING_SMALL)
-        self.width_label = QLabel("宽度:")
+        self.width_label = SelectableLabel("宽度:")
         width_layout.addWidget(self.width_label)
         self.width_input = QSpinBox()
         self.width_input.setRange(1, 10000)
@@ -251,7 +251,7 @@ class ImageScalerWidget(QWidget):
         height_layout = QHBoxLayout(self.height_row_widget)
         height_layout.setContentsMargins(0, 0, 0, 0)
         height_layout.setSpacing(SPACING_SMALL)
-        self.height_label = QLabel("高度:")
+        self.height_label = SelectableLabel("高度:")
         height_layout.addWidget(self.height_label)
         self.height_input = QSpinBox()
         self.height_input.setRange(1, 10000)
@@ -281,7 +281,7 @@ class ImageScalerWidget(QWidget):
         quality_layout = QHBoxLayout(self.quality_row_widget)
         quality_layout.setContentsMargins(0, 0, 0, 0)
         quality_layout.setSpacing(SPACING_SMALL)
-        quality_layout.addWidget(QLabel("图片质量:"))
+        quality_layout.addWidget(SelectableLabel("图片质量:"))
         self.quality_combo = QComboBox()
         self.quality_combo.addItems(["高质量 (95)", "标准 (85)", "较小文件 (75)", "最小文件 (50)"])
         self.quality_combo.setCurrentIndex(1)
@@ -294,7 +294,7 @@ class ImageScalerWidget(QWidget):
         output_dir_layout = QHBoxLayout(self.output_row_widget)
         output_dir_layout.setContentsMargins(0, 0, 0, 0)
         output_dir_layout.setSpacing(SPACING_SMALL)
-        output_dir_layout.addWidget(QLabel("输出目录:"))
+        output_dir_layout.addWidget(SelectableLabel("输出目录:"))
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("默认保存到原图目录（图片缩放后带 _scaled 后缀）")
         self.output_path.setStyleSheet(f"""

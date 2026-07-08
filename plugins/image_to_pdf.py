@@ -7,7 +7,7 @@ import os
 import sys
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QWidget, QVBoxLayout, QHBoxLayout,
     QComboBox, QSlider, QLineEdit,
     QGridLayout, QCheckBox
 )
@@ -385,23 +385,23 @@ class ImageToPDF(ToolPlugin):
         settings_layout = QGridLayout()
         settings_card.content_layout.addLayout(settings_layout)
 
-        settings_layout.addWidget(QLabel("页面大小:"), 0, 0)
+        settings_layout.addWidget(SelectableLabel("页面大小:"), 0, 0)
         self.size_combo = QComboBox()
         self.size_combo.addItems(["自动适应", "A4", "A3", "原图尺寸", "智能缩放"])
         self.size_combo.setCurrentIndex(4)  # 默认智能缩放
         settings_layout.addWidget(self.size_combo, 0, 1)
 
-        settings_layout.addWidget(QLabel("启用压缩:"), 1, 0)
+        settings_layout.addWidget(SelectableLabel("启用压缩:"), 1, 0)
         self.compress_check = QCheckBox()
         self.compress_check.setChecked(True)
         settings_layout.addWidget(self.compress_check, 1, 1)
 
-        settings_layout.addWidget(QLabel("JPEG质量:"), 2, 0)
+        settings_layout.addWidget(SelectableLabel("JPEG质量:"), 2, 0)
         quality_layout = QHBoxLayout()
         self.quality_slider = QSlider(Qt.Orientation.Horizontal)
         self.quality_slider.setRange(1, 100)
         self.quality_slider.setValue(85)
-        self.quality_label = QLabel("85%")
+        self.quality_label = SelectableLabel("85%")
         self.quality_slider.valueChanged.connect(
             lambda v: self.quality_label.setText(f"{v}%")
         )
@@ -409,7 +409,7 @@ class ImageToPDF(ToolPlugin):
         quality_layout.addWidget(self.quality_label)
         settings_layout.addLayout(quality_layout, 2, 1)
 
-        settings_layout.addWidget(QLabel("输出文件:"), 3, 0)
+        settings_layout.addWidget(SelectableLabel("输出文件:"), 3, 0)
         path_layout = QHBoxLayout()
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("选择保存位置...")

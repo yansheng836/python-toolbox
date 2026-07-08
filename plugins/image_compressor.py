@@ -7,7 +7,7 @@ import os
 import sys
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QWidget, QVBoxLayout, QHBoxLayout,
     QComboBox, QSlider, QLineEdit, QGridLayout
 )
 
@@ -253,7 +253,7 @@ class ImageCompressor(ToolPlugin):
         settings_layout.setSpacing(SPACING_SMALL)
         settings_card.content_layout.addLayout(settings_layout)
 
-        settings_layout.addWidget(QLabel("输出格式:"), 0, 0)
+        settings_layout.addWidget(SelectableLabel("输出格式:"), 0, 0)
         self.format_combo = QComboBox()
         self.format_combo.addItems(["保持原格式", "JPG", "JPEG", "PNG", "WebP"])
         self.format_combo.setStyleSheet(f"""
@@ -267,12 +267,12 @@ class ImageCompressor(ToolPlugin):
         """)
         settings_layout.addWidget(self.format_combo, 0, 1)
 
-        settings_layout.addWidget(QLabel("压缩质量:"), 1, 0)
+        settings_layout.addWidget(SelectableLabel("压缩质量:"), 1, 0)
         quality_layout = QHBoxLayout()
         self.quality_slider = QSlider(Qt.Orientation.Horizontal)
         self.quality_slider.setRange(1, 100)
         self.quality_slider.setValue(75)
-        self.quality_label = QLabel("75%")
+        self.quality_label = SelectableLabel("75%")
         self.quality_slider.valueChanged.connect(
             lambda v: self.quality_label.setText(f"{v}%")
         )
@@ -280,7 +280,7 @@ class ImageCompressor(ToolPlugin):
         quality_layout.addWidget(self.quality_label)
         settings_layout.addLayout(quality_layout, 1, 1)
 
-        settings_layout.addWidget(QLabel("输出目录:"), 2, 0)
+        settings_layout.addWidget(SelectableLabel("输出目录:"), 2, 0)
         output_layout = QHBoxLayout()
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("默认保存到原图目录（图片压缩后带 _compressed 后缀）")
