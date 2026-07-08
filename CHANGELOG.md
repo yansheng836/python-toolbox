@@ -5,25 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/).
 
-[v2.0.5]: https://github.com/yansheng836/python-toolbox/compare/v2.0.4...v2.0.5
-[v2.0.4]: https://github.com/yansheng836/python-toolbox/compare/v2.0.3...v2.0.4
-[v2.0.3]: https://github.com/yansheng836/python-toolbox/compare/v2.0.2...v2.0.3
-[v2.0.2]: https://github.com/yansheng836/python-toolbox/compare/v2.0.1...v2.0.2
-[v2.0.1]: https://github.com/yansheng836/python-toolbox/compare/v2.0.0...v2.0.1
-[v2.0.0]: https://github.com/yansheng836/python-toolbox/compare/v1.0.11...v2.0.0
-[v1.0.11]: https://github.com/yansheng836/python-toolbox/compare/v1.0.10...v1.0.11
-[v1.0.10]: https://github.com/yansheng836/python-toolbox/compare/v1.0.9...v1.0.10
-[v1.0.9]: https://github.com/yansheng836/python-toolbox/compare/v1.0.8...v1.0.9
-[v1.0.8]: https://github.com/yansheng836/python-toolbox/compare/v1.0.7...v1.0.8
-[v1.0.7]: https://github.com/yansheng836/python-toolbox/compare/v1.0.6...v1.0.7
-[v1.0.6]: https://github.com/yansheng836/python-toolbox/compare/v1.0.5...v1.0.6
-[v1.0.5]: https://github.com/yansheng836/python-toolbox/compare/v1.0.4...v1.0.5
-[v1.0.4]: https://github.com/yansheng836/python-toolbox/compare/v1.0.3...v1.0.4
-[v1.0.3]: https://github.com/yansheng836/python-toolbox/compare/v1.0.2...v1.0.3
-[v1.0.2]: https://github.com/yansheng836/python-toolbox/compare/v1.0.1...v1.0.2
-[v1.0.1]: https://github.com/yansheng836/python-toolbox/compare/v1.0.0...v1.0.1
-[v1.0.0]: https://github.com/yansheng836/python-toolbox/compare/v0.0.1...v1.0.0
-[v0.0.1]: https://github.com/yansheng836/python-toolbox/releases/tag/v0.0.1
+## [v2.0.6] - 2026-07-07
+
+### Added
+
+- 侧边栏折叠按钮改用 QPainter 绘制矢量图标，支持主题色和 hover 高亮
+- 侧边栏折叠/展开时子控件淡入淡出动画，告别瞬间闪现
+- 折叠态按钮左侧增加 primary 色装饰线，提示可点击展开
+- 新增 Ctrl+B 快捷键切换侧边栏
+- 按钮增加按下态（:pressed）视觉反馈
+
+### Fixed
+
+- 修复展开淡入期间动画对象被 GC 回收导致内容不可见的问题
+- 修复快速折叠/展开时 opacity effect 残留导致控件闪烁的问题
+- 修复展开淡入期间动画状态未锁定导致的竞态问题
 
 ## [v2.0.5] - 2026-06-15
 
@@ -454,3 +450,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/
 - 修复卡片内容布局冲突导致按钮无响应
 - 修复 register_plugin 中 lambda 闭包捕获错误的插件名称
 - 修复点击侧边栏按钮崩溃和设置布局父级问题
+
+[v2.0.6]: https://github.com/yansheng836/python-toolbox/compare/v2.0.5...v2.0.6
+[v2.0.5]: https://github.com/yansheng836/python-toolbox/compare/v2.0.4...v2.0.5
+[v2.0.4]: https://github.com/yansheng836/python-toolbox/compare/v2.0.3...v2.0.4
+[v2.0.3]: https://github.com/yansheng836/python-toolbox/compare/v2.0.2...v2.0.3
+[v2.0.2]: https://github.com/yansheng836/python-toolbox/compare/v2.0.1...v2.0.2
+[v2.0.1]: https://github.com/yansheng836/python-toolbox/compare/v2.0.0...v2.0.1
+[v2.0.0]: https://github.com/yansheng836/python-toolbox/compare/v1.0.11...v2.0.0
+[v1.0.11]: https://github.com/yansheng836/python-toolbox/compare/v1.0.10...v1.0.11
+[v1.0.10]: https://github.com/yansheng836/python-toolbox/compare/v1.0.9...v1.0.10
+[v1.0.9]: https://github.com/yansheng836/python-toolbox/compare/v1.0.8...v1.0.9
+[v1.0.8]: https://github.com/yansheng836/python-toolbox/compare/v1.0.7...v1.0.8
+[v1.0.7]: https://github.com/yansheng836/python-toolbox/compare/v1.0.6...v1.0.7
+[v1.0.6]: https://github.com/yansheng836/python-toolbox/compare/v1.0.5...v1.0.6
+[v1.0.5]: https://github.com/yansheng836/python-toolbox/compare/v1.0.4...v1.0.5
+[v1.0.4]: https://github.com/yansheng836/python-toolbox/compare/v1.0.3...v1.0.4
+[v1.0.3]: https://github.com/yansheng836/python-toolbox/compare/v1.0.2...v1.0.3
+[v1.0.2]: https://github.com/yansheng836/python-toolbox/compare/v1.0.1...v1.0.2
+[v1.0.1]: https://github.com/yansheng836/python-toolbox/compare/v1.0.0...v1.0.1
+[v1.0.0]: https://github.com/yansheng836/python-toolbox/compare/v0.0.1...v1.0.0
+[v0.0.1]: https://github.com/yansheng836/python-toolbox/releases/tag/v0.0.1

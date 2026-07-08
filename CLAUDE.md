@@ -33,6 +33,7 @@ toolbox/
 ├── menu_system.py              # Menu system (legacy demo, not imported by the app)
 ├── settings_page.py            # Settings page UI (Card, SettingsPage)
 ├── requirements.txt            # Python dependencies
+├── cliff.toml                  # git-cliff changelog 生成配置
 ├── toolbox.spec                # PyInstaller build spec
 ├── generate_version_info.py    # Version info generator (pre-build)
 ├── verify_packaging.py        # Packaging dependency verifier
@@ -116,6 +117,35 @@ pyinstaller --upx-dir=/path/to/upx toolbox.spec
 rm -rf build/
 
 # ⚠️ 不要删除 dist/ 目录 — 用户可能在其中存放自定义构建产物
+```
+
+### Changelog 生成（需安装 git-cliff，通过 `git cliff` 使用）
+
+```bash
+# 预览两个版本间的变更
+git cliff v2.0.5..HEAD --unreleased
+
+# 生成草稿并追加到 CHANGELOG.md
+git cliff --unreleased --tag v2.0.6 --prepend CHANGELOG.md
+```
+
+## 发布流程
+
+```bash
+# 1. 更新版本号（编辑 config.py 中的 APP_VERSION）
+
+# 2. 生成 changelog 草稿（自动分组 Added / Fixed / Dependencies / …）
+git cliff --unreleased --tag v2.0.6 --prepend CHANGELOG.md
+
+# 3. 人工润色 CHANGELOG.md（补充上下文细节、统一措辞）
+
+# 4. 提交并打 tag
+git add config.py CHANGELOG.md
+git commit -m "chore: release v2.0.6"
+git tag v2.0.6
+
+# 5. 推送到远程
+git push origin main --tags
 ```
 
 ---
