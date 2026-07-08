@@ -9,15 +9,15 @@ import traceback
 from pathlib import Path
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QComboBox, QSpinBox, QGridLayout, QLineEdit
 )
 
-from common.message_utils import show_info, show_error, show_warning
+from common.message_utils import show_warning
 from common.dialog_utils import get_save_file_name
 from common.action_panel import ActionPanel
 from common.utils import PIL_AVAILABLE
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from common.base_worker import BaseWorker
 
 if PIL_AVAILABLE:
     from PIL import Image
@@ -26,19 +26,18 @@ if PIL_AVAILABLE:
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_600, \
     Theme
-from config import SPACING_SMALL, SPACING_MEDIUM
+from config import SPACING_SMALL
 
 from common.file_list_panel import FileListPanel
-from common.utils import IMAGE_COLUMNS, get_create_time
+from common.utils import IMAGE_COLUMNS, get_create_time, get_combo_style, get_lineedit_style, get_spinbox_style
 
 MAX_DIMENSION = 60000  # Pillow 实际限制 65500，保守取值
 
 
-class ImageStitchWorker(QThread):
+class ImageStitchWorker(BaseWorker):
     """图片拼接工作线程（支持自动分批）"""
-    status = pyqtSignal(str)
-    finished = pyqtSignal(bool, str)
-    progress = pyqtSignal(int)  # 整体进度 0-100
+    # 继承 BaseWorker 的标准信号：progress, status, finished
+    # progress 和 status 在此直接可用  # 整体进度 0-100
 
     def __init__(self, files, output_path, direction, align, bg_color):
         super().__init__()
@@ -343,53 +342,17 @@ class ImageStitcher(ToolPlugin):
                 self.desc_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};")
             if hasattr(self, 'file_panel'):
                 self.file_panel.update_theme(theme)
-            combo_style = f"""
-                QComboBox {{
-                    background-color: {theme['bg']};
-                    border: 1px solid {theme['surface']};
-                    border-radius: 6px;
-                    padding: 6px;
-                    color: {theme['text']};
-                }}
-                QComboBox::drop-down {{
-                    border: none;
-                }}
-                QComboBox QAbstractItemView {{
-                    background-color: {theme['bg_secondary']};
-                    color: {theme['text']};
-                    selection-background-color: {theme['primary']};
-                    selection-color: {theme['text']};
-                    padding: 4px;
-                    border: none;
-                }}
-            """
+            combo_style = get_combo_style(theme)
             if hasattr(self, 'dir_combo'):
                 self.dir_combo.setStyleSheet(combo_style)
             if hasattr(self, 'align_combo'):
                 self.align_combo.setStyleSheet(combo_style)
-            spin_style = f"""
-                QSpinBox {{
-                    background-color: {theme['bg']};
-                    border: 1px solid {theme['surface']};
-                    border-radius: 6px;
-                    padding: 4px;
-                    color: {theme['text']};
-                    max-width: 60px;
-                }}
-            """
+            spin_style = get_spinbox_style(theme)
             for spin in [getattr(self, 'bg_r', None), getattr(self, 'bg_g', None), getattr(self, 'bg_b', None)]:
                 if spin:
                     spin.setStyleSheet(spin_style)
             if hasattr(self, 'output_path'):
-                self.output_path.setStyleSheet(f"""
-                    QLineEdit {{
-                        background-color: {theme['bg']};
-                        border: 1px solid {theme['surface']};
-                        border-radius: 6px;
-                        padding: 6px;
-                        color: {theme['text']};
-                    }}
-                """)
+                self.output_path.setStyleSheet(get_lineedit_style(theme))
             if hasattr(self, 'start_btn'):
                 self.start_btn.setStyleSheet(f"""
                     QPushButton {{
@@ -417,15 +380,8 @@ class ImageStitcher(ToolPlugin):
 
         self.theme = Theme.DARK
 
-        self.title_label = SelectableLabel(f"{self.icon} {self.name}")
-        self.title_label.setStyleSheet(
-            f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};"
-        )
-        layout.addWidget(self.title_label)
-
-        self.desc_label = SelectableLabel(self.description)
-        self.desc_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_14};")
-        layout.addWidget(self.desc_label)
+        # 标题 + 描述
+        self._setup_header(layout, theme=self.theme)
 
         # 文件列表（含创建时间列）
         file_card = Card(title="选择图片（列表顺序即拼接顺序）")
@@ -548,8 +504,4 @@ class ImageStitcher(ToolPlugin):
         self.worker.start()
 
     def stitch_finished(self, success, message):
-        self.action_panel.finish_task(message)
-        if success:
-            show_info(None, "完成", message)
-        else:
-            show_error(None, "错误", message)
+        self._finish_with_message(self.action_panel, success, message)

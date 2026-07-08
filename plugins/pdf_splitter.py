@@ -15,22 +15,21 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFileDialog,
     QComboBox, QSpinBox, QSlider, QRadioButton, QButtonGroup, QFormLayout, QLineEdit
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt
 
 from common.message_utils import show_info, show_error, show_warning
 from common.file_list_panel import FileListPanel
 from common.action_panel import ActionPanel
-from common.utils import PDF_COLUMNS
+from common.utils import PDF_COLUMNS, get_lineedit_style, get_combo_style, get_spinbox_style
+from common.base_worker import BaseWorker
 
 if FITZ_AVAILABLE:
     import fitz
 
 
-class PDFSplitWorker(QThread):
+class PDFSplitWorker(BaseWorker):
     """PDF拆分工作线程"""
-    progress = pyqtSignal(int)
-    status = pyqtSignal(str)
-    finished = pyqtSignal(bool, str)
+    # 继承 BaseWorker 的标准信号：progress, status, finished
 
     def __init__(self, input_file, output_path, output_format, pages_per_split, image_format, quality):
         super().__init__()
@@ -44,25 +43,11 @@ class PDFSplitWorker(QThread):
     def run(self):
         try:
             # ========= 预检查：输出目录是否可写 =========
+            from common.utils import check_dir_writable
             if self.output_path:
-                try:
-                    # 检查输出目录是否存在
-                    if not os.path.exists(self.output_path):
-                        os.makedirs(self.output_path, exist_ok=True)
-                    # 尝试在输出目录创建临时文件，检查是否可写
-                    test_file = os.path.join(self.output_path, ".write_test.tmp")
-                    with open(test_file, 'w') as f:
-                        f.write("test")
-                    os.remove(test_file)
-                except PermissionError as e:
-                    self.finished.emit(
-                        False,
-                        f"输出目录被占用或无法写入：\n{self.output_path}\n\n"
-                        f"请检查目录权限，或关闭可能占用该目录的程序。"
-                    )
-                    return
-                except Exception as e:
-                    self.finished.emit(False, f"无法访问输出目录：{str(e)}")
+                writable, err_msg = check_dir_writable(self.output_path)
+                if not writable:
+                    self.finished.emit(False, err_msg)
                     return
 
             if not FITZ_AVAILABLE:
@@ -236,51 +221,16 @@ class PDFSplitterWidget(QWidget):
         if hasattr(self, 'file_panel'):
             self.file_panel.update_theme(theme)
         if hasattr(self, 'output_path'):
-            self.output_path.setStyleSheet(f"""
-                QLineEdit {{
-                    background-color: {theme['bg']};
-                    border: 1px solid {theme['surface']};
-                    border-radius: 6px;
-                    padding: 6px;
-                    color: {theme['text']};
-                }}
-            """)
+            self.output_path.setStyleSheet(get_lineedit_style(theme))
         if hasattr(self, 'output_label'):
             self.output_label.setStyleSheet(f"color: {theme['text']};")
         if hasattr(self, 'pdf_radio'):
             self.pdf_radio.setStyleSheet(f"color: {theme['text']};")
             self.image_radio.setStyleSheet(f"color: {theme['text']};")
         if hasattr(self, 'image_format_combo'):
-            self.image_format_combo.setStyleSheet(f"""
-                QComboBox {{
-                    background-color: {theme['bg']};
-                    border: 1px solid {theme['surface']};
-                    border-radius: 6px;
-                    padding: 6px;
-                    color: {theme['text']};
-                }}
-                QComboBox::drop-down {{
-                    border: none;
-                }}
-                QComboBox QAbstractItemView {{
-                    background-color: {theme['bg_secondary']};
-                    color: {theme['text']};
-                    selection-background-color: {theme['primary']};
-                    selection-color: {theme['text']};
-                    padding: 4px;
-                    border: none;
-                }}
-            """)
+            self.image_format_combo.setStyleSheet(get_combo_style(theme))
         if hasattr(self, 'pages_spin'):
-            self.pages_spin.setStyleSheet(f"""
-                QSpinBox {{
-                    background-color: {theme['bg']};
-                    border: 1px solid {theme['surface']};
-                    border-radius: 6px;
-                    padding: 4px;
-                    color: {theme['text']};
-                }}
-            """)
+            self.pages_spin.setStyleSheet(get_spinbox_style(theme))
         if hasattr(self, 'quality_label'):
             self.quality_label.setStyleSheet(f"color: {theme['text']};")
         if hasattr(self, 'action_panel'):

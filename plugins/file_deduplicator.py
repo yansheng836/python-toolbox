@@ -17,19 +17,19 @@ from PyQt6.QtWidgets import (
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
 from common.message_utils import show_info, show_error, show_warning, show_question
 from common.action_panel import ActionPanel
-from common.utils import get_create_time, get_modify_time
+from common.utils import get_create_time, get_modify_time, WINDOWS_RESERVED_NAMES, get_combo_style
+from common.base_worker import BaseWorker
 
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QBrush
 from PyQt6.QtWidgets import QSizePolicy
 
 
-class FileDeduplicationWorker(QThread):
+class FileDeduplicationWorker(BaseWorker):
     """文件去重工作线程"""
     progress = pyqtSignal(int, int)  # 已扫描文件数, 总文件数
-    status = pyqtSignal(str)
+    # 继承 BaseWorker 的 status 和 finished 信号
     duplicates_found = pyqtSignal(dict)  # {hash: [file_paths]}
-    finished = pyqtSignal(bool, str)
     error = pyqtSignal(str)
 
     def __init__(self, folder_path):
@@ -37,12 +37,7 @@ class FileDeduplicationWorker(QThread):
         self.folder_path = folder_path
         self.cancel_requested = False
 
-    # Windows 保留设备名称，打开这些名称的文件会阻塞或行为异常
-    WINDOWS_RESERVED_NAMES = frozenset({
-        'CON', 'PRN', 'AUX', 'NUL',
-        'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
-        'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9',
-    })
+    # Windows 保留设备名称定义在 common/utils.py 的 WINDOWS_RESERVED_NAMES 中
 
     def run(self):
         try:
@@ -56,7 +51,7 @@ class FileDeduplicationWorker(QThread):
                 for file in files:
                     # 跳过 Windows 保留设备名（如 con.log），open() 会阻塞
                     name_without_ext = os.path.splitext(file)[0].upper()
-                    if name_without_ext in self.WINDOWS_RESERVED_NAMES:
+                    if name_without_ext in WINDOWS_RESERVED_NAMES:
                         continue
                     file_path = os.path.join(root, file)
                     try:
@@ -439,23 +434,7 @@ class FileDeduplicatorWidget(QWidget):
 
         # 下拉框
         if hasattr(self, 'rule_combo'):
-            self.rule_combo.setStyleSheet(f"""
-                QComboBox {{
-                    background-color: {theme['bg']};
-                    border: 1px solid {theme['border']};
-                    border-radius: 6px;
-                    padding: 6px;
-                    color: {theme['text']};
-                }}
-                QComboBox::drop-down {{
-                    border: none;
-                }}
-                QComboBox QAbstractItemView {{
-                    background-color: {theme['bg_secondary']};
-                    color: {theme['text']};
-                    selection-background-color: {theme['primary']};
-                }}
-            """)
+            self.rule_combo.setStyleSheet(get_combo_style(theme))
 
         # 存储当前主题供 show_duplicates 使用
         self.current_theme = theme

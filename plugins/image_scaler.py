@@ -14,7 +14,7 @@ if PIL_AVAILABLE:
 
 # 导入主程序中的ToolPlugin基类
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_SIZE_16, FONT_WEIGHT_700, Theme
+from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
 from config import SPACING_SMALL
 
 from PyQt6.QtWidgets import (
@@ -24,17 +24,18 @@ from PyQt6.QtWidgets import (
 )
 
 from common.message_utils import show_info, show_error, show_warning
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 
 from common.file_list_panel import FileListPanel
-from common.utils import IMAGE_COLUMNS
+from common.utils import IMAGE_COLUMNS, get_combo_style, get_spinbox_style, get_lineedit_style
 from common.action_panel import ActionPanel
+from common.base_worker import BaseWorker
 
 
-class ScalingWorker(QThread):
+class ScalingWorker(BaseWorker):
     progress_updated = pyqtSignal(int, int)
-    finished = pyqtSignal(bool, str)
     image_processed = pyqtSignal(str, str)
+    # 继承 BaseWorker 的 finished 信号
 
     def __init__(self, input_files: List[str], output_dir: str, scale_type: str,
                  scale_value: float, quality: int, maintain_aspect: bool,
@@ -52,24 +53,11 @@ class ScalingWorker(QThread):
     def run(self):
         try:
             # ========= 预检查：输出目录是否可写 =========
+            from common.utils import check_dir_writable
             output_dir = self.output_dir or os.path.dirname(self.input_files[0]) if self.input_files else '.'
-            try:
-                if not os.path.exists(output_dir):
-                    os.makedirs(output_dir, exist_ok=True)
-                # 尝试在输出目录创建临时文件，检查是否可写
-                test_file = os.path.join(output_dir, ".write_test.tmp")
-                with open(test_file, 'w') as f:
-                    f.write("test")
-                os.remove(test_file)
-            except PermissionError as e:
-                self.finished.emit(
-                    False,
-                    f"输出目录被占用或无法写入：\n{output_dir}\n\n"
-                    f"请检查目录权限，或关闭可能占用该目录的程序。"
-                )
-                return
-            except Exception as e:
-                self.finished.emit(False, f"无法访问输出目录：{str(e)}")
+            writable, err_msg = check_dir_writable(output_dir)
+            if not writable:
+                self.finished.emit(False, err_msg)
                 return
 
             # 如果指定了输出目录，则创建
@@ -179,26 +167,9 @@ class ImageScalerWidget(QWidget):
         grid.setVerticalSpacing(SPACING_SMALL)
         settings_card.content_layout.addLayout(grid)
 
-        combo_style = f"""
-            QComboBox {{
-                background-color: {self.theme['bg']};
-                border: 1px solid {self.theme['surface']};
-                border-radius: 6px;
-                padding: 6px;
-                color: {self.theme['text']};
-            }}
-        """
+        combo_style = get_combo_style(self.theme)
 
-        spin_style = f"""
-            QSpinBox {{
-                background-color: {self.theme['bg']};
-                border: 1px solid {self.theme['surface']};
-                border-radius: 6px;
-                padding: 4px;
-                color: {self.theme['text']};
-                text-align: left;
-            }}
-        """
+        spin_style = get_spinbox_style(self.theme)
 
         # 第0行：缩放方式（跨两列）
         scale_widget = QWidget()
@@ -297,15 +268,7 @@ class ImageScalerWidget(QWidget):
         output_dir_layout.addWidget(SelectableLabel("输出目录:"))
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("默认保存到原图目录（图片缩放后带 _scaled 后缀）")
-        self.output_path.setStyleSheet(f"""
-            QLineEdit {{
-                background-color: {self.theme['bg']};
-                border: 1px solid {self.theme['surface']};
-                border-radius: 6px;
-                padding: 6px;
-                color: {self.theme['text']};
-            }}
-        """)
+        self.output_path.setStyleSheet(get_lineedit_style(self.theme))
         self.browse_btn = AnimatedButton("浏览")
         self.browse_btn.setMaximumWidth(80)
         self.browse_btn.clicked.connect(self.select_output_dir)
@@ -429,51 +392,15 @@ class ImageScalerWidget(QWidget):
             self.file_panel.update_theme(theme)
         if hasattr(self, 'action_panel'):
             self.action_panel.update_theme(theme)
-        combo_style = f"""
-            QComboBox {{
-                background-color: {theme['bg']};
-                border: 1px solid {theme['surface']};
-                border-radius: 6px;
-                padding: 6px;
-                color: {theme['text']};
-            }}
-            QComboBox::drop-down {{
-                border: none;
-            }}
-            QComboBox QAbstractItemView {{
-                background-color: {theme['bg_secondary']};
-                color: {theme['text']};
-                selection-background-color: {theme['primary']};
-                selection-color: {theme['text']};
-                padding: 4px;
-                border: none;
-            }}
-        """
+        combo_style = get_combo_style(theme)
         self.scale_type_combo.setStyleSheet(combo_style)
         self.quality_combo.setStyleSheet(combo_style)
-        spin_style = f"""
-            QSpinBox {{
-                background-color: {theme['bg']};
-                border: 1px solid {theme['surface']};
-                border-radius: 6px;
-                padding: 4px;
-                color: {theme['text']};
-                text-align: left;
-            }}
-        """
+        spin_style = get_spinbox_style(theme)
         self.scale_value_input.setStyleSheet(spin_style)
         self.width_input.setStyleSheet(spin_style)
         self.height_input.setStyleSheet(spin_style)
         self.maintain_aspect.setStyleSheet(f"color: {theme['text']};")
-        self.output_path.setStyleSheet(f"""
-            QLineEdit {{
-                background-color: {theme['bg']};
-                border: 1px solid {theme['surface']};
-                border-radius: 6px;
-                padding: 6px;
-                color: {theme['text']};
-            }}
-        """)
+        self.output_path.setStyleSheet(get_lineedit_style(theme))
 
 
 class ImageScaler(ToolPlugin):

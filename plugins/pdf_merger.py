@@ -10,28 +10,24 @@ from common.utils import FITZ_AVAILABLE
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
-from config import SPACING_SMALL
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFileDialog,
     QLineEdit
 )
-from PyQt6.QtCore import QThread, pyqtSignal
-
 from common.message_utils import show_info, show_error, show_warning
 from common.file_list_panel import FileListPanel
 from common.action_panel import ActionPanel
-from common.utils import PDF_COLUMNS
+from common.utils import PDF_COLUMNS, get_lineedit_style
+from common.base_worker import BaseWorker
 
 if FITZ_AVAILABLE:
     import fitz
 
 
-class PDFMergeWorker(QThread):
+class PDFMergeWorker(BaseWorker):
     """PDF合并工作线程"""
-    progress = pyqtSignal(int)
-    status = pyqtSignal(str)
-    finished = pyqtSignal(bool, str)
+    # 继承 BaseWorker 的标准信号：progress, status, finished
 
     def __init__(self, files, output):
         super().__init__()
@@ -41,19 +37,11 @@ class PDFMergeWorker(QThread):
     def run(self):
         try:
             # ========= 预检查：目标文件是否被占用 =========
+            from common.utils import check_file_writable
             if self.output:
-                try:
-                    with open(self.output, 'ab') as f:
-                        pass
-                except PermissionError as e:
-                    self.finished.emit(
-                        False,
-                        f"目标文件被占用，无法写入：\n{self.output}\n\n"
-                        f"请先关闭该文件（如在 WPS、Adobe Reader 等软件中打开），然后重试。"
-                    )
-                    return
-                except Exception as e:
-                    self.finished.emit(False, f"无法访问目标文件：{str(e)}")
+                writable, err_msg = check_file_writable(self.output)
+                if not writable:
+                    self.finished.emit(False, err_msg)
                     return
 
             if not FITZ_AVAILABLE:
@@ -126,15 +114,7 @@ class PDFMergerWidget(QWidget):
         output_layout.addWidget(SelectableLabel("输出文件:"))
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("选择输出文件路径...")
-        self.output_path.setStyleSheet(f"""
-            QLineEdit {{
-                background-color: {self.theme['bg']};
-                border: 1px solid {self.theme['surface']};
-                border-radius: 6px;
-                padding: 6px;
-                color: {self.theme['text']};
-            }}
-        """)
+        self.output_path.setStyleSheet(get_lineedit_style(self.theme))
         browse_btn = AnimatedButton("浏览")
         browse_btn.setMaximumWidth(80)
         browse_btn.clicked.connect(self.browse_output)
@@ -221,15 +201,7 @@ class PDFMergerWidget(QWidget):
         if hasattr(self, 'file_panel'):
             self.file_panel.update_theme(theme)
         if hasattr(self, 'output_path'):
-            self.output_path.setStyleSheet(f"""
-                QLineEdit {{
-                    background-color: {theme['bg']};
-                    border: 1px solid {theme['surface']};
-                    border-radius: 6px;
-                    padding: 6px;
-                    color: {theme['text']};
-                }}
-            """)
+            self.output_path.setStyleSheet(get_lineedit_style(theme))
         if hasattr(self, 'action_panel'):
             self.action_panel.update_theme(theme)
 

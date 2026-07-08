@@ -11,11 +11,10 @@ from PyQt6.QtWidgets import (
     QComboBox, QLineEdit, QGridLayout
 )
 
-from common.message_utils import show_info, show_error, show_warning
 from common.dialog_utils import get_existing_directory
 from common.action_panel import ActionPanel
 from common.utils import PIL_AVAILABLE
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from common.base_worker import BaseWorker
 
 if PIL_AVAILABLE:
     from PIL import Image
@@ -25,13 +24,11 @@ from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STY
 from config import SPACING_SMALL
 
 from common.file_list_panel import FileListPanel
-from common.utils import IMAGE_COLUMNS
+from common.utils import IMAGE_COLUMNS, get_combo_style, get_lineedit_style
 
-class FormatConvertWorker(QThread):
+class FormatConvertWorker(BaseWorker):
     """图片格式转换工作线程"""
-    progress = pyqtSignal(int)
-    status = pyqtSignal(str)
-    finished = pyqtSignal(bool, str)
+    # 继承 BaseWorker 的标准信号：progress, status, finished
 
     FORMAT_MAP = {
         "JPEG": ("JPEG", "jpg"),
@@ -51,26 +48,13 @@ class FormatConvertWorker(QThread):
     def run(self):
         try:
             # ========= 预检查：输出目录是否可写 =========
+            from common.utils import check_dir_writable
             out_dir = self.output_dir or (
                 os.path.dirname(self.files[0]) if self.files else '.'
             )
-            try:
-                if not os.path.exists(out_dir):
-                    os.makedirs(out_dir, exist_ok=True)
-                # 尝试在输出目录创建临时文件，检查是否可写
-                test_file = os.path.join(out_dir, ".write_test.tmp")
-                with open(test_file, 'w') as f:
-                    f.write("test")
-                os.remove(test_file)
-            except PermissionError as e:
-                self.finished.emit(
-                    False,
-                    f"输出目录被占用或无法写入：\n{out_dir}\n\n"
-                    f"请检查目录权限，或关闭可能占用该目录的程序。"
-                )
-                return
-            except Exception as e:
-                self.finished.emit(False, f"无法访问输出目录：{str(e)}")
+            writable, err_msg = check_dir_writable(out_dir)
+            if not writable:
+                self.finished.emit(False, err_msg)
                 return
 
             processed = 0
@@ -153,36 +137,9 @@ class FormatConverter(ToolPlugin):
             if hasattr(self, 'file_panel'):
                 self.file_panel.update_theme(theme)
             if hasattr(self, 'fmt_combo'):
-                self.fmt_combo.setStyleSheet(f"""
-                    QComboBox {{
-                        background-color: {theme['bg']};
-                        border: 1px solid {theme['surface']};
-                        border-radius: 6px;
-                        padding: 6px;
-                        color: {theme['text']};
-                    }}
-                    QComboBox::drop-down {{
-                        border: none;
-                    }}
-                    QComboBox QAbstractItemView {{
-                        background-color: {theme['bg_secondary']};
-                        color: {theme['text']};
-                        selection-background-color: {theme['primary']};
-                        selection-color: {theme['text']};
-                        padding: 4px;
-                        border: none;
-                    }}
-                """)
+                self.fmt_combo.setStyleSheet(get_combo_style(theme))
             if hasattr(self, 'output_path'):
-                self.output_path.setStyleSheet(f"""
-                    QLineEdit {{
-                        background-color: {theme['bg']};
-                        border: 1px solid {theme['surface']};
-                        border-radius: 6px;
-                        padding: 6px;
-                        color: {theme['text']};
-                    }}
-                """)
+                self.output_path.setStyleSheet(get_lineedit_style(theme))
             if hasattr(self, 'start_btn'):
                 self.start_btn.setStyleSheet(f"""
                     QPushButton {{
@@ -209,15 +166,8 @@ class FormatConverter(ToolPlugin):
         layout.setSpacing(10)
         self.theme = Theme.DARK
 
-        self.title_label = SelectableLabel(f"{self.icon} {self.name}")
-        self.title_label.setStyleSheet(
-            f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};"
-        )
-        layout.addWidget(self.title_label)
-
-        self.desc_label = SelectableLabel(self.description)
-        self.desc_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_14};")
-        layout.addWidget(self.desc_label)
+        # 标题 + 描述
+        self._setup_header(layout, theme=self.theme)
 
         # 文件选择区域
         file_card = Card(title="选择图片")
@@ -239,30 +189,14 @@ class FormatConverter(ToolPlugin):
         settings_layout.addWidget(SelectableLabel("目标格式:"), 0, 0)
         self.fmt_combo = QComboBox()
         self.fmt_combo.addItems(self.FORMATS)
-        self.fmt_combo.setStyleSheet(f"""
-            QComboBox {{
-                background-color: {self.theme['bg']};
-                border: 1px solid {self.theme['surface']};
-                border-radius: 6px;
-                padding: 6px;
-                color: {self.theme['text']};
-            }}
-        """)
+        self.fmt_combo.setStyleSheet(get_combo_style(self.theme))
         settings_layout.addWidget(self.fmt_combo, 0, 1)
 
         settings_layout.addWidget(SelectableLabel("输出目录:"), 1, 0)
         out_row = QHBoxLayout()
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("默认保存到原图目录")
-        self.output_path.setStyleSheet(f"""
-            QLineEdit {{
-                background-color: {self.theme['bg']};
-                border: 1px solid {self.theme['surface']};
-                border-radius: 6px;
-                padding: 6px;
-                color: {self.theme['text']};
-            }}
-        """)
+        self.output_path.setStyleSheet(get_lineedit_style(self.theme))
         browse_btn = AnimatedButton("浏览")
         browse_btn.setMaximumWidth(80)
         browse_btn.clicked.connect(self.browse_output)
@@ -292,8 +226,7 @@ class FormatConverter(ToolPlugin):
     def start_convert(self):
         files = self.file_panel.get_files()
         if not files:
-            parent = self.widget if self.widget else None
-            show_warning(parent, "警告", "请先添加图片！")
+            self._show_empty_warning("请先添加图片！")
             return
 
         self.action_panel.start_task(len(files), status="")
@@ -309,9 +242,4 @@ class FormatConverter(ToolPlugin):
         self.worker.start()
 
     def convert_finished(self, success, message):
-        self.action_panel.finish_task(message)
-        parent = self.widget if self.widget else None
-        if success:
-            show_info(parent, "完成", message)
-        else:
-            show_error(parent, "错误", message)
+        self._finish_with_message(self.action_panel, success, message)

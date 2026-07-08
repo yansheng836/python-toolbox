@@ -12,11 +12,11 @@ from PyQt6.QtWidgets import (
     QGridLayout, QCheckBox
 )
 
-from common.message_utils import show_info, show_error, show_warning
 from common.dialog_utils import get_save_file_name
 from common.action_panel import ActionPanel
 from common.utils import PIL_AVAILABLE, IMG2PDF_AVAILABLE, FITZ_AVAILABLE
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from common.base_worker import BaseWorker
+from PyQt6.QtCore import Qt
 
 if PIL_AVAILABLE:
     from PIL import Image
@@ -30,14 +30,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, Theme
 
 from common.file_list_panel import FileListPanel
-from common.utils import IMAGE_COLUMNS, get_create_time
+from common.utils import IMAGE_COLUMNS, get_create_time, get_combo_style, get_lineedit_style
 
 
-class PDFWorker(QThread):
+class PDFWorker(BaseWorker):
     """PDF转换工作线程"""
-    progress = pyqtSignal(int)
-    status = pyqtSignal(str)
-    finished = pyqtSignal(bool, str)
+    # 继承 BaseWorker 的标准信号：progress, status, finished
 
     def __init__(self, files, output, page_size, compress=True, quality=85):
         super().__init__()
@@ -53,22 +51,10 @@ class PDFWorker(QThread):
         temp_files = set()  # 使用集合避免重复文件名导致的清理问题
         try:
             # ========= 预检查：目标文件是否被占用 =========
-            # 在开始处理前检查，避免处理完成后才发现文件被占用
-            try:
-                # 尝试以独占写模式打开目标文件
-                with open(self.output, 'ab') as f:
-                    pass  # 立即关闭，不写入任何内容
-            except PermissionError as e:
-                # Windows 文件被占用时会抛出 PermissionError (WinError 32)
-                self.finished.emit(
-                    False,
-                    f"目标文件被占用，无法写入：\n{self.output}\n\n"
-                    f"请先关闭该文件（如在 WPS、Adobe Reader 等软件中打开），然后重试。"
-                )
-                return
-            except Exception as e:
-                # 其他错误（如路径不存在、权限不足等）
-                self.finished.emit(False, f"无法访问目标文件：{str(e)}")
+            from common.utils import check_file_writable
+            writable, err_msg = check_file_writable(self.output)
+            if not writable:
+                self.finished.emit(False, err_msg)
                 return
 
             total = len(self.files)
@@ -317,36 +303,9 @@ class ImageToPDF(ToolPlugin):
             if hasattr(self, 'file_panel'):
                 self.file_panel.update_theme(theme)
             if hasattr(self, 'size_combo'):
-                self.size_combo.setStyleSheet(f"""
-                    QComboBox {{
-                        background-color: {theme['bg']};
-                        border: 1px solid {theme['surface']};
-                        border-radius: 6px;
-                        padding: 6px;
-                        color: {theme['text']};
-                    }}
-                    QComboBox::drop-down {{
-                        border: none;
-                    }}
-                    QComboBox QAbstractItemView {{
-                        background-color: {theme['bg_secondary']};
-                        color: {theme['text']};
-                        selection-background-color: {theme['primary']};
-                        selection-color: {theme['text']};
-                        padding: 4px;
-                        border: none;
-                    }}
-                """)
+                self.size_combo.setStyleSheet(get_combo_style(theme))
             if hasattr(self, 'output_path'):
-                self.output_path.setStyleSheet(f"""
-                    QLineEdit {{
-                        background-color: {theme['bg']};
-                        border: 1px solid {theme['surface']};
-                        border-radius: 6px;
-                        padding: 6px;
-                        color: {theme['text']};
-                    }}
-                """)
+                self.output_path.setStyleSheet(get_lineedit_style(theme))
             if hasattr(self, 'action_panel'):
                 self.action_panel.update_theme(theme)
         except RuntimeError:
@@ -359,15 +318,8 @@ class ImageToPDF(ToolPlugin):
 
         self.theme = Theme.DARK
 
-        self.title_label = SelectableLabel(f"{self.icon} {self.name}")
-        self.title_label.setStyleSheet(
-            f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};"
-        )
-        layout.addWidget(self.title_label)
-
-        self.desc_label = SelectableLabel(self.description)
-        self.desc_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_14};")
-        layout.addWidget(self.desc_label)
+        # 标题 + 描述
+        self._setup_header(layout, theme=self.theme)
 
         # 图片列表
         list_card = Card(title="图片列表（列表顺序即PDF顺序）")
@@ -389,6 +341,7 @@ class ImageToPDF(ToolPlugin):
         self.size_combo = QComboBox()
         self.size_combo.addItems(["自动适应", "A4", "A3", "原图尺寸", "智能缩放"])
         self.size_combo.setCurrentIndex(4)  # 默认智能缩放
+        self.size_combo.setStyleSheet(get_combo_style(self.theme))
         settings_layout.addWidget(self.size_combo, 0, 1)
 
         settings_layout.addWidget(SelectableLabel("启用压缩:"), 1, 0)
@@ -447,8 +400,7 @@ class ImageToPDF(ToolPlugin):
     def start_conversion(self):
         files = self.file_panel.get_files()
         if not files:
-            parent = self.widget if self.widget else None
-            show_warning(parent, "警告", "请先添加图片！")
+            self._show_empty_warning("请先添加图片！")
             return
 
         output = self.output_path.text()
@@ -465,6 +417,7 @@ class ImageToPDF(ToolPlugin):
 
         if not (IMG2PDF_AVAILABLE or FITZ_AVAILABLE or PIL_AVAILABLE):
             parent = self.widget if self.widget else None
+            from common.message_utils import show_error
             show_error(
                 parent, "错误",
                 "请先安装依赖: pip install img2pdf 或 pip install PyMuPDF 或 pip install Pillow"
@@ -486,9 +439,4 @@ class ImageToPDF(ToolPlugin):
         self.worker.start()
 
     def conversion_finished(self, success, message):
-        self.action_panel.finish_task(message)
-        parent = self.widget if self.widget else None
-        if success:
-            show_info(parent, "完成", message)
-        else:
-            show_error(parent, "错误", message)
+        self._finish_with_message(self.action_panel, success, message)

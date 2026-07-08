@@ -11,11 +11,11 @@ from PyQt6.QtWidgets import (
     QComboBox, QSlider, QLineEdit, QGridLayout
 )
 
-from common.message_utils import show_info, show_error, show_warning
 from common.dialog_utils import get_existing_directory
 from common.action_panel import ActionPanel
 from common.utils import PIL_AVAILABLE
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from common.base_worker import BaseWorker
+from PyQt6.QtCore import Qt
 
 if PIL_AVAILABLE:
     from PIL import Image
@@ -26,14 +26,12 @@ from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STY
 from config import SPACING_SMALL
 
 from common.file_list_panel import FileListPanel
-from common.utils import IMAGE_COLUMNS
+from common.utils import IMAGE_COLUMNS, get_combo_style, get_lineedit_style
 
 
-class CompressionWorker(QThread):
+class CompressionWorker(BaseWorker):
     """图片压缩工作线程"""
-    progress = pyqtSignal(int)
-    status = pyqtSignal(str)
-    finished = pyqtSignal(bool, str)
+    # 继承 BaseWorker 的标准信号：progress, status, finished
 
     def __init__(self, files, output_dir, format_str, quality):
         super().__init__()
@@ -45,24 +43,11 @@ class CompressionWorker(QThread):
     def run(self):
         try:
             # ========= 预检查：输出目录是否可写 =========
+            from common.utils import check_dir_writable
             output_dir = self.output_dir or os.path.dirname(self.files[0]) if self.files else '.'
-            try:
-                if not os.path.exists(output_dir):
-                    os.makedirs(output_dir, exist_ok=True)
-                # 尝试在输出目录创建临时文件，检查是否可写
-                test_file = os.path.join(output_dir, ".write_test.tmp")
-                with open(test_file, 'w') as f:
-                    f.write("test")
-                os.remove(test_file)
-            except PermissionError as e:
-                self.finished.emit(
-                    False,
-                    f"输出目录被占用或无法写入：\n{output_dir}\n\n"
-                    f"请检查目录权限，或关闭可能占用该目录的程序。"
-                )
-                return
-            except Exception as e:
-                self.finished.emit(False, f"无法访问输出目录：{str(e)}")
+            writable, err_msg = check_dir_writable(output_dir)
+            if not writable:
+                self.finished.emit(False, err_msg)
                 return
 
             processed = 0
@@ -76,9 +61,6 @@ class CompressionWorker(QThread):
                 # 确定输出格式及扩展名
                 # Pillow 格式映射（JPG/JPEG 底层都是 JPEG）
                 format_map = {'JPG': 'JPEG', 'JPEG': 'JPEG', 'PNG': 'PNG', 'WebP': 'WEBP'}
-                # 原扩展名 → Pillow 格式
-                ext_map = {'.jpg': 'JPEG', '.jpeg': 'JPEG', '.png': 'PNG',
-                            '.webp': 'WEBP', '.bmp': 'BMP'}
                 # 输出扩展名：JPG→jpg，JPEG→jpeg，其余用对应小写
                 out_ext_map = {'JPG': 'jpg', 'JPEG': 'jpeg', 'PNG': 'png',
                                'WebP': 'webp'}
@@ -166,36 +148,9 @@ class ImageCompressor(ToolPlugin):
             if hasattr(self, 'file_panel'):
                 self.file_panel.update_theme(theme)
             if hasattr(self, 'format_combo'):
-                self.format_combo.setStyleSheet(f"""
-                    QComboBox {{
-                        background-color: {theme['bg']};
-                        border: 1px solid {theme['surface']};
-                        border-radius: 6px;
-                        padding: 6px;
-                        color: {theme['text']};
-                    }}
-                    QComboBox::drop-down {{
-                        border: none;
-                    }}
-                    QComboBox QAbstractItemView {{
-                        background-color: {theme['bg_secondary']};
-                        color: {theme['text']};
-                        selection-background-color: {theme['primary']};
-                        selection-color: {theme['text']};
-                        padding: 4px;
-                        border: none;
-                    }}
-                """)
+                self.format_combo.setStyleSheet(get_combo_style(theme))
             if hasattr(self, 'output_path'):
-                self.output_path.setStyleSheet(f"""
-                    QLineEdit {{
-                        background-color: {theme['bg']};
-                        border: 1px solid {theme['surface']};
-                        border-radius: 6px;
-                        padding: 6px;
-                        color: {theme['text']};
-                    }}
-                """)
+                self.output_path.setStyleSheet(get_lineedit_style(theme))
             if hasattr(self, 'start_btn'):
                 self.start_btn.setStyleSheet(f"""
                     QPushButton {{
@@ -224,17 +179,8 @@ class ImageCompressor(ToolPlugin):
         layout.setSpacing(10)
         self.theme = Theme.DARK
 
-        # 标题（使用 PLUGIN_MODULES 配置中的 icon + name）
-        self.title_label = SelectableLabel(f"{self.icon} {self.name}")
-        self.title_label.setStyleSheet(
-            f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};"
-        )
-        layout.addWidget(self.title_label)
-
-        # 说明（使用 PLUGIN_MODULES 配置中的 description）
-        self.desc_label = SelectableLabel(self.description)
-        self.desc_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_14};")
-        layout.addWidget(self.desc_label)
+        # 标题 + 描述
+        self._setup_header(layout, theme=self.theme)
 
         # 文件选择区域
         file_card = Card(title="选择图片")
@@ -256,15 +202,7 @@ class ImageCompressor(ToolPlugin):
         settings_layout.addWidget(SelectableLabel("输出格式:"), 0, 0)
         self.format_combo = QComboBox()
         self.format_combo.addItems(["保持原格式", "JPG", "JPEG", "PNG", "WebP"])
-        self.format_combo.setStyleSheet(f"""
-            QComboBox {{
-                background-color: {self.theme['bg']};
-                border: 1px solid {self.theme['surface']};
-                border-radius: 6px;
-                padding: 4px;
-                color: {self.theme['text']};
-            }}
-        """)
+        self.format_combo.setStyleSheet(get_combo_style(self.theme))
         settings_layout.addWidget(self.format_combo, 0, 1)
 
         settings_layout.addWidget(SelectableLabel("压缩质量:"), 1, 0)
@@ -284,15 +222,7 @@ class ImageCompressor(ToolPlugin):
         output_layout = QHBoxLayout()
         self.output_path = QLineEdit()
         self.output_path.setPlaceholderText("默认保存到原图目录（图片压缩后带 _compressed 后缀）")
-        self.output_path.setStyleSheet(f"""
-            QLineEdit {{
-                background-color: {self.theme['bg']};
-                border: 1px solid {self.theme['surface']};
-                border-radius: 6px;
-                padding: 4px;
-                color: {self.theme['text']};
-            }}
-        """)
+        self.output_path.setStyleSheet(get_lineedit_style(self.theme))
         self.browse_btn = AnimatedButton("浏览")
         self.browse_btn.clicked.connect(self.browse_output)
         self.browse_btn.setMaximumWidth(80)
@@ -323,11 +253,11 @@ class ImageCompressor(ToolPlugin):
     def start_compression(self):
         files = self.file_panel.get_files()
         if not files:
-            parent = self.widget if self.widget else None
-            show_warning(parent, "警告", "请先添加图片！")
+            self._show_empty_warning("请先添加图片！")
             return
 
         if not PIL_AVAILABLE:
+            from common.message_utils import show_error
             parent = self.widget if self.widget else None
             show_error(parent, "错误", "请先安装 Pillow: pip install Pillow")
             return
@@ -346,9 +276,4 @@ class ImageCompressor(ToolPlugin):
         self.worker.start()
 
     def compression_finished(self, success, message):
-        self.action_panel.finish_task(message)
-        parent = self.widget if self.widget else None
-        if success:
-            show_info(parent, "完成", message)
-        else:
-            show_error(parent, "错误", message)
+        self._finish_with_message(self.action_panel, success, message)

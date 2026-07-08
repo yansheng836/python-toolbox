@@ -18,7 +18,7 @@ from config import (
     FEATURE_MODULES, PLUGIN_MODULES, UI_CONFIG, WELCOME_CONFIG,
     TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_20,
     FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800,
-    SPACING_SMALL, SPACING_MEDIUM
+    SPACING_SMALL
 )
 
 from PyQt6.QtWidgets import (
@@ -256,6 +256,57 @@ class ToolPlugin:
 
     def update_theme(self, theme):
         """更新主题 - 由子类实现"""
+
+    # ==================== 共享辅助方法 ====================
+
+    def _setup_header(self, layout, title=None, desc=None, theme=None):
+        """创建标题和描述标签
+
+        统一处理所有插件常见的标题+描述布局。
+        Args:
+            layout: 父级 QVBoxLayout
+            title: 标题文本，默认使用 self.icon + self.name
+            desc: 描述文本，默认使用 self.description
+            theme: 主题字典，默认使用 Theme.DARK
+        """
+        if theme is None:
+            from toolbox import Theme
+            theme = Theme.DARK
+        t = title or f"{self.icon} {self.name}"
+        d = desc or self.description
+
+        self.title_label = SelectableLabel(t)
+        self.title_label.setStyleSheet(
+            f"font-size: {TITLE_STYLES['font_size']}; "
+            f"font-weight: {TITLE_STYLES['font_weight']}; "
+            f"color: {theme['text']};"
+        )
+        layout.addWidget(self.title_label)
+
+        self.desc_label = SelectableLabel(d)
+        self.desc_label.setStyleSheet(
+            f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};"
+        )
+        layout.addWidget(self.desc_label)
+
+    def _show_empty_warning(self, message="请先添加文件！"):
+        """弹出文件为空警告"""
+        from common.message_utils import show_warning
+        parent = self.widget if self.widget else None
+        show_warning(parent, "警告", message)
+
+    def _finish_with_message(self, action_panel, success, message):
+        """完成任务并显示结果消息
+
+        统一处理完成后的操作面板更新和结果弹窗。
+        """
+        from common.message_utils import show_info, show_error
+        action_panel.finish_task(message)
+        parent = self.widget if self.widget else None
+        if success:
+            show_info(parent, "完成", message)
+        else:
+            show_error(parent, "错误", message)
 
 
 # ==================== 拖拽处理工具类 ====================
