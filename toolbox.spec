@@ -80,6 +80,7 @@ a = Analysis(
         'plugins.image_to_pdf',
         'plugins.image_format_converter',
         'plugins.image_stitcher',
+        'plugins.pdf_to_word',
 
         # PIL/Pillow 核心模块
         'PIL',
@@ -95,6 +96,7 @@ a = Analysis(
         # PDF 转换库
         'img2pdf',
         'fitz',  # PyMuPDF
+        'docx',  # python-docx
     ],
     hookspath=[],
     hooksconfig={},

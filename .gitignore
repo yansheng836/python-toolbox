@@ -148,4 +148,6 @@ nt-mjs/nt.txt
 
 * 副本 *
 *.html
+*.pdf
+*.docx
 ~$*

@@ -82,6 +82,14 @@ PLUGIN_MODULES = [
         "module": "plugins.file_deduplicator",
         "class": "FileDeduplicator",
     },
+    {
+        "name": "PDF转Word",
+        "icon": "📝",
+        "description": "将PDF转换为Word文档，保留文字格式、图片和表格",
+        "order": 110,
+        "module": "plugins.pdf_to_word",
+        "class": "PDFToWord",
+    },
     # 设置插件（内置，在 toolbox.py 中定义）
     {
         "name": "设置",
