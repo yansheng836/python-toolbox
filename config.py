@@ -82,6 +82,14 @@ PLUGIN_MODULES = [
         "module": "plugins.file_deduplicator",
         "class": "FileDeduplicator",
     },
+    {
+        "name": "空文件夹清理",
+        "icon": "🗑️",
+        "description": "递归查找并删除完全为空的文件夹，支持多层空目录",
+        "order": 205,
+        "module": "plugins.empty_folder_cleaner",
+        "class": "EmptyFolderCleaner",
+    },
     # 设置插件（内置，在 toolbox.py 中定义）
     {
         "name": "设置",

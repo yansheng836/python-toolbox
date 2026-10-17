@@ -76,6 +76,7 @@ a = Analysis(
         'plugins.pdf_merger',
         'plugins.pdf_splitter',
         'plugins.file_deduplicator',
+        'plugins.empty_folder_cleaner',
         'plugins.image_compressor',
         'plugins.image_to_pdf',
         'plugins.image_format_converter',

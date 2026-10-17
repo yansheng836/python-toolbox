@@ -3,6 +3,8 @@
 插件自动发现、UI 创建和主题切换测试
 """
 
+from pathlib import Path
+
 import pytest
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 from toolbox import Theme
@@ -29,6 +31,7 @@ class TestPluginLoading:
             "PDF合并",
             "PDF拆分",
             "文件去重",
+            "空文件夹清理",
         ]
         plugin_names = [p.name for p in loaded_plugins.values()]
         for name in expected_names:
@@ -53,6 +56,12 @@ class TestPluginLoading:
         """每个插件都应有 get_widget 方法"""
         for name, plugin in loaded_plugins.items():
             assert hasattr(plugin, "get_widget"), f"{name} 缺少 get_widget"
+
+    def test_empty_folder_cleaner_is_packaged(self):
+        """空文件夹清理插件应加入 PyInstaller hiddenimports"""
+        spec_path = Path(__file__).resolve().parent.parent / "toolbox.spec"
+        spec_content = spec_path.read_text(encoding="utf-8")
+        assert "plugins.empty_folder_cleaner" in spec_content
 
 
 # ==================== UI 创建测试 ====================
