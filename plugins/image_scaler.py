@@ -70,16 +70,16 @@ class ScalingWorker(BaseWorker):
                 try:
                     img = load_oriented_image(input_file)
                     try:
-                        if self.scale_type == "百分比缩放":
+                        if self.scale_type == "percent":
                             new_width = int(img.width * self.scale_value / 100)
                             new_height = int(img.height * self.scale_value / 100)
-                        elif self.scale_type == "指定宽度":
+                        elif self.scale_type == "width":
                             new_width = self.width
                             if self.maintain_aspect:
                                 new_height = int(img.height * new_width / img.width)
                             else:
                                 new_height = self.height
-                        elif self.scale_type == "指定高度":
+                        elif self.scale_type == "height":
                             new_height = self.height
                             if self.maintain_aspect:
                                 new_width = int(img.width * new_height / img.height)
@@ -183,9 +183,11 @@ class ImageScalerWidget(QWidget):
         scale_layout.setSpacing(SPACING_SMALL)
         scale_layout.addWidget(SelectableLabel("缩放方式:"))
         self.scale_type_combo = QComboBox()
-        self.scale_type_combo.addItems(["百分比缩放", "指定宽度", "指定高度"])
+        self.scale_type_combo.addItem("百分比缩放", "percent")
+        self.scale_type_combo.addItem("指定宽度", "width")
+        self.scale_type_combo.addItem("指定高度", "height")
         self.scale_type_combo.setStyleSheet(combo_style)
-        self.scale_type_combo.currentTextChanged.connect(self.on_scale_type_changed)
+        self.scale_type_combo.currentIndexChanged.connect(self.on_scale_type_changed)
         scale_layout.addWidget(self.scale_type_combo, 1)
         grid.addWidget(scale_widget, 0, 0, 1, 2)
 
@@ -259,7 +261,10 @@ class ImageScalerWidget(QWidget):
         quality_layout.setSpacing(SPACING_SMALL)
         quality_layout.addWidget(SelectableLabel("图片质量:"))
         self.quality_combo = QComboBox()
-        self.quality_combo.addItems(["高质量 (95)", "标准 (85)", "较小文件 (75)", "最小文件 (50)"])
+        self.quality_combo.addItem("高质量 (95)", 95)
+        self.quality_combo.addItem("标准 (85)", 85)
+        self.quality_combo.addItem("较小文件 (75)", 75)
+        self.quality_combo.addItem("最小文件 (50)", 50)
         self.quality_combo.setCurrentIndex(1)
         self.quality_combo.setStyleSheet(combo_style)
         quality_layout.addWidget(self.quality_combo, 1)
@@ -298,37 +303,33 @@ class ImageScalerWidget(QWidget):
             self.apply_theme(Theme.DARK)
 
     def on_scale_type_changed(self):
-        scale_type = self.scale_type_combo.currentText()
+        scale_type = self.scale_type_combo.currentData()
 
-        if scale_type == "百分比缩放":
+        if scale_type == "percent":
             self.zoom_row_widget.setVisible(True)
             self.width_row_widget.setVisible(False)
             self.height_row_widget.setVisible(False)
             self.aspect_row_widget.setVisible(False)
-        elif scale_type == "指定宽度":
+        elif scale_type == "width":
             self.zoom_row_widget.setVisible(False)
             self.width_row_widget.setVisible(True)
             self.height_row_widget.setVisible(True)
             self.aspect_row_widget.setVisible(True)
-            # 指定宽度模式下，宽度始终可编辑
             self.width_input.setEnabled(True)
             self.width_input.setSuffix(" px")
-            # 高度的可编辑性取决于是否保持宽高比
             if self.maintain_aspect.isChecked():
                 self.height_input.setEnabled(False)
                 self.height_input.setSuffix(" (自动)")
             else:
                 self.height_input.setEnabled(True)
                 self.height_input.setSuffix(" px")
-        elif scale_type == "指定高度":
+        elif scale_type == "height":
             self.zoom_row_widget.setVisible(False)
             self.width_row_widget.setVisible(True)
             self.height_row_widget.setVisible(True)
             self.aspect_row_widget.setVisible(True)
-            # 指定高度模式下，高度始终可编辑
             self.height_input.setEnabled(True)
             self.height_input.setSuffix(" px")
-            # 宽度的可编辑性取决于是否保持宽高比
             if self.maintain_aspect.isChecked():
                 self.width_input.setEnabled(False)
                 self.width_input.setSuffix(" (自动)")
@@ -349,18 +350,18 @@ class ImageScalerWidget(QWidget):
             show_warning(self, "警告", "请先添加图片！")
             return
 
-        scale_type = self.scale_type_combo.currentText()
-        quality = int(self.quality_combo.currentText().split("(")[1].split(")")[0])
+        scale_type = self.scale_type_combo.currentData()
+        quality = self.quality_combo.currentData()
 
         self.worker = ScalingWorker(
             input_files=files,
             output_dir=self.output_path.text(),
             scale_type=scale_type,
-            scale_value=self.scale_value_input.value() if scale_type == "百分比缩放" else 100,
+            scale_value=self.scale_value_input.value() if scale_type == "percent" else 100,
             quality=quality,
             maintain_aspect=self.maintain_aspect.isChecked(),
-            width=self.width_input.value() if scale_type in ["指定宽度", "指定高度"] else None,
-            height=self.height_input.value() if scale_type in ["指定宽度", "指定高度"] else None
+            width=self.width_input.value() if scale_type in ("width", "height") else None,
+            height=self.height_input.value() if scale_type in ("width", "height") else None
         )
 
         self.worker.progress_updated.connect(self.on_progress_updated)
