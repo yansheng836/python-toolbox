@@ -29,7 +29,7 @@ from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STY
 from config import SPACING_SMALL
 
 from common.file_list_panel import FileListPanel
-from common.utils import IMAGE_COLUMNS, get_create_time, get_combo_style, get_lineedit_style, get_spinbox_style
+from common.utils import IMAGE_COLUMNS, Column, get_create_time, get_combo_style, get_lineedit_style, get_spinbox_style
 
 MAX_DIMENSION = 60000  # Pillow 实际限制 65500，保守取值
 
@@ -401,7 +401,7 @@ class ImageStitcher(ToolPlugin):
         # 文件列表（含创建时间列）
         file_card = Card(title="选择图片（列表顺序即拼接顺序）")
         self.file_panel = FileListPanel(
-            columns=IMAGE_COLUMNS + [("创建时间", get_create_time)],
+            columns=IMAGE_COLUMNS + [Column("created", "创建时间", get_create_time)],
             file_filter="图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff *.tif *.gif)",
             button_class=AnimatedButton,
             show_buttons=["add", "remove", "clear", "up", "down", "sort_name", "sort_time"]

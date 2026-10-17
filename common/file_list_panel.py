@@ -7,9 +7,12 @@ import os
 import re
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget,
-    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QSizePolicy, QLabel
+    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QSizePolicy, QLabel,
+    QPushButton
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent
+
+from common.utils import Column
 
 
 class FileListPanel(QWidget):
@@ -24,14 +27,14 @@ class FileListPanel(QWidget):
 
     files_changed = pyqtSignal()
 
-    # 默认列宽映射：列名 -> 宽度（px），None 表示使用 Stretch
+    # 默认列宽映射：列 id -> 宽度（px），None 表示使用 Stretch
     DEFAULT_COLUMN_WIDTHS = {
-        "文件名": None,  # Stretch
-        "大小": 80,
-        "页数": 50,
-        "尺寸": 100,
-        "创建时间": 150,
-        "修改时间": 150,
+        "filename": None,   # Stretch
+        "size": 80,
+        "pages": 50,
+        "dimensions": 100,
+        "created": 150,
+        "modified": 150,
     }
 
     def __init__(self, parent=None, *,
@@ -57,7 +60,16 @@ class FileListPanel(QWidget):
         self.files = []
         self._text_secondary = "#94a3b8"  # 默认次级文本颜色（深色模式）
         self.setAcceptDrops(True)  # 允许整个面板接收拖拽事件
-        self.columns = columns or [("文件名", lambda f: os.path.basename(f))]
+        # 规范化列定义：接受 Column 或旧式 (label, func) / (id, label, func) 元组
+        raw_cols = columns or [("filename", lambda f: os.path.basename(f))]
+        self.columns = []
+        for col in raw_cols:
+            if isinstance(col, Column):
+                self.columns.append(col)
+            elif len(col) == 3:
+                self.columns.append(Column(col[0], col[1], col[2]))
+            else:  # (label, func) -> 推导 id
+                self.columns.append(Column(col[0], col[0], col[1]))
         self.file_filter = file_filter
         self.button_class = button_class
         self.show_buttons = show_buttons if show_buttons is not None else ["add", "remove", "up", "down"]
@@ -107,7 +119,7 @@ class FileListPanel(QWidget):
         # 表格
         self.table = QTableWidget()
         self.table.setColumnCount(len(self.columns))
-        self.table.setHorizontalHeaderLabels([col[0] for col in self.columns])
+        self.table.setHorizontalHeaderLabels([col.label for col in self.columns])
         header = self.table.horizontalHeader()
 
         # 应用列宽设置
@@ -158,24 +170,21 @@ class FileListPanel(QWidget):
 
         优先级：用户指定 > DEFAULT_COLUMN_WIDTHS > 默认（第0列Stretch，其余Interactive）
         """
-        # 构建列名到索引的映射
-        col_name_to_idx = {col[0]: idx for idx, col in enumerate(self.columns)}
-
-        # 初始化每列的设置为 None（表示未设置）
+        col_id_to_idx = {col.id: idx for idx, col in enumerate(self.columns)}
         col_settings = [None] * len(self.columns)
 
         # 1. 先应用默认值
-        for col_name, default_width in self.DEFAULT_COLUMN_WIDTHS.items():
-            if col_name in col_name_to_idx:
-                col_settings[col_name_to_idx[col_name]] = default_width
+        for col_id, default_width in self.DEFAULT_COLUMN_WIDTHS.items():
+            if col_id in col_id_to_idx:
+                col_settings[col_id_to_idx[col_id]] = default_width
 
         # 2. 再应用用户指定的设置（覆盖默认值）
         if self.column_widths is not None:
             if isinstance(self.column_widths, dict):
-                # 格式: {"列名": 宽度, ...}
-                for col_name, width in self.column_widths.items():
-                    if col_name in col_name_to_idx:
-                        col_settings[col_name_to_idx[col_name]] = width
+                # 格式: {"列 id": 宽度, ...}
+                for col_id, width in self.column_widths.items():
+                    if col_id in col_id_to_idx:
+                        col_settings[col_id_to_idx[col_id]] = width
             else:
                 # 格式: [(列索引, 宽度), ...] 或 [宽度1, 宽度2, ...]
                 for item in self.column_widths:
@@ -189,16 +198,15 @@ class FileListPanel(QWidget):
         # 3. 应用设置到 header
         for col_idx, width in enumerate(col_settings):
             if width is None:
-                # None 表示 Stretch
                 header.setSectionResizeMode(col_idx, QHeaderView.ResizeMode.Stretch)
             else:
-                # 固定宽度
                 header.setSectionResizeMode(col_idx, QHeaderView.ResizeMode.Fixed)
                 header.resizeSection(col_idx, width)
 
     def _create_btn(self, text, action):
         """创建按钮并连接信号"""
-        btn = self.button_class(text) if self.button_class else QWidget()
+        # 默认使用 QPushButton：QWidget 无 clicked 信号，不可作为按钮回退
+        btn = self.button_class(text) if self.button_class else QPushButton(text)
         if action == "add":
             btn.clicked.connect(self.add_files)
         elif action == "remove":
@@ -319,9 +327,9 @@ class FileListPanel(QWidget):
         self.table.setRowCount(0)
         self.table.setRowCount(len(self.files))
         for row, file_path in enumerate(self.files):
-            for col_idx, (col_name, col_func) in enumerate(self.columns):
+            for col_idx, col in enumerate(self.columns):
                 try:
-                    text = str(col_func(file_path))
+                    text = str(col.func(file_path))
                 except Exception as e:
                     print(f"Error in file_list_panel: {e}")
                     text = "错误"

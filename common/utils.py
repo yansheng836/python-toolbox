@@ -5,6 +5,7 @@
 """
 
 import os
+from collections import namedtuple
 
 # ==================== 模块可用性检查 ====================
 try:
@@ -106,18 +107,21 @@ def get_pdf_pages(file_path):
         return "N/A"
 
 
+# 列定义：id 为稳定标识（列宽/排序按 id 匹配），label 为显示文本（i18n 时翻译），func 为取值函数
+Column = namedtuple("Column", "id label func")
+
 # 图片类插件通用的表格列定义
 IMAGE_COLUMNS = [
-    ("文件名", lambda f: os.path.basename(f)),
-    ("尺寸", get_image_size),
-    ("大小", get_file_size)
+    Column("filename", "文件名", lambda f: os.path.basename(f)),
+    Column("dimensions", "尺寸", get_image_size),
+    Column("size", "大小", get_file_size),
 ]
 
 # PDF类插件通用的表格列定义
 PDF_COLUMNS = [
-    ("文件名", lambda f: os.path.basename(f)),
-    ("页数", get_pdf_pages),
-    ("大小", get_file_size)
+    Column("filename", "文件名", lambda f: os.path.basename(f)),
+    Column("pages", "页数", get_pdf_pages),
+    Column("size", "大小", get_file_size),
 ]
 
 

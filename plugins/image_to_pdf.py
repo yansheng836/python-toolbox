@@ -30,7 +30,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, Theme
 
 from common.file_list_panel import FileListPanel
-from common.utils import IMAGE_COLUMNS, get_create_time, get_combo_style, get_lineedit_style
+from common.utils import IMAGE_COLUMNS, Column, get_create_time, get_combo_style, get_lineedit_style
 
 
 class PDFWorker(BaseWorker):
@@ -364,7 +364,7 @@ class ImageToPDF(ToolPlugin):
         # 图片列表
         list_card = Card(title="图片列表（列表顺序即PDF顺序）")
         self.file_panel = FileListPanel(
-            columns=IMAGE_COLUMNS + [("创建时间", get_create_time)],
+            columns=IMAGE_COLUMNS + [Column("created", "创建时间", get_create_time)],
             file_filter="图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff)",
             button_class=AnimatedButton,
             show_buttons=["add", "remove", "clear", "up", "down", "sort_name", "sort_time"]
