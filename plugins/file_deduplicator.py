@@ -11,7 +11,7 @@ from collections import defaultdict
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QComboBox, QTreeWidget, QTreeWidgetItem,
-    QFileDialog, QLineEdit, QHBoxLayout, QCheckBox
+    QFileDialog, QHBoxLayout, QCheckBox
 )
 
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
@@ -19,6 +19,7 @@ from common.message_utils import show_info, show_error, show_warning, show_quest
 from common.action_panel import ActionPanel
 from common.utils import get_create_time, get_modify_time, WINDOWS_RESERVED_NAMES, get_combo_style
 from common.base_worker import BaseWorker
+from common.directory_drop_line_edit import DirectoryDropLineEdit
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QBrush
@@ -164,44 +165,6 @@ class FileDeduplicationWorker(BaseWorker):
 
     def cancel(self):
         self.cancel_requested = True
-
-
-class DirectoryDropLineEdit(QLineEdit):
-    """支持从文件管理器拖拽文件夹的输入框（内置只读）"""
-
-    directory_dropped = pyqtSignal(str)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setReadOnly(True)
-        self.setAcceptDrops(True)
-
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
-                if url.isLocalFile() and os.path.isdir(url.toLocalFile()):
-                    event.acceptProposedAction()
-                    return
-        event.ignore()
-
-    def dragMoveEvent(self, event):
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
-                if url.isLocalFile() and os.path.isdir(url.toLocalFile()):
-                    event.acceptProposedAction()
-                    return
-        event.ignore()
-
-    def dropEvent(self, event):
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
-                if url.isLocalFile() and os.path.isdir(url.toLocalFile()):
-                    dir_path = url.toLocalFile()
-                    self.setText(dir_path)
-                    self.directory_dropped.emit(dir_path)
-                    event.acceptProposedAction()
-                    return
-        event.ignore()
 
 
 class FileDeduplicatorWidget(QWidget):

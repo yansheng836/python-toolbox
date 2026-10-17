@@ -127,8 +127,15 @@ class ActionPanel(Card):
         # 渐变按钮的主题更新：使用用户自定义颜色或主题中的action渐变色
         if self.use_gradient:
             if self._user_gradient_colors:
-                g_start, g_end = self._user_gradient_colors
-                g_hover_start, g_hover_end = self._user_gradient_hover_colors or (theme['action_gradient_hover_start'], theme['action_gradient_hover_end'])
+                # 使用可更新的当前颜色，允许调用方在切换主题时刷新自定义渐变
+                g_start, g_end = self.gradient_colors
+                if self._user_gradient_hover_colors:
+                    g_hover_start, g_hover_end = self.gradient_hover_colors
+                else:
+                    g_hover_start, g_hover_end = (
+                        theme['action_gradient_hover_start'],
+                        theme['action_gradient_hover_end'],
+                    )
             else:
                 g_start, g_end = theme['action_gradient_start'], theme['action_gradient_end']
                 g_hover_start, g_hover_end = theme['action_gradient_hover_start'], theme['action_gradient_hover_end']
