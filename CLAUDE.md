@@ -194,6 +194,10 @@ Each plugin defines its own `*Worker` class (e.g., `CompressionWorker`, `PDFMerg
 
 ## Development Standards
 
+### Documentation Naming
+
+问题分析、故障记录和修复建议文档统一放在 `docs/` 目录下，文件名使用 `YYYY-MM-DD-简短问题描述.md` 格式，例如 `2026-10-17-图片转PDF方向异常问题.md`。
+
 ### Syntax Check After Modification (MANDATORY)
 
 **Rule: After modifying any Python file, you MUST run syntax checking before marking the task as complete.**

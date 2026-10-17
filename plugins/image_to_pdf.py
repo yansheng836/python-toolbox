@@ -19,7 +19,7 @@ from common.base_worker import BaseWorker
 from PyQt6.QtCore import Qt
 
 if PIL_AVAILABLE:
-    from PIL import Image
+    from PIL import Image, ImageOps
 if IMG2PDF_AVAILABLE:
     import img2pdf
 if FITZ_AVAILABLE:
@@ -46,6 +46,64 @@ class PDFWorker(BaseWorker):
         self.quality = quality
 
     BATCH_SIZE = 50  # 每批处理图片数，控制内存占用
+    PAGE_SIZES = {
+        "A4": (595, 842),
+        "A3": (842, 1191),
+    }
+    PDF_DPI = 72
+
+    @staticmethod
+    def _load_oriented_image(file_path):
+        """读取图片并将 EXIF 方向应用到像素。"""
+        with Image.open(file_path) as src_img:
+            src_img.load()
+            oriented_img = ImageOps.exif_transpose(src_img)
+            try:
+                if oriented_img.mode in ('RGBA', 'LA', 'P'):
+                    return oriented_img.convert('RGBA')
+                return oriented_img.convert('RGB')
+            finally:
+                oriented_img.close()
+
+    @classmethod
+    def _fit_to_page(cls, image, page_size):
+        """按比例将图片置于固定尺寸的白色页面中央。"""
+        page_width, page_height = cls.PAGE_SIZES[page_size]
+        ratio = min(page_width / image.width, page_height / image.height)
+        image_width = max(1, int(image.width * ratio))
+        image_height = max(1, int(image.height * ratio))
+        resized = image.resize((image_width, image_height), Image.Resampling.LANCZOS)
+        image.close()
+
+        page = Image.new('RGB', (page_width, page_height), (255, 255, 255))
+        if resized.mode == 'RGBA':
+            page.paste(resized, ((page_width - image_width) // 2, (page_height - image_height) // 2), resized)
+        else:
+            page.paste(resized, ((page_width - image_width) // 2, (page_height - image_height) // 2))
+        resized.close()
+        return page
+
+    def _prepare_image(self, file_path, max_width=None):
+        """读取图片，按页面设置处理尺寸并转换为 RGB。"""
+        img = self._load_oriented_image(file_path)
+        if self.page_size == "智能缩放" and max_width is not None and img.width != max_width:
+            ratio = max_width / img.width
+            resized = img.resize((max_width, max(1, int(img.height * ratio))), Image.Resampling.LANCZOS)
+            img.close()
+            img = resized
+        elif self.page_size in self.PAGE_SIZES:
+            img = self._fit_to_page(img, self.page_size)
+
+        if img.mode == 'RGBA':
+            bg = Image.new('RGB', img.size, (255, 255, 255))
+            bg.paste(img, mask=img.split()[3])
+            img.close()
+            img = bg
+        elif img.mode != 'RGB':
+            rgb = img.convert('RGB')
+            img.close()
+            img = rgb
+        return img
 
     def run(self):
         temp_files = set()  # 使用集合避免重复文件名导致的清理问题
@@ -66,9 +124,12 @@ class PDFWorker(BaseWorker):
                 self.status.emit("正在扫描图片尺寸...")
                 for f in self.files:
                     try:
-                        with Image.open(f) as img:
+                        img = self._load_oriented_image(f)
+                        try:
                             if max_width is None or img.width > max_width:
                                 max_width = img.width
+                        finally:
+                            img.close()
                     except Exception as e:
                         print(f"Error in image_to_pdf: {e}")
                         skipped += 1
@@ -89,13 +150,7 @@ class PDFWorker(BaseWorker):
                 batch_imgs = []
                 for f in batch_files:
                     try:
-                        with Image.open(f) as src_img:
-                            src_img.load()
-                            if src_img.mode in ('RGBA', 'LA', 'P'):
-                                img = src_img.convert('RGBA')
-                            else:
-                                img = src_img.convert('RGB')
-                        # src_img 已关闭，img 为独立对象
+                        img = self._prepare_image(f, max_width)
                         batch_imgs.append(img)
                         processed_count += 1
                         self.progress.emit(processed_count)
@@ -109,37 +164,11 @@ class PDFWorker(BaseWorker):
                 if not batch_imgs:
                     continue
 
-                # 2b. 页面大小处理 + 转 RGB JPEG
+                # 2b. 转 RGB JPEG
                 jpeg_quality = self.quality if self.compress else 95
                 batch_jpeg_files = []
 
                 for img in batch_imgs:
-                    # 页面大小
-                    if self.page_size == "智能缩放" and img.width != max_width:
-                        ratio = max_width / img.width
-                        resized = img.resize((max_width, int(img.height * ratio)), Image.Resampling.LANCZOS)
-                        img.close()
-                        img = resized
-                    elif self.page_size == "A4":
-                        resized = img.resize((595, 842), Image.Resampling.LANCZOS)
-                        img.close()
-                        img = resized
-                    elif self.page_size == "A3":
-                        resized = img.resize((842, 1191), Image.Resampling.LANCZOS)
-                        img.close()
-                        img = resized
-
-                    # 确保 RGB 模式
-                    if img.mode == 'RGBA':
-                        bg = Image.new('RGB', img.size, (255, 255, 255))
-                        bg.paste(img, mask=img.split()[3])
-                        img.close()
-                        img = bg
-                    elif img.mode != 'RGB':
-                        rgb = img.convert('RGB')
-                        img.close()
-                        img = rgb
-
                     # 去除 ICC 配置，避免 "broken data stream" 错误
                     if 'icc_profile' in img.info:
                         del img.info['icc_profile']
@@ -150,7 +179,14 @@ class PDFWorker(BaseWorker):
                     if not os.path.exists(temp_dir):
                         os.makedirs(temp_dir, exist_ok=True)
                     tmp_jpg = os.path.join(temp_dir, f".temp_{int(time.time() * 1000)}_{id(img)}.jpg")
-                    img.save(tmp_jpg, format='JPEG', quality=jpeg_quality, optimize=True)
+                    save_options = {
+                        'format': 'JPEG',
+                        'quality': jpeg_quality,
+                        'optimize': True,
+                    }
+                    if self.page_size in self.PAGE_SIZES:
+                        save_options['dpi'] = (self.PDF_DPI, self.PDF_DPI)
+                    img.save(tmp_jpg, **save_options)
                     img.close()  # 释放内存
                     batch_jpeg_files.append(tmp_jpg)
                     temp_files.add(tmp_jpg)  # 使用集合，避免重复
@@ -197,7 +233,11 @@ class PDFWorker(BaseWorker):
                     if pil_imgs:
                         pil_imgs[0].save(
                             temp_pdf, "PDF",
-                            resolution=100.0,
+                            resolution=(
+                                PDFWorker.PDF_DPI
+                                if self.page_size in PDFWorker.PAGE_SIZES
+                                else 100.0
+                            ),
                             save_all=True,
                             append_images=pil_imgs[1:]
                         )
