@@ -20,6 +20,7 @@ These rules MUST be followed. Violations will cause bugs or maintenance debt.
 | 10 | When deleting temporary files, check if the file exists first to avoid error spam | [File Operations](#file-operations-mandatory) |
 | 11 | When processing files/images, use context managers and release resources properly | [Performance Optimization](#performance-optimization-mandatory) |
 | 12 | When scanning/opening files, skip Windows reserved device names (CON, PRN, AUX, NUL, COMx, LPTx) | [File Operations](#file-operations-mandatory) |
+| 13 | 只改动到代码才运行测试；纯文档改动（.md 等）不需要跑测试 | [Testing](#testing) |
 
 ---
 
@@ -769,6 +770,8 @@ All test files are in `test/` with a `test_` prefix.
 - `test_sidebar.py` — Sidebar navigation tests
 
 When adding features, create corresponding test files in `test/`.
+
+**测试纪律：** 只有改动了对应的代码文件才运行测试；纯文档改动（`.md`、`docs/`、`CHANGELOG.md` 等）不需要运行测试。改某个插件时只需跑该插件相关的测试，不必跑全量套件。
 
 ---
 
