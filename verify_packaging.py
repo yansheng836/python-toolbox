@@ -23,6 +23,7 @@ def test_imports():
         ('plugins.image_scaler', '图片批量缩放插件'),
         ('plugins.pdf_merger', 'PDF合并插件'),
         ('plugins.file_deduplicator', '文件去重插件'),
+        ('plugins.empty_folder_cleaner', '空文件夹清理插件'),
 
         # 依赖库
         ('PIL', 'Pillow 图像处理库'),
