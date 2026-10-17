@@ -33,11 +33,11 @@ class CompressionWorker(BaseWorker):
     """图片压缩工作线程"""
     # 继承 BaseWorker 的标准信号：progress, status, finished
 
-    def __init__(self, files, output_dir, format_str, quality):
+    def __init__(self, files, output_dir, format_code, quality):
         super().__init__()
         self.files = files
         self.output_dir = output_dir
-        self.format_str = format_str
+        self.format_code = format_code
         self.quality = quality
 
     def run(self):
@@ -64,7 +64,7 @@ class CompressionWorker(BaseWorker):
                 out_ext_map = {'JPG': 'jpg', 'JPEG': 'jpeg', 'PNG': 'png',
                                'WebP': 'webp'}
 
-                if self.format_str == "保持原格式":
+                if self.format_code == "keep":
                     # 保留原扩展名（区分 jpg/jpeg）
                     orig_ext = os.path.splitext(file_path)[1].lstrip('.')
                     if orig_ext.lower() in ('jpg', 'jpeg'):
@@ -80,8 +80,8 @@ class CompressionWorker(BaseWorker):
                         fmt = img.format if img.format else 'JPEG'
                         output_ext = fmt.lower()
                 else:
-                    fmt = format_map[self.format_str]
-                    output_ext = out_ext_map[self.format_str]
+                    fmt = format_map[self.format_code]
+                    output_ext = out_ext_map[self.format_code]
 
                 # 确定输出路径
                 base_name = os.path.splitext(os.path.basename(file_path))[0]
@@ -200,7 +200,11 @@ class ImageCompressor(ToolPlugin):
 
         settings_layout.addWidget(SelectableLabel("输出格式:"), 0, 0)
         self.format_combo = QComboBox()
-        self.format_combo.addItems(["保持原格式", "JPG", "JPEG", "PNG", "WebP"])
+        self.format_combo.addItem("保持原格式", "keep")
+        self.format_combo.addItem("JPG", "JPG")
+        self.format_combo.addItem("JPEG", "JPEG")
+        self.format_combo.addItem("PNG", "PNG")
+        self.format_combo.addItem("WebP", "WebP")
         self.format_combo.setStyleSheet(get_combo_style(self.theme))
         settings_layout.addWidget(self.format_combo, 0, 1)
 
@@ -266,7 +270,7 @@ class ImageCompressor(ToolPlugin):
         self.worker = CompressionWorker(
             files,
             self.output_path.text() or None,
-            self.format_combo.currentText(),
+            self.format_combo.currentData(),
             self.quality_slider.value()
         )
         self.worker.progress.connect(self.action_panel.update_progress)
