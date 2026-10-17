@@ -3,7 +3,7 @@
 
 import pytest
 
-from plugins.image_compressor import ImageCompressor, CompressionWorker
+from plugins.image_compressor import ImageCompressor
 
 
 @pytest.fixture
@@ -13,7 +13,6 @@ def compressor_widget(qapp):
     plugin.icon = "🗜️"
     plugin.name = "图片压缩"
     plugin.description = ""
-    from PyQt6.QtWidgets import QWidget
     plugin.widget = None
     plugin.theme = Theme.DARK
     w = plugin.create_ui()
