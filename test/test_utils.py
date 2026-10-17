@@ -159,14 +159,20 @@ class TestTableColumns:
 
     def test_image_columns_structure(self):
         assert len(IMAGE_COLUMNS) >= 3
-        names = [col[0] for col in IMAGE_COLUMNS]
+        names = [col.label for col in IMAGE_COLUMNS]
         assert "文件名" in names
         assert "尺寸" in names
         assert "大小" in names
+        # 锁定 Column(id, label, func) 契约：下标 0 为稳定 id
+        assert IMAGE_COLUMNS[0].id == "filename"
+        assert IMAGE_COLUMNS[0].label == "文件名"
 
     def test_pdf_columns_structure(self):
         assert len(PDF_COLUMNS) >= 3
-        names = [col[0] for col in PDF_COLUMNS]
+        names = [col.label for col in PDF_COLUMNS]
         assert "文件名" in names
         assert "页数" in names
         assert "大小" in names
+        # 锁定 Column(id, label, func) 契约：下标 0 为稳定 id
+        assert PDF_COLUMNS[0].id == "filename"
+        assert PDF_COLUMNS[0].label == "文件名"
