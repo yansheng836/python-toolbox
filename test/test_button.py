@@ -7,6 +7,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication, QVBoxLayout, QWidget
 from toolbox import SidebarButton
 
@@ -30,7 +31,7 @@ class TestWindow(QWidget):
 
         for name, icon in test_plugins:
             try:
-                btn = SidebarButton(name, icon)
+                btn = SidebarButton(name, name, icon)
                 btn.setFixedHeight(50)
                 layout.addWidget(btn)
                 print(f"[OK] 创建按钮成功: {name}")
@@ -42,4 +43,6 @@ class TestWindow(QWidget):
 app = QApplication(sys.argv)
 window = TestWindow()
 window.show()
+# 2 秒后自动退出，避免窗口阻塞进程
+QTimer.singleShot(2000, app.quit)
 sys.exit(app.exec())
