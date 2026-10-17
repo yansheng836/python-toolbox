@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-from common.utils import PIL_AVAILABLE
+from common.utils import PIL_AVAILABLE, load_oriented_image
 if PIL_AVAILABLE:
     from PIL import Image
 
@@ -68,7 +68,8 @@ class ScalingWorker(BaseWorker):
 
             for i, input_file in enumerate(self.input_files):
                 try:
-                    with Image.open(input_file) as img:
+                    img = load_oriented_image(input_file)
+                    try:
                         if self.scale_type == "百分比缩放":
                             new_width = int(img.width * self.scale_value / 100)
                             new_height = int(img.height * self.scale_value / 100)
@@ -88,7 +89,10 @@ class ScalingWorker(BaseWorker):
                             raise ValueError(f"未知缩放类型: {self.scale_type}")
 
                         scaled_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                    finally:
+                        img.close()
 
+                    try:
                         input_path = Path(input_file)
                         # 确定输出目录：如果指定了则用指定的，否则用原图目录
                         output_dir = self.output_dir if self.output_dir else str(input_path.parent)
@@ -103,10 +107,11 @@ class ScalingWorker(BaseWorker):
                             scaled_img.save(output_file, "PNG")
                         else:
                             scaled_img.save(output_file)
-
+                    finally:
                         scaled_img.close()  # 释放内存
-                        success_count += 1
-                        self.image_processed.emit(input_file, output_file)
+
+                    success_count += 1
+                    self.image_processed.emit(input_file, output_file)
 
                 except Exception as e:
                     print(f"Error processing {input_file}: {str(e)}")

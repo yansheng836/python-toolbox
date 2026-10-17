@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
 
 from common.dialog_utils import get_existing_directory
 from common.action_panel import ActionPanel
-from common.utils import PIL_AVAILABLE
+from common.utils import PIL_AVAILABLE, load_oriented_image
 from common.base_worker import BaseWorker
 
 if PIL_AVAILABLE:
@@ -61,10 +61,8 @@ class FormatConvertWorker(BaseWorker):
             pil_fmt, ext = self.FORMAT_MAP[self.target_fmt]
             for i, file_path in enumerate(self.files):
                 self.status.emit(f"正在转换: {os.path.basename(file_path)}")
-                # 使用上下文管理器确保文件句柄释放，复制后操作避免源文件锁定
-                with Image.open(file_path) as src_img:
-                    src_img.load()  # 强制加载，提前发现损坏文件
-                    img = self._prepare_image(src_img, pil_fmt)
+                # 校正 EXIF 方向后返回独立副本，保存时不受源文件句柄生命周期影响
+                img = self._prepare_image(load_oriented_image(file_path), pil_fmt)
                 base = os.path.splitext(os.path.basename(file_path))[0]
                 out_dir = self.output_dir or os.path.dirname(file_path)
                 out_path = os.path.join(out_dir, f"{base}.{ext}")

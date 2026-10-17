@@ -8,7 +8,7 @@ import os
 
 # ==================== 模块可用性检查 ====================
 try:
-    from PIL import Image
+    from PIL import Image, ImageOps
     PIL_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: {e}")
@@ -30,12 +30,25 @@ except ImportError as e:
     img2pdf = None
 
 
+def load_oriented_image(file_path):
+    """读取图片并返回应用 EXIF 方向后的独立图像副本"""
+    if not PIL_AVAILABLE:
+        raise RuntimeError("Pillow 未安装")
+    with Image.open(file_path) as src_img:
+        src_img.load()
+        oriented_img = ImageOps.exif_transpose(src_img)
+        try:
+            return oriented_img.copy()
+        finally:
+            oriented_img.close()
+
+
 def get_image_size(file_path):
-    """获取图片尺寸文本"""
+    """获取图片尺寸文本（应用 EXIF 方向）"""
     if not PIL_AVAILABLE:
         return "N/A"
     try:
-        with Image.open(file_path) as img:
+        with load_oriented_image(file_path) as img:
             return f"{img.width} x {img.height}"
     except Exception as e:
         print(f"get_image_size error: {e}")

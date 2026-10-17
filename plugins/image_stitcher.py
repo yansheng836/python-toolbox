@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
 from common.message_utils import show_warning
 from common.dialog_utils import get_save_file_name
 from common.action_panel import ActionPanel
-from common.utils import PIL_AVAILABLE
+from common.utils import PIL_AVAILABLE, load_oriented_image
 from common.base_worker import BaseWorker
 
 if PIL_AVAILABLE:
@@ -115,6 +115,20 @@ class ImageStitchWorker(BaseWorker):
                     result.append((f, w, h))
             return result
 
+    def _load_composited_image(self, file_path, expected_w, expected_h):
+        """读取图片，应用 EXIF 方向、按需缩放并转换为 RGBA"""
+        loaded = load_oriented_image(file_path)
+        try:
+            if loaded.width != expected_w or loaded.height != expected_h:
+                resized = loaded.resize((expected_w, expected_h), Image.Resampling.LANCZOS)
+                try:
+                    return resized.convert("RGBA")
+                finally:
+                    resized.close()
+            return loaded.convert("RGBA")
+        finally:
+            loaded.close()
+
     def run(self):
         try:
             # ========= 第一遍：扫描尺寸 =========
@@ -123,10 +137,11 @@ class ImageStitchWorker(BaseWorker):
             skipped = 0
             for f in self.files:
                 try:
-                    with Image.open(f) as img:
-                        img.verify()
-                        img = Image.open(f)
+                    img = load_oriented_image(f)
+                    try:
                         file_info.append((f, img.width, img.height))
+                    finally:
+                        img.close()
                 except Exception as e:
                     print(f"Error in image_stitcher: {e}")
                     skipped += 1
@@ -247,18 +262,18 @@ class ImageStitchWorker(BaseWorker):
                             f"正在处理: {os.path.basename(f)} "
                             f"({global_idx}/{total_images})，批次 {bi+1}/{num_batches}"
                         )
-                        with Image.open(f) as img:
-                            img = img.convert("RGBA")
-                            if img.width != expected_w or img.height != expected_h:
-                                img = img.resize((expected_w, expected_h), Image.Resampling.LANCZOS)
+                        composited = self._load_composited_image(f, expected_w, expected_h)
+                        try:
                             if align == "center":
-                                y = (batch_h - img.height) // 2
+                                y = (batch_h - composited.height) // 2
                             elif align == "end":
-                                y = batch_h - img.height
+                                y = batch_h - composited.height
                             else:
                                 y = 0
-                            canvas.paste(img, (x, y), img)
-                            x += img.width
+                            canvas.paste(composited, (x, y), composited)
+                            x += composited.width
+                        finally:
+                            composited.close()
                         self.progress.emit(int(global_idx / total_images * 100))
                 else:
                     y = 0
@@ -268,18 +283,18 @@ class ImageStitchWorker(BaseWorker):
                             f"正在处理: {os.path.basename(f)} "
                             f"({global_idx}/{total_images})，批次 {bi+1}/{num_batches}"
                         )
-                        with Image.open(f) as img:
-                            img = img.convert("RGBA")
-                            if img.width != expected_w or img.height != expected_h:
-                                img = img.resize((expected_w, expected_h), Image.Resampling.LANCZOS)
+                        composited = self._load_composited_image(f, expected_w, expected_h)
+                        try:
                             if align == "center":
-                                x = (batch_w - img.width) // 2
+                                x = (batch_w - composited.width) // 2
                             elif align == "end":
-                                x = batch_w - img.width
+                                x = batch_w - composited.width
                             else:
                                 x = 0
-                            canvas.paste(img, (x, y), img)
-                            y += img.height
+                            canvas.paste(composited, (x, y), composited)
+                            y += composited.height
+                        finally:
+                            composited.close()
                         self.progress.emit(int(global_idx / total_images * 100))
 
                 # 输出格式不支持透明时转 RGB

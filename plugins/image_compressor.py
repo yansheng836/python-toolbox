@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
 
 from common.dialog_utils import get_existing_directory
 from common.action_panel import ActionPanel
-from common.utils import PIL_AVAILABLE
+from common.utils import PIL_AVAILABLE, load_oriented_image
 from common.base_worker import BaseWorker
 from PyQt6.QtCore import Qt
 
@@ -54,9 +54,8 @@ class CompressionWorker(BaseWorker):
             for i, file_path in enumerate(self.files):
                 self.status.emit(f"正在处理: {os.path.basename(file_path)}")
 
-                # 使用上下文管理器确保图片处理后释放内存
-                with Image.open(file_path) as src_img:
-                    img = src_img.copy()  # 复制一份操作，原文件可立即释放
+                # 将 EXIF 方向落实到像素，避免保存后丢失方向信息
+                img = load_oriented_image(file_path)
 
                 # 确定输出格式及扩展名
                 # Pillow 格式映射（JPG/JPEG 底层都是 JPEG）
