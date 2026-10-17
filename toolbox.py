@@ -201,8 +201,9 @@ class Card(QFrame):
 class SidebarButton(QPushButton):
     """侧边栏导航按钮"""
 
-    def __init__(self, text, icon_text, parent=None):
+    def __init__(self, plugin_id, text, icon_text, parent=None):
         super().__init__(parent)
+        self._plugin_id = plugin_id
         self.setText(f"  {icon_text}  {text}")
         self.setMinimumHeight(48)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -229,6 +230,10 @@ class SidebarButton(QPushButton):
             }
         """)
 
+    def plugin_id(self):
+        """返回该按钮绑定的插件稳定 id"""
+        return self._plugin_id
+
 
 # ==================== 核心功能模块 ====================
 class ToolPlugin:
@@ -238,6 +243,7 @@ class ToolPlugin:
     icon = "🔧"
     version = "2.0.1"
     order = 999  # 插件排序权重，数值越小排在越前面
+    id = None  # 插件稳定 id，由 load_plugins 从 config 注入
 
     def __init__(self, parent=None):
         self.parent = parent
@@ -926,7 +932,7 @@ class ToolboxWindow(QMainWindow):
         sidebar_layout.addWidget(self.sidebar_line)
 
         # 首页按钮
-        self.home_btn = SidebarButton("首页", "🏠")
+        self.home_btn = SidebarButton(None, "首页", "🏠")
         self.home_btn.setChecked(True)
         self.home_btn.clicked.connect(self.switch_to_welcome)
         sidebar_layout.addWidget(self.home_btn)
@@ -1004,11 +1010,11 @@ class ToolboxWindow(QMainWindow):
     def register_plugin(self, plugin_class):
         try:
             plugin = plugin_class(self)
-            self.plugins[plugin.name] = plugin
+            self.plugins[plugin.id] = plugin
 
-            btn = SidebarButton(plugin.name, plugin.icon)
+            btn = SidebarButton(plugin.id, plugin.name, plugin.icon)
             from functools import partial
-            btn.clicked.connect(partial(self.switch_plugin, plugin.name))
+            btn.clicked.connect(partial(self.switch_plugin, plugin.id))
             self.nav_layout.addWidget(btn)
 
             widget = plugin.get_widget()
@@ -1033,7 +1039,7 @@ class ToolboxWindow(QMainWindow):
             plugin.scroll_area = scroll_area
             self.content.addWidget(scroll_area)
         except Exception as e:
-            print(f"注册插件失败 {plugin_class.name}: {e}")
+            print(f"注册插件失败 {getattr(plugin_class, 'id', '?')}: {e}")
 
     def load_plugins(self):
         """从PLUGIN_MODULES配置加载插件，按order排序后注册"""
@@ -1046,6 +1052,7 @@ class ToolboxWindow(QMainWindow):
                 # 获取插件类
                 plugin_class = getattr(module, plugin_config["class"])
                 # 动态设置属性（与配置保持一致，单一数据源）
+                plugin_class.id = plugin_config["id"]
                 plugin_class.name = plugin_config["name"]
                 plugin_class.icon = plugin_config["icon"]
                 plugin_class.order = plugin_config["order"]
@@ -1085,22 +1092,22 @@ class ToolboxWindow(QMainWindow):
         # 选中首页按钮
         self.home_btn.setChecked(True)
 
-    def switch_plugin(self, name):
+    def switch_plugin(self, plugin_id):
         for i in range(self.nav_layout.count()):
             widget = self.nav_layout.itemAt(i).widget()
             if isinstance(widget, SidebarButton):
-                widget.setChecked(name in widget.text())
+                widget.setChecked(widget.plugin_id() == plugin_id)
 
         # 取消首页按钮选中
         self.home_btn.setChecked(False)
 
-        if name in self.plugins:
-            plugin = self.plugins[name]
+        if plugin_id in self.plugins:
+            plugin = self.plugins[plugin_id]
             if hasattr(plugin, 'scroll_area'):
                 index = self.content.indexOf(plugin.scroll_area)
                 if index >= 0:
                     self.content.setCurrentIndex(index)
-                    self.current_plugin = name
+                    self.current_plugin = plugin_id
 
     def _toggle_sidebar(self):
         """切换侧边栏展开/折叠"""
@@ -1489,7 +1496,7 @@ class ToolboxWindow(QMainWindow):
         view_menu.addAction(toggle_sidebar_action)
 
     def show_settings(self):
-        self.switch_plugin("设置")
+        self.switch_plugin("settings")
 
     def tray_activated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
