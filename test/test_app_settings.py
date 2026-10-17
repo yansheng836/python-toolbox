@@ -108,6 +108,26 @@ def test_corrupt_file_falls_back(tmp_path, capsys):
     assert ini.get("general", "language") == "zh_CN"
 
 
+def test_corrupt_non_utf8_bytes_falls_back(tmp_path, capsys):
+    """写非 UTF-8 原始字节（如记事本另存的 GBK）：UnicodeDecodeError 也回退默认值
+
+    configparser.read 按 utf-8-sig 解码文件，GBK 字节（0xd6... 非 UTF-8
+    合法序列）抛 UnicodeDecodeError——它是 ValueError 子类，不在
+    OSError/configparser.Error 之列，构造 AppSettings 不得因此崩溃。
+    """
+    (tmp_path / INI_NAME).write_bytes(b"[general]\ntheme=\xd6\xd0\xce\xc4\n")
+
+    s = AppSettings(config_dir=tmp_path)  # 不应抛出 UnicodeDecodeError
+    assert s.get("general", "theme") == "dark"
+
+    out = capsys.readouterr().out
+    assert "配置文件" in out  # 错误信息已报告，不静默
+
+    # 损坏文件被默认值内容替换
+    ini = _read_ini(tmp_path / INI_NAME)
+    assert ini.get("general", "theme") == "dark"
+
+
 # ==================== 4. 启动加载不覆盖已存值 ====================
 
 

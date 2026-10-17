@@ -167,7 +167,8 @@ class AppSettings:
                 read_ok = self._parser.read(str(path), encoding="utf-8-sig")
                 if not read_ok:
                     raise OSError(f"无法读取 {path}")
-            except (OSError, configparser.Error) as e:
+            except (OSError, ValueError, configparser.Error) as e:
+                # ValueError 覆盖 UnicodeDecodeError（如记事本另存的 GBK 内容）
                 print(f"配置文件损坏或无法读取，使用默认值：{e}")
                 self._parser = configparser.ConfigParser(interpolation=None)
             else:
