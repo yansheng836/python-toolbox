@@ -149,3 +149,6 @@ nt-mjs/nt.txt
 * 副本 *
 *.html
 ~$*
+
+# SDD session scratch (review diffs, briefs, reports, ledger)
+.superpowers/
