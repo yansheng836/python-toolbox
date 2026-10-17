@@ -9,4 +9,4 @@ img2pdf>=0.6.3
 PyMuPDF>=1.28.2
 
 # Build Tool
-pyinstaller>=6.21.0
+pyinstaller>=6.22.3
