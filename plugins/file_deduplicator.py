@@ -521,6 +521,8 @@ class FileDeduplicatorWidget(QWidget):
             for file_path in file_list:
                 file_item = QTreeWidgetItem(group_item)
                 file_item.setText(0, file_path)
+                # 文件路径存 UserRole，供 _sort_by_rule 建索引，不依赖显示文本前缀
+                file_item.setData(0, Qt.ItemDataRole.UserRole, file_path)
                 file_item.setForeground(0, QBrush(QColor(text_color)))
                 # 子节点不可勾选（不设置 ItemIsUserCheckable）
                 # 文件大小
@@ -642,11 +644,11 @@ class FileDeduplicatorWidget(QWidget):
 
             sorted_files = self._get_sorted_files(file_list, rule)
 
-            # 收集现有子项（按文件路径索引）
+            # 收集现有子项（按 UserRole 中存的文件路径索引，不依赖显示前缀）
             child_map = {}
             for j in range(parent.childCount()):
                 child = parent.child(j)
-                child_map[child.text(0).removeprefix("✅ 保留: ").removeprefix("❌ 删除: ")] = child
+                child_map[child.data(0, Qt.ItemDataRole.UserRole)] = child
 
             # 按排序顺序重建子项顺序
             for idx, file_path in enumerate(sorted_files):
