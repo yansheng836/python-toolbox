@@ -186,7 +186,8 @@ class FormatConverter(ToolPlugin):
 
         settings_layout.addWidget(SelectableLabel("目标格式:"), 0, 0)
         self.fmt_combo = QComboBox()
-        self.fmt_combo.addItems(self.FORMATS)
+        for fmt in self.FORMATS:
+            self.fmt_combo.addItem(fmt, fmt)
         self.fmt_combo.setStyleSheet(get_combo_style(self.theme))
         settings_layout.addWidget(self.fmt_combo, 0, 1)
 
@@ -232,7 +233,7 @@ class FormatConverter(ToolPlugin):
         self.worker = FormatConvertWorker(
             files,
             self.output_path.text() or None,
-            self.fmt_combo.currentText()
+            self.fmt_combo.currentData()
         )
         self.worker.progress.connect(self.action_panel.update_progress)
         self.worker.status.connect(self.action_panel.update_status)
