@@ -19,6 +19,7 @@ APP_ISSUE_URL = "https://github.com/yansheng836/python-toolbox/issues"  # 问题
 # order: 排序权重，数值越小排在越前面
 PLUGIN_MODULES = [
     {
+        "id": "image_compressor",
         "name": "图片压缩",
         "icon": "🗜️",
         "description": "批量压缩JPG/PNG/WebP图片，可调整质量以减小文件体积",
@@ -27,6 +28,7 @@ PLUGIN_MODULES = [
         "class": "ImageCompressor",
     },
     {
+        "id": "image_format_converter",
         "name": "图片格式转换",
         "icon": "🔁",
         "description": "批量转换图片格式，支持JPEG/PNG/WebP/BMP/TIFF/GIF",
@@ -35,6 +37,7 @@ PLUGIN_MODULES = [
         "class": "FormatConverter",
     },
     {
+        "id": "image_stitcher",
         "name": "图片拼接",
         "icon": "🧩",
         "description": "多张图片横向或纵向拼接合并为一张，支持自定义对齐",
@@ -43,6 +46,7 @@ PLUGIN_MODULES = [
         "class": "ImageStitcher",
     },
     {
+        "id": "image_to_pdf",
         "name": "图片转PDF",
         "icon": "🖨️",
         "description": "将多张图片合并为一个PDF文件，支持拖拽排序",
@@ -51,6 +55,7 @@ PLUGIN_MODULES = [
         "class": "ImageToPDF",
     },
     {
+        "id": "image_scaler",
         "name": "图片缩放",
         "icon": "🔍",
         "description": "批量缩放图片尺寸，支持按比例或指定宽高，保持画质",
@@ -59,6 +64,7 @@ PLUGIN_MODULES = [
         "class": "ImageScaler",
     },
     {
+        "id": "pdf_merger",
         "name": "PDF合并",
         "icon": "📚",
         "description": "将多个PDF文件合并为一个，支持拖拽排序和调整顺序",
@@ -67,6 +73,7 @@ PLUGIN_MODULES = [
         "class": "PDFMerger",
     },
     {
+        "id": "pdf_splitter",
         "name": "PDF拆分",
         "icon": "✂️",
         "description": "将PDF拆分为图片或单页PDF文件，支持自定义页数",
@@ -75,6 +82,7 @@ PLUGIN_MODULES = [
         "class": "PDFSplitter",
     },
     {
+        "id": "file_deduplicator",
         "name": "文件去重",
         "icon": "🧹",
         "description": "按内容Hash查找重复文件，预览后按需删除释放空间",
@@ -83,6 +91,7 @@ PLUGIN_MODULES = [
         "class": "FileDeduplicator",
     },
     {
+        "id": "empty_folder_cleaner",
         "name": "空文件夹清理",
         "icon": "🗑️",
         "description": "递归查找并删除完全为空的文件夹，支持多层空目录",
@@ -92,6 +101,7 @@ PLUGIN_MODULES = [
     },
     # 设置插件（内置，在 toolbox.py 中定义）
     {
+        "id": "settings",
         "name": "设置",
         "icon": "⚙️",
         "description": "切换深浅主题、查看版本和关于信息",
