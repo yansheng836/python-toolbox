@@ -86,7 +86,7 @@ class PDFWorker(BaseWorker):
     def _prepare_image(self, file_path, max_width=None):
         """读取图片，按页面设置处理尺寸并转换为 RGB。"""
         img = self._load_oriented_image(file_path)
-        if self.page_size == "智能缩放" and max_width is not None and img.width != max_width:
+        if self.page_size == "smart" and max_width is not None and img.width != max_width:
             ratio = max_width / img.width
             resized = img.resize((max_width, max(1, int(img.height * ratio))), Image.Resampling.LANCZOS)
             img.close()
@@ -120,7 +120,7 @@ class PDFWorker(BaseWorker):
 
             # ========= 阶段1：智能缩放需要先扫描最大宽度 =========
             max_width = None
-            if self.page_size == "智能缩放":
+            if self.page_size == "smart":
                 self.status.emit("正在扫描图片尺寸...")
                 for f in self.files:
                     try:
@@ -379,8 +379,13 @@ class ImageToPDF(ToolPlugin):
 
         settings_layout.addWidget(SelectableLabel("页面大小:"), 0, 0)
         self.size_combo = QComboBox()
-        self.size_combo.addItems(["自动适应", "A4", "A3", "原图尺寸", "智能缩放"])
-        self.size_combo.setCurrentIndex(4)  # 默认智能缩放
+        self.size_combo.addItem("自动适应", "auto")
+        self.size_combo.addItem("A4", "A4")
+        self.size_combo.addItem("A3", "A3")
+        self.size_combo.addItem("原图尺寸", "original")
+        self.size_combo.addItem("智能缩放", "smart")
+        # 默认 smart 在索引 4
+        self.size_combo.setCurrentIndex(self.size_combo.findData("smart"))
         self.size_combo.setStyleSheet(get_combo_style(self.theme))
         settings_layout.addWidget(self.size_combo, 0, 1)
 
@@ -469,7 +474,7 @@ class ImageToPDF(ToolPlugin):
         self.worker = PDFWorker(
             files,
             output,
-            self.size_combo.currentText(),
+            self.size_combo.currentData(),
             self.compress_check.isChecked(),
             self.quality_slider.value()
         )

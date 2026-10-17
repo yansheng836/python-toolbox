@@ -48,7 +48,7 @@ def test_exif_orientation_is_applied_before_pdf_conversion(tmp_path):
     image.save(source, exif=exif)
     image.close()
 
-    success, message = _run_worker([str(source)], output, "原图尺寸")
+    success, message = _run_worker([str(source)], output, "original")
 
     assert success, message
     with fitz.open(output) as document:
@@ -64,7 +64,7 @@ def test_image_without_exif_keeps_landscape_orientation(tmp_path):
     image.save(source)
     image.close()
 
-    success, message = _run_worker([str(source)], output, "原图尺寸")
+    success, message = _run_worker([str(source)], output, "original")
 
     assert success, message
     with fitz.open(output) as document:
@@ -87,7 +87,7 @@ def test_smart_scaling_uses_oriented_dimensions(tmp_path):
     landscape.close()
 
     success, message = _run_worker(
-        [str(portrait_source), str(landscape_source)], output, "智能缩放"
+        [str(portrait_source), str(landscape_source)], output, "smart"
     )
 
     assert success, message
