@@ -41,11 +41,12 @@ The ToolBox interface has two main parts:
 | Element | Description |
 |---------|-------------|
 | 📄 Add Files (💡 drag-and-drop supported) | Click to pick files into the list; you can also drag files directly onto the button |
-| 🗑️ Remove Selected | Remove the selected files from the list |
+| 🗑️ Remove | Remove the selected files from the list |
 | 🧹 Clear List | Clear the entire file list |
 | ⬆ Move Up / ⬇ Move Down | Adjust a file's position in the list (supported by some tools) |
 | 🔀 Sort by Name | Sort the list by file name |
 | ⏰ Sort by Creation Time | Sort the list by file creation time |
+| 🔍 Browse | Pick a folder or output path (each tool shows its own label) |
 | 🏁 Start | Runs the current tool's task (each tool shows its own label, e.g. "Start Compression", "Start Conversion") |
 | Progress bar | Shows task processing progress |
 | Status label | Shows task status and result info |
@@ -63,7 +64,7 @@ The ToolBox interface has two main parts:
 **Steps**:
 
 1. Click "Image Compressor" in the left menu
-2. Click "Add Images" and select the images to compress (multi-select supported)
+2. Click "Add Files" and select the images to compress (multi-select supported)
 3. Pick a format in the "Output Format" dropdown:
    - **Keep original format**: the format stays unchanged after compression
    - **JPG / JPEG**: convert to JPG
@@ -89,7 +90,7 @@ The ToolBox interface has two main parts:
 **Steps**:
 
 1. Click "Image Format Converter" in the left menu
-2. Click "Add Images" and select the images to convert (multi-select supported)
+2. Click "Add Files" and select the images to convert (multi-select supported)
 3. Pick the target format in the "Target Format" dropdown
 4. Choose the output directory (optional)
 5. Click "Start Conversion"
@@ -108,7 +109,7 @@ The ToolBox interface has two main parts:
 **Steps**:
 
 1. Click "Image Stitcher" in the left menu
-2. Click "Add Images" and select at least 2 images
+2. Click "Add Files" and select at least 2 images
 3. Arrange the image order (with the "Move Up" / "Move Down" buttons)
 4. Choose the stitch direction:
    - **Horizontal**: images are laid out left to right
@@ -137,7 +138,7 @@ The ToolBox interface has two main parts:
 
 1. Click "Image to PDF" in the left menu
 2. Add images in one of these ways:
-   - Click "Add Images" to pick files
+   - Click "Add Files" to pick files
    - Drag image files directly into the file list area
 3. Arrange the image order (with "Move Up" / "Move Down", "Sort by Name", or "Sort by Creation Time")
 4. Set the page size:
@@ -160,22 +161,22 @@ The ToolBox interface has two main parts:
 
 ![Image Scaler](README.assets/图片缩放.png)
 
-**What it does**: Batch-resize images by percentage or to a specific width/height.
+**What it does**: Batch-resize images by percentage, or to a specific width/height.
 
 **Steps**:
 
 1. Click "Image Scaler" in the left menu
-2. Click "Add Images" and select the images to resize (multi-select supported)
+2. Click "Add Files" and select the images to resize (multi-select supported)
 3. Choose a scaling mode:
    - **Percentage**: enter a percentage (e.g. 50% to halve the size)
    - **Specify Width**: enter the target width; height adjusts proportionally
    - **Specify Height**: enter the target height; width adjusts proportionally
-4. In "Specify Width" or "Specify Height" mode, check "Keep Aspect Ratio" to prevent distortion (recommended)
+4. In "Specify Width" or "Specify Height" mode, "Maintain Aspect Ratio" is checked by default to prevent distortion
 5. Pick the output quality in the dropdown:
-   - **High Quality**: best image quality, larger files
-   - **Standard**: balance of quality and size
-   - **Small File**: slightly lower quality, smaller files
-   - **Smallest File**: smallest files, lowest quality
+   - **High Quality (95)**: best image quality, larger files
+   - **Standard (85)**: balance of quality and size
+   - **Smaller File (75)**: slightly lower quality, smaller files
+   - **Smallest File (50)**: smallest files, lowest quality
 6. Choose the output directory (optional)
 7. Click "Start Scaling"
 8. Wait for processing to finish
@@ -240,23 +241,23 @@ The ToolBox interface has two main parts:
 **Steps**:
 
 1. Click "File Deduplicator" in the left menu
-2. Click "Choose Folder", select the folder to scan, and scanning starts automatically
+2. Click "Browse" to choose the folder to scan (or drag a folder into the input box); scanning starts automatically
 3. Wait for the scan to finish; results are grouped as duplicate groups in a tree list
 4. Choose a deletion rule (6 options in the dropdown):
    - **Creation time ascending** (earliest-created files are kept, later ones deleted)
    - **Creation time descending** (newest-created files are kept, older ones deleted)
    - **File name ascending** (A→Z; names earlier in sort order are kept)
    - **File name descending** (Z→A; names later in sort order are kept)
-   - **Smart copy detection (creation time ascending)** (deletes files marked as copies like `(1)`/`_copy`/`_backup`/`.temp` first, then sorts the rest by creation time)
+   - **Smart copy detection (creation time ascending)** (deletes files marked as copies like `(1)`/`_copy`/`_backup`/`.temp`/`_副本` first, then sorts the rest by creation time)
    - **Smart copy detection (creation time descending)** (same as above, but keeps files created later first)
 5. Click "Sort by Rule" to preview the keep/delete markers in each group (✅ keep / ❌ delete)
-6. Use "Select All", "Deselect All", and "Collapse" to manage file groups quickly
+6. Use "Select All", "Deselect All", "Collapse", and "Expand" to manage file groups quickly
 7. Check the duplicate groups you want to process
-8. Check "Rescan after deletion" to automatically rescan when deletion completes, for continuous cleanup
+8. Check "Auto-rescan after deletion" to automatically rescan when deletion completes, for continuous cleanup
 9. Click "Delete Duplicates"
 10. Review the deletion list in the confirmation dialog and click "Confirm" to finish
 
-> 💡 **Tip**: Smart copy detection treats files with markers like `(1)`, `_copy`, `_backup`, and `.temp` as copies first; the rest are sorted by creation time, with earlier-created files more likely to be kept.
+> 💡 **Tip**: Smart copy detection treats files with markers like `(1)`, `_copy`, `_backup`, `.temp`, and `_副本` as copies first; the rest are sorted by creation time, with earlier-created files more likely to be kept.
 
 > ⚠️ **Warning**: Double-check before deleting! Back up important files first. Deduplication cannot be undone. Read-only files are automatically made writable before deletion.
 
@@ -264,7 +265,51 @@ The ToolBox interface has two main parts:
 
 ---
 
+### Empty Folder Cleaner
+
+**What it does**: Recursively finds and deletes completely empty folders — not just empty directories themselves, but a directory tree containing only empty subfolders is also recognized as empty. Candidates are shown by their topmost directory, so multi-level empty directories can be cleaned up in one pass.
+
+**Steps**:
+
+1. Click "Empty Folder Cleaner" in the left menu
+2. Choose the root folder to clean:
+   - Click "Browse" to pick a folder
+   - Drag a folder directly into the input box
+3. Click "Start Scan" to recursively find every completely empty folder inside the root
+4. Results are listed by directory path; check the folders to delete ("Select All" / "Deselect All" supported)
+5. Click "Delete Selected Folders"
+6. Review the folder list in the confirmation dialog and click "Confirm" to finish
+7. You can rescan after deletion to refresh the results
+
+> 💡 **Safety guarantees**: The scan root itself is always kept and never appears in the candidates. Deletion only calls `os.rmdir` on empty directories — no file is ever removed. Symbolic links and junctions are skipped. Folders that received new files after the scan are kept, and the reason is reported.
+
+> ⚠️ **Warning**: Hidden files/folders (whose names start with `.`) are treated as content, so their parent directory is never considered empty.
+
+> 📌 **When to use**: Leftover empty folders after uninstalling software? A stack of empty directories left after deleting files from a project? Scan once and clean them all up!
+
+---
+
 ## Settings & Themes
+
+### Switching the Interface Language
+
+ToolBox supports two interface languages: Simplified Chinese and English:
+
+1. Click "⚙ Settings" at the bottom of the left menu
+2. In the "General Settings" area, find the "Language" dropdown
+3. Select "简体中文" or "English"; the UI switches immediately and your choice is remembered
+
+> 💡 **First launch**: ToolBox picks the interface language automatically from the system language (Chinese system → 简体中文, otherwise → English) and shows a notice; afterwards your choice on the Settings page takes precedence.
+
+### Reset to Defaults
+
+At the bottom of the "General Settings" area there is a "Reset to Defaults" button (red outline, indicating a broad impact):
+
+1. Click "Reset to Defaults"
+2. Click "Confirm" in the confirmation dialog
+3. The interface language is re-detected from the system, the theme returns to the default dark, the window layout is reset, and the navigation order and visibility are restored to defaults
+
+> ⚠️ **Warning**: This restores the interface language, theme, window layout, and navigation configuration all at once. Use with care.
 
 ### Switching Themes
 

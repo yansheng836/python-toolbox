@@ -13,7 +13,15 @@ English | [简体中文](BUILD_CHECKLIST.md)
 - [x] settings_page.py - Settings page
 - [x] favicon.ico - Application icon
 - [x] plugins/ - Plugin directory
-  - [x] image_scaler.py - Image scaling plugin
+  - [x] image_compressor.py - Image compression
+  - [x] image_format_converter.py - Image format conversion
+  - [x] image_stitcher.py - Image stitching
+  - [x] image_to_pdf.py - Image to PDF
+  - [x] image_scaler.py - Image scaling
+  - [x] pdf_merger.py - PDF merging
+  - [x] pdf_splitter.py - PDF splitting
+  - [x] file_deduplicator.py - File deduplication
+  - [x] empty_folder_cleaner.py - Empty folder cleanup
 
 ### 2. Dependencies
 
@@ -23,11 +31,11 @@ pip list | grep -E "PyQt6|Pillow|img2pdf|PyMuPDF|pyinstaller"
 
 You should see:
 
-- PyQt6 >= 6.4.0
-- Pillow >= 9.0.0
-- img2pdf >= 0.4.4
-- PyMuPDF >= 1.21.0
-- pyinstaller >= 5.7.0
+- PyQt6 >= 6.11.0
+- Pillow >= 12.3.0
+- img2pdf >= 0.6.3
+- PyMuPDF >= 1.28.2
+- pyinstaller >= 6.22.3
 
 ### 3. Code Checks
 
@@ -44,6 +52,7 @@ You should see:
   - menu_system.py
   - settings_page.py
   - plugins/
+  - i18n/
   - favicon.ico
 - [x] hiddenimports includes all project modules
 - [x] excludes removes unneeded modules
@@ -51,8 +60,8 @@ You should see:
 ## Build Commands
 
 ```bash
-# Clean old build artifacts
-rm -rf build/ dist/
+# Clean old build artifacts (only build/; keep dist/ to preserve user's historical builds)
+rm -rf build/
 
 # Build from the spec file
 pyinstaller toolbox.spec
@@ -75,12 +84,19 @@ ls -lh dist/
 - [ ] Image format conversion works
 - [ ] Image to PDF works
 - [ ] Image stitching works
-- [ ] Batch image scaling works
+- [ ] Image scaling works
+- [ ] PDF merging works
+- [ ] PDF splitting works
+- [ ] File deduplication works
+- [ ] Empty folder cleanup works
 
 ### 3. Settings
 
 - [ ] The settings page opens
 - [ ] Theme switching works
+- [ ] Language switching works
+- [ ] Navigation management works
+- [ ] Reset-to-defaults works
 - [ ] About info displays correctly
 
 ### 4. Plugin System

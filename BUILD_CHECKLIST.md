@@ -13,7 +13,15 @@
 - [x] settings_page.py - 设置页面
 - [x] favicon.ico - 应用图标
 - [x] plugins/ - 插件目录
-  - [x] image_scaler.py - 图片缩放插件
+  - [x] image_compressor.py - 图片压缩
+  - [x] image_format_converter.py - 图片格式转换
+  - [x] image_stitcher.py - 图片拼接
+  - [x] image_to_pdf.py - 图片转PDF
+  - [x] image_scaler.py - 图片缩放
+  - [x] pdf_merger.py - PDF合并
+  - [x] pdf_splitter.py - PDF拆分
+  - [x] file_deduplicator.py - 文件去重
+  - [x] empty_folder_cleaner.py - 空文件夹清理
 
 ### 2. 依赖检查
 
@@ -23,11 +31,11 @@ pip list | grep -E "PyQt6|Pillow|img2pdf|PyMuPDF|pyinstaller"
 
 应该看到：
 
-- PyQt6 >= 6.4.0
-- Pillow >= 9.0.0
-- img2pdf >= 0.4.4
-- PyMuPDF >= 1.21.0
-- pyinstaller >= 5.7.0
+- PyQt6 >= 6.11.0
+- Pillow >= 12.3.0
+- img2pdf >= 0.6.3
+- PyMuPDF >= 1.28.2
+- pyinstaller >= 6.22.3
 
 ### 3. 代码检查
 
@@ -44,6 +52,7 @@ pip list | grep -E "PyQt6|Pillow|img2pdf|PyMuPDF|pyinstaller"
   - menu_system.py
   - settings_page.py
   - plugins/
+  - i18n/
   - favicon.ico
 - [x] hiddenimports 包含所有项目模块
 - [x] excludes 排除了不需要的模块
@@ -51,8 +60,8 @@ pip list | grep -E "PyQt6|Pillow|img2pdf|PyMuPDF|pyinstaller"
 ## 打包命令
 
 ```bash
-# 清理旧的构建文件
-rm -rf build/ dist/
+# 清理旧的构建文件（仅清理 build/，dist/ 保留用户历史构建产物）
+rm -rf build/
 
 # 使用 spec 文件打包
 pyinstaller toolbox.spec
@@ -75,12 +84,19 @@ ls -lh dist/
 - [ ] 图片格式转换功能正常
 - [ ] 图片转PDF功能正常
 - [ ] 图片拼接功能正常
-- [ ] 图片批量缩放功能正常
+- [ ] 图片缩放功能正常
+- [ ] PDF合并功能正常
+- [ ] PDF拆分功能正常
+- [ ] 文件去重功能正常
+- [ ] 空文件夹清理功能正常
 
 ### 3. 设置功能测试
 
 - [ ] 设置页面能打开
 - [ ] 主题切换功能正常
+- [ ] 语言切换功能正常
+- [ ] 导航栏管理功能正常
+- [ ] 恢复默认设置功能正常
 - [ ] 关于信息显示正常
 
 ### 4. 插件系统测试

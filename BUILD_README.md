@@ -31,9 +31,9 @@ python generate_version_info.py
 # 2. 验证依赖
 python verify_packaging.py
 
-# 3. 清理旧文件
-rmdir /s /q build dist  # Windows
-# rm -rf build dist     # Linux/macOS
+# 3. 清理旧文件（仅清理 build/，保留 dist/ 历史产物）
+rmdir /s /q build       # Windows
+# rm -rf build          # Linux/macOS
 
 # 4. 打包
 pyinstaller toolbox.spec
@@ -72,8 +72,8 @@ pyinstaller toolbox.spec
 
 ```python
 APP_NAME = "工具箱"
-APP_VERSION = "1.0.0"
-APP_DESCRIPTION = "批量处理工具，支持图片压缩、PDF转换、格式转换和拼接"
+APP_VERSION = "2.0.6"
+APP_DESCRIPTION = "批量处理工具，支持图片压缩、PDF转换、格式转换、拼接和PDF合并"
 APP_COPYRIGHT = "© 2026 yansheng836"
 APP_WEBSITE_URL = "https://github.com/yansheng836/python-toolbox"
 ```

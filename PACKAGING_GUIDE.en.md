@@ -15,18 +15,27 @@ The packaged app is missing these feature modules:
 
 When analyzing code dependencies, PyInstaller only detects **static imports** (such as `import xxx` or `from xxx import yyy`) and cannot automatically detect **dynamically imported** modules.
 
-The `load_plugins()` method in `toolbox.py` (lines 2200-2230) loads plugins dynamically via `importlib`:
+The `load_plugins()` method in `toolbox.py` dynamically loads the plugin modules configured in `config.PLUGIN_MODULES` via `importlib`:
 
 ```python
 def load_plugins(self):
-    # ...
-    for file in plugins_dir.glob("*.py"):
-        spec = importlib.util.spec_from_file_location(file.stem, file)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)  # dynamically loaded
+    """Load plugins from the PLUGIN_MODULES config, register after sorting by order."""
+    plugin_classes = []
+    for plugin_config in PLUGIN_MODULES:
+        try:
+            module = importlib.import_module(plugin_config["module"])
+            plugin_class = getattr(module, plugin_config["class"])
+            plugin_class.id = plugin_config["id"]
+            plugin_class.name = plugin_config["name"]
+            plugin_class.icon = plugin_config["icon"]
+            plugin_class.order = plugin_config["order"]
+            ...
+            plugin_classes.append(plugin_class)
+        except Exception as e:
+            print(f"Failed to load plugin {plugin_config.get('name', 'unknown')}: {e}")
 ```
 
-This dynamic loading prevents PyInstaller from automatically discovering the `plugins/image_scaler.py` module.
+This dynamic loading prevents PyInstaller from automatically discovering the modules under `plugins/`, so every plugin must be declared explicitly in `hiddenimports`.
 
 ### Solution
 
@@ -41,22 +50,30 @@ hiddenimports=[
     'settings_page',
 
     # ⭐ Plugin modules (dynamically loaded plugins must be listed explicitly)
-    'plugins.image_scaler',  # new
+    'plugins.image_compressor',
+    'plugins.image_format_converter',
+    'plugins.image_stitcher',
+    'plugins.image_to_pdf',
+    'plugins.image_scaler',
+    'plugins.pdf_merger',
+    'plugins.pdf_splitter',
+    'plugins.file_deduplicator',
+    'plugins.empty_folder_cleaner',
 
     # PIL/Pillow core modules
     'PIL',
     'PIL.Image',
     'PIL.ImageFilter',
     'PIL.ImageEnhance',
-    'PIL.ImageDraw',  # new
-    'PIL.ImageFont',  # new
+    'PIL.ImageDraw',
+    'PIL.ImageFont',
 
     # PyQt6 core modules
     'PyQt6.sip',
 
     # PDF conversion libraries
     'img2pdf',
-    'fitz',
+    'pymupdf',  # PyMuPDF
 ],
 ```
 
@@ -80,12 +97,14 @@ Make sure every required module imports correctly.
 
 ### 3. Clean Old Build Artifacts
 
+> ⚠️ Only clean `build/`; do not delete `dist/` — users may keep historical build artifacts there.
+
 ```bash
 # Windows
-rmdir /s /q build dist
+rmdir /s /q build
 
 # Linux/macOS
-rm -rf build dist
+rm -rf build
 ```
 
 ### 4. Build with the Spec File
@@ -108,10 +127,10 @@ Check that the following work:
 
 - ✓ The app starts normally
 - ✓ Right-click → Properties shows the correct version info
-- ✓ The sidebar shows "Image Scaler"
+- ✓ The sidebar shows all tools (Image Compressor, Image Format Converter, Image Stitcher, Image to PDF, Image Scaler, PDF Merger, PDF Splitter, File Deduplicator, Empty Folder Cleaner)
 - ✓ The sidebar shows "Settings"
-- ✓ "Image Scaler" opens normally
-- ✓ "Settings" opens and can switch themes
+- ✓ Every tool opens normally
+- ✓ "Settings" opens and can switch themes, switch language, and manage the navigation bar
 
 ## Version Info Configuration
 
@@ -138,8 +157,8 @@ Just edit the variables in `config.py`:
 
 ```python
 APP_NAME = "工具箱"
-APP_VERSION = "1.0.0"
-APP_DESCRIPTION = "批量处理工具，支持图片压缩、PDF转换、格式转换和拼接"
+APP_VERSION = "2.0.6"
+APP_DESCRIPTION = "批量处理工具，支持图片压缩、PDF转换、格式转换、拼接和PDF合并"
 APP_COPYRIGHT = "© 2026 yansheng836"
 ```
 
@@ -149,9 +168,9 @@ Then run `python generate_version_info.py` to regenerate the version info file.
 
 Right-click the packaged `.exe` → Properties → Details shows:
 
-- File description: Batch processing tool with image compression, PDF conversion, format conversion and stitching
-- Product name: ToolBox
-- Product version: 1.0.0.0
+- File description: 批量处理工具，支持图片压缩、PDF转换、格式转换、拼接和PDF合并
+- Product name: 工具箱
+- Product version: 2.0.6.0
 - Copyright: © 2026 yansheng836
 - Company: yansheng836
 
@@ -186,14 +205,20 @@ Right-click the packaged `.exe` → Properties → Details shows:
 After packaging, verify the following:
 
 - [ ] The app starts normally
-- [ ] The sidebar shows all tools (including "Image Scaler" and "Settings")
+- [ ] The sidebar shows all tools (Image Compressor, Image Format Converter, Image Stitcher, Image to PDF, Image Scaler, PDF Merger, PDF Splitter, File Deduplicator, Empty Folder Cleaner) and Settings
 - [ ] Image compression works
 - [ ] Image to PDF works
 - [ ] Image format conversion works
 - [ ] Image stitching works
-- [ ] **Batch image scaling works**
-- [ ] **The settings page opens**
-- [ ] **Theme switching works**
+- [ ] Image scaling works
+- [ ] PDF merging works
+- [ ] PDF splitting works
+- [ ] File deduplication works
+- [ ] Empty folder cleanup works
+- [ ] The settings page opens
+- [ ] Theme switching works
+- [ ] Language switching works
+- [ ] Navigation management works
 
 ## References
 

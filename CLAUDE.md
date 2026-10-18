@@ -32,10 +32,11 @@ toolbox/
 ├── toolbox.py                  # Main app (ToolboxWindow, ToolPlugin, Theme, UI components)
 ├── config.py                   # Global config (app info, UI, theme, welcome page)
 ├── menu_system.py              # Menu system (legacy demo, not imported by the app)
-├── settings_page.py            # Settings page UI (Card, SettingsPage)
+├── settings_page.py            # Legacy settings module (unused; real SettingsPlugin lives in toolbox.py)
 ├── requirements.txt            # Python dependencies
 ├── cliff.toml                  # git-cliff changelog 生成配置
 ├── toolbox.spec                # PyInstaller build spec
+├── pytest.ini                  # pytest configuration
 ├── generate_version_info.py    # Version info generator (pre-build)
 ├── verify_packaging.py        # Packaging dependency verifier
 ├── build.py                   # Windows build script
@@ -50,44 +51,47 @@ toolbox/
 │   ├── file_list_panel.py     # FileListPanel — reusable file list table
 │   ├── action_panel.py        # ActionPanel — button + progress bar + status label
 │   ├── dialog_utils.py        # Dialog helpers (get_save_file_name, etc.)
+│   ├── directory_drop_line_edit.py  # DirectoryDropLineEdit — folder drag-drop input
 │   ├── message_utils.py       # Themed message boxes (show_info, show_error, etc.)
-│   ├── nav_config.py         # Sidebar order/visibility config ([nav] in config.ini)
+│   ├── app_settings.py        # AppSettings — config.ini read/write with atomic save
+│   ├── nav_config.py          # Sidebar order/visibility config ([nav] in config.ini)
+│   ├── i18n.py                # t() translation lookup, bind_combo, retranslate helpers
 │   └── utils.py              # Helpers: get_image_size, get_file_size, get_pdf_pages,
 │                               get_create_time, get_modify_time, PDF_COLUMNS, IMAGE_COLUMNS,
 │                               PIL_AVAILABLE, FITZ_AVAILABLE, IMG2PDF_AVAILABLE
 │
 ├── plugins/                   # Plugin directory (auto-discovered via importlib)
-│   ├── image_compressor.py    # Batch image compression (JPG/PNG/WebP)
-│   ├── image_scaler.py        # Batch image scaling (resize by width/height/percentage)
-│   ├── image_stitcher.py      # Image stitching (horizontal/vertical merge)
-│   ├── image_to_pdf.py        # Convert multiple images to a single PDF
+│   ├── image_compressor.py        # Batch image compression (JPG/PNG/WebP)
+│   ├── image_scaler.py            # Batch image scaling (resize by width/height/percentage)
+│   ├── image_stitcher.py          # Image stitching (horizontal/vertical merge)
+│   ├── image_to_pdf.py            # Convert multiple images to a single PDF
 │   ├── image_format_converter.py  # Batch image format conversion
-│   ├── pdf_merger.py         # Merge multiple PDFs into one
-│   ├── pdf_splitter.py        # Split PDF into per-page PDFs or images
-│   └── file_deduplicator.py  # File deduplication (size→quick hash→full hash)
+│   ├── pdf_merger.py             # Merge multiple PDFs into one
+│   ├── pdf_splitter.py            # Split PDF into per-page PDFs or images
+│   ├── file_deduplicator.py      # File deduplication (size→quick hash→full hash)
+│   └── empty_folder_cleaner.py   # Recursive empty folder finder & deleter
+│
+├── i18n/                       # Translation dictionaries (zh_CN.json, en.json)
 │
 ├── scripts/                   # Build and release scripts
 │   ├── build_dmg.py           # macOS .dmg packaging
+│   ├── check_i18n.py          # i18n dictionary validator (key coverage, dangling refs)
 │   ├── generate_notes.py      # Release notes generator
 │   └── get_version.py         # Version info extractor
 │
-└── test/                      # Test files
-    ├── test_button.py          # Button UI component tests
+└── test/                      # Test files (test_ prefix)
+    ├── conftest.py            # Shared pytest fixtures
+    ├── test_p3_*.py           # Per-plugin functional tests (image/pdf/dedup/empty-folder)
+    ├── test_app_settings.py   # AppSettings INI read/write tests
+    ├── test_i18n*.py          # i18n dictionary tests
+    ├── test_nav_config.py    # Sidebar order/visibility config tests
+    ├── test_base_worker.py   # BaseWorker tests
+    ├── test_utils.py          # common/utils helper tests
+    ├── test_button.py        # Button UI component tests
     ├── test_icon.py           # Icon and theme tests
-    ├── test_plugin.py         # Plugin system tests
-    ├── test_scaling.py        # Image scaling functionality tests
-    ├── test_scaling_complete.py
-    ├── test_scaling_function.py
+    ├── test_plugin*.py        # Plugin system tests
     ├── test_sidebar.py        # Sidebar navigation tests
-    ├── test_adaptive_ui.py
-    ├── test_plugins.py
-    ├── test_pdf_merger.py
     ├── create_test_images.py  # Test image generator
-    ├── check_plugins.py
-    ├── debug_plugins.py
-    ├── final_test.py
-    ├── simple_check.py
-    ├── simple_test.py
     └── toolbox2.py            # Backup/alternative implementation (test only)
 ```
 
@@ -190,7 +194,7 @@ Each plugin defines its own `*Worker` class (e.g., `CompressionWorker`, `PDFMerg
 
 ### PDF Conversion
 
-`PDFWorker` (in `image_to_pdf.py`) tries libraries in order: `img2pdf` → `PyMuPDF` → `PIL`. All three are in `requirements.txt`. Supports compression with adjustable quality (1–100%) for all three backends.
+`PDFWorker` (in `image_to_pdf.py`) tries libraries in order: `PyMuPDF` → `img2pdf` → `PIL`. All three are in `requirements.txt`. Supports compression with adjustable quality (1–100%) for all three backends.
 
 ---
 
@@ -255,9 +259,13 @@ Common issues to catch:
 | `ActionPanel` | `common/action_panel.py` | Button + progress bar + status label |
 | `BaseWorker` | `common/base_worker.py` | Base QThread worker with standard signals |
 | `MessageUtils` | `common/message_utils.py` | Themed message boxes and dialogs |
+| `AppSettings` | `common/app_settings.py` | config.ini read/write with backup + atomic save |
+| `i18n` (`t()`, `bind_combo`) | `common/i18n.py` | Translation lookup and combo auto-retranslate |
+| `DirectoryDropLineEdit` | `common/directory_drop_line_edit.py` | Folder input with drag-drop support |
 | `get_image_size`, `get_file_size` | `common/utils.py` | Image/file size helper functions |
 | `get_pdf_pages`, `get_create_time` | `common/utils.py` | PDF/file time helper functions |
 | `IMAGE_COLUMNS`, `PDF_COLUMNS` | `common/utils.py` | Common table column definitions |
+| `WINDOWS_RESERVED_NAMES` | `common/utils.py` | Windows reserved device names (CON, PRN, ...) |
 | `PIL_AVAILABLE`, `FITZ_AVAILABLE`, `IMG2PDF_AVAILABLE` | `common/utils.py` | Module availability flags |
 
 #### Patterns That MUST Use Shared Components
@@ -498,6 +506,7 @@ except Exception as e:
 
 - ✅ `image_to_pdf.py` — has this check (since commit 79b9b69)
 - ✅ Other plugins — `file_deduplicator.py` only reads files (no output file check needed)
+- ✅ `empty_folder_cleaner.py` — deletes via `os.rmdir` only; output-path lock check N/A
 - ✅ `pdf_merger.py`, `pdf_splitter.py`, etc. — use `QFileDialog` which handles file access natively
 
 #### Rule 10: Check File Existence Before Deletion
@@ -655,11 +664,13 @@ for batch_start in range(0, total, self.BATCH_SIZE):
 | `image_to_pdf.py` | ✅ Fixed (f28dfae) | Now uses context manager in scan + batch processing |
 | `pdf_merger.py` | ✅ OK | Uses `doc.close()` correctly |
 | `pdf_splitter.py` | ✅ OK | Uses `doc.close()` correctly |
+| `file_deduplicator.py` | ✅ OK | Streams files; no large image buffers held |
+| `empty_folder_cleaner.py` | ✅ OK | Directory traversal only; no file/image buffers |
 
 ## Theme System
 
 - Two themes: `Theme.DARK` (default) and `Theme.LIGHT`
-- Theme switching via `SettingsPlugin` with persistent storage using `QSettings`
+- Theme switching via `SettingsPlugin` with persistent storage in `config.ini` (`[general]` theme)
 - All plugins MUST implement `update_theme(theme)` to respond to theme changes
 - Global stylesheet applied to main window with theme-specific colors
 
@@ -762,13 +773,17 @@ class MyTool(ToolPlugin):
 
 ## Testing
 
-All test files are in `test/` with a `test_` prefix.
+All test files are in `test/` with a `test_` prefix (pytest via `pytest.ini`, or `python -m unittest discover`).
 
-- `test_button.py` — Button UI component tests
-- `test_icon.py` — Icon and theme tests
-- `test_plugin.py` — Plugin system tests
-- `test_scaling.py` — Image scaling functionality tests
-- `test_sidebar.py` — Sidebar navigation tests
+- `test_p3_*.py` — per-plugin functional tests (compressor, converter, stitcher, image_to_pdf, scaler, pdf_merger, pdf_splitter, file_deduplicator, empty_folder_cleaner)
+- `test_app_settings.py` — config.ini read/write/migration tests
+- `test_i18n*.py`, `test_check_i18n.py` — translation dictionary tests
+- `test_nav_config.py` — sidebar order/visibility config tests
+- `test_base_worker.py`, `test_utils.py` — shared component tests
+- `test_button.py`, `test_icon.py`, `test_sidebar.py` — UI component tests
+- `test_plugin*.py` — plugin system tests
+
+Note: some legacy script-style test files launch a GUI event loop on import and hang a full pytest collection run — run a targeted subset when testing (see memory notes).
 
 When adding features, create corresponding test files in `test/`.
 

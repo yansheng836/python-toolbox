@@ -15,18 +15,27 @@
 
 PyInstaller 在分析代码依赖时，只能检测**静态导入**（如 `import xxx` 或 `from xxx import yyy`），无法自动检测**动态导入**的模块。
 
-在 `toolbox.py` 的 `load_plugins()` 方法中（第2200-2230行），使用了 `importlib` 动态加载插件：
+在 `toolbox.py` 的 `load_plugins()` 方法中，通过 `importlib` 动态加载 `config.PLUGIN_MODULES` 中配置的插件模块：
 
 ```python
 def load_plugins(self):
-    # ...
-    for file in plugins_dir.glob("*.py"):
-        spec = importlib.util.spec_from_file_location(file.stem, file)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)  # 动态加载
+    """从PLUGIN_MODULES配置加载插件，按order排序后注册"""
+    plugin_classes = []
+    for plugin_config in PLUGIN_MODULES:
+        try:
+            module = importlib.import_module(plugin_config["module"])
+            plugin_class = getattr(module, plugin_config["class"])
+            plugin_class.id = plugin_config["id"]
+            plugin_class.name = plugin_config["name"]
+            plugin_class.icon = plugin_config["icon"]
+            plugin_class.order = plugin_config["order"]
+            ...
+            plugin_classes.append(plugin_class)
+        except Exception as e:
+            print(f"加载插件失败 {plugin_config.get('name', 'unknown')}: {e}")
 ```
 
-这种动态加载方式导致 PyInstaller 无法自动发现 `plugins/image_scaler.py` 模块。
+这种动态加载方式导致 PyInstaller 无法自动发现 `plugins/` 下的模块，因此每个插件都需要在 `hiddenimports` 中显式声明。
 
 ### 解决方法
 
@@ -41,22 +50,30 @@ hiddenimports=[
     'settings_page',
 
     # ⭐ 插件模块（动态加载的插件必须明确指定）
-    'plugins.image_scaler',  # 新增
+    'plugins.image_compressor',
+    'plugins.image_format_converter',
+    'plugins.image_stitcher',
+    'plugins.image_to_pdf',
+    'plugins.image_scaler',
+    'plugins.pdf_merger',
+    'plugins.pdf_splitter',
+    'plugins.file_deduplicator',
+    'plugins.empty_folder_cleaner',
 
     # PIL/Pillow 核心模块
     'PIL',
     'PIL.Image',
     'PIL.ImageFilter',
     'PIL.ImageEnhance',
-    'PIL.ImageDraw',  # 新增
-    'PIL.ImageFont',  # 新增
+    'PIL.ImageDraw',
+    'PIL.ImageFont',
 
     # PyQt6 核心模块
     'PyQt6.sip',
 
     # PDF 转换库
     'img2pdf',
-    'fitz',
+    'pymupdf',  # PyMuPDF
 ],
 ```
 
@@ -80,12 +97,14 @@ python verify_packaging.py
 
 ### 3. 清理旧的打包文件
 
+> ⚠️ 仅清理 `build/`，不要删除 `dist/`——用户可能在其中存放历史构建产物。
+
 ```bash
 # Windows
-rmdir /s /q build dist
+rmdir /s /q build
 
 # Linux/macOS
-rm -rf build dist
+rm -rf build
 ```
 
 ### 4. 使用 spec 文件打包
@@ -108,10 +127,10 @@ dist\工具箱.exe
 
 - ✓ 应用能正常启动
 - ✓ 右键查看文件属性，版本信息是否正确显示
-- ✓ 侧边栏是否显示"图片批量缩放"
+- ✓ 侧边栏是否显示全部工具（图片压缩、图片格式转换、图片拼接、图片转PDF、图片缩放、PDF合并、PDF拆分、文件去重、空文件夹清理）
 - ✓ 侧边栏是否显示"设置"
-- ✓ 点击"图片批量缩放"是否能正常打开
-- ✓ 点击"设置"是否能正常打开并切换主题
+- ✓ 点击任一工具是否能正常打开
+- ✓ 点击"设置"是否能正常打开并切换主题、切换语言、管理导航栏
 
 ## 版本信息配置
 
@@ -138,8 +157,8 @@ exe = EXE(
 
 ```python
 APP_NAME = "工具箱"
-APP_VERSION = "1.0.0"
-APP_DESCRIPTION = "批量处理工具，支持图片压缩、PDF转换、格式转换和拼接"
+APP_VERSION = "2.0.6"
+APP_DESCRIPTION = "批量处理工具，支持图片压缩、PDF转换、格式转换、拼接和PDF合并"
 APP_COPYRIGHT = "© 2026 yansheng836"
 ```
 
@@ -149,9 +168,9 @@ APP_COPYRIGHT = "© 2026 yansheng836"
 
 打包后的 `.exe` 文件右键 → 属性 → 详细信息，会显示：
 
-- 文件描述：批量处理工具，支持图片压缩、PDF转换、格式转换和拼接
+- 文件描述：批量处理工具，支持图片压缩、PDF转换、格式转换、拼接和PDF合并
 - 产品名称：工具箱
-- 产品版本：1.0.0.0
+- 产品版本：2.0.6.0
 - 版权：© 2026 yansheng836
 - 公司：yansheng836
 
@@ -186,14 +205,20 @@ APP_COPYRIGHT = "© 2026 yansheng836"
 打包完成后，请验证以下内容：
 
 - [ ] 应用能正常启动
-- [ ] 侧边栏显示所有工具（包括"图片批量缩放"和"设置"）
+- [ ] 侧边栏显示所有工具（图片压缩、图片格式转换、图片拼接、图片转PDF、图片缩放、PDF合并、PDF拆分、文件去重、空文件夹清理）和设置
 - [ ] 图片压缩功能正常
 - [ ] 图片转PDF功能正常
 - [ ] 图片格式转换功能正常
 - [ ] 图片拼接功能正常
-- [ ] **图片批量缩放功能正常**
-- [ ] **设置页面能打开**
-- [ ] **主题切换功能正常**
+- [ ] 图片缩放功能正常
+- [ ] PDF合并功能正常
+- [ ] PDF拆分功能正常
+- [ ] 文件去重功能正常
+- [ ] 空文件夹清理功能正常
+- [ ] 设置页面能打开
+- [ ] 主题切换功能正常
+- [ ] 语言切换功能正常
+- [ ] 导航栏管理功能正常
 
 ## 参考资料
 
