@@ -297,6 +297,17 @@ class ImageCompressor(ToolPlugin):
         self.update_theme(Theme.DARK)
         return widget
 
+    def load_settings(self):
+        fmt = self.load_setting("format", "keep")
+        self.set_combo_by_data(self.format_combo, fmt)
+        self.quality_slider.setValue(self.load_setting("quality", 75, int))
+        self.output_path.setText(self.load_setting("output_dir", ""))
+
+    def save_settings(self):
+        self.save_setting("format", self.format_combo.currentData())
+        self.save_setting("quality", self.quality_slider.value())
+        self.save_setting("output_dir", self.output_path.text().strip())
+
     def retranslate_ui(self):
         """语言切换后重放全部用户可见文本"""
         self.title_label.setText(f"{self.icon} {t('plugin.image_compressor.name')}")

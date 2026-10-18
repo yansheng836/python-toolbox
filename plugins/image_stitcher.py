@@ -541,6 +541,22 @@ class ImageStitcher(ToolPlugin):
 
         return widget
 
+    def load_settings(self):
+        self.set_combo_by_data(self.dir_combo, self.load_setting("direction", "vertical"))
+        self.set_combo_by_data(self.align_combo, self.load_setting("align", "max_size"))
+        self.bg_r.setValue(self.load_setting("bg_r", 255, int))
+        self.bg_g.setValue(self.load_setting("bg_g", 255, int))
+        self.bg_b.setValue(self.load_setting("bg_b", 255, int))
+        self.output_path.setText(self.load_setting("output_file", ""))
+
+    def save_settings(self):
+        self.save_setting("direction", self.dir_combo.currentData())
+        self.save_setting("align", self.align_combo.currentData())
+        self.save_setting("bg_r", self.bg_r.value())
+        self.save_setting("bg_g", self.bg_g.value())
+        self.save_setting("bg_b", self.bg_b.value())
+        self.save_setting("output_file", self.output_path.text().strip())
+
     def browse_output(self):
         path = get_save_file_name(
             None, t("plugin.image_stitcher.dialog.save_image"), "stitched.jpg",

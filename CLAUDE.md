@@ -54,7 +54,7 @@ toolbox/
 │   ├── directory_drop_line_edit.py  # DirectoryDropLineEdit — folder drag-drop input
 │   ├── message_utils.py       # Themed message boxes (show_info, show_error, etc.)
 │   ├── app_settings.py        # AppSettings — config.ini read/write with atomic save
-│   ├── nav_config.py          # Sidebar order/visibility config ([nav] in config.ini)
+│   ├── nav_config.py          # Sidebar order/visibility config ([setting.nav] in config.ini)
 │   ├── i18n.py                # t() translation lookup, bind_combo, retranslate helpers
 │   └── utils.py              # Helpers: get_image_size, get_file_size, get_pdf_pages,
 │                               get_create_time, get_modify_time, PDF_COLUMNS, IMAGE_COLUMNS,
@@ -245,6 +245,7 @@ Common issues to catch:
 | Component | Location | Purpose |
 |-----------|----------|---------|
 | `ToolPlugin` | `toolbox.py` | Base class for all plugins |
+| `load_setting`/`save_setting`/`set_combo_by_data` | `ToolPlugin` (`toolbox.py`) | 公共配置读写方法，插件设置项统一持久化到 `[plugin.<id>]` |
 | `Theme` | `toolbox.py` | Dark/light color palettes + ALL color constants |
 | `AnimatedButton` | `toolbox.py` | Reusable button with hover effects |
 | `SelectableLabel` | `toolbox.py` | Text label supporting mouse selection and copying |
@@ -463,6 +464,69 @@ When adding new UI components:
 
 ---
 
+## Configuration Persistence (config.ini)
+
+所有用户配置统一存放在单个 `config.ini`（由 `common/app_settings.py` 的 `AppSettings` 管理），分两个命名空间：
+
+### INI 节结构
+
+| 节 | 键 | 内容 |
+|----|-----|------|
+| `[setting]` | `language`, `theme` | 界面语言、主题 |
+| `[setting.window]` | `geometry`, `state` | 窗口几何/状态（base64） |
+| `[setting.nav]` | `order`, `hidden` | 侧边栏顺序与隐藏项 |
+| `[setting.meta]` | `config_version` | 配置文件版本（当前 2） |
+| `[plugin.<id>]` | 各插件自定义 | 插件设置项（如 `quality`、`format`、`output_dir`） |
+
+规则：**全局项一律放 `setting.*` 命名空间，插件项一律放 `plugin.<id>`**——节名即前缀，天然区分归属。
+
+### 读写时机（重要）
+
+| 配置项 | 读取时机 | 写入时机 |
+|--------|----------|----------|
+| `[setting]` language | `main.py` 启动时（`QApplication` 创建后、窗口构造前） | 语言下拉变化时（`_persist_language` 立即 `save()`） |
+| `[setting]` theme | `ToolboxWindow.__init__`（初始主题） | 主题按钮点击时（`save_theme_setting` 立即 `save()`） |
+| `[setting.window]` geometry/state | 窗口构造时 `load_geometry()` | `closeEvent` → `save_geometry()` |
+| `[setting.nav]` order/hidden | `rebuild_navigation()`（注册后与每次导航变动） | 导航管理操作时（`save_nav_state` 立即 `save()`） |
+| `[plugin.<id>]` 全部 | `register_plugin` → `plugin.load_settings()`（页面构建后立即应用） | `closeEvent` → `save_plugins_settings()`（仅 `set` 进内存，随 `save_geometry` 的 `save()` 一次性落盘） |
+
+要点：
+
+- 插件设置**不在改控件时写盘**，只在窗口正常关闭时统一落盘——`save_setting()` 只写内存，必须由 `ToolboxWindow.closeEvent` 链路调用 `app_settings.save()` 才持久化。崩溃/强杀会丢失上次关闭后的插件设置改动（与窗口几何同风险等级，属有意设计）。
+- 设置页「恢复默认设置」→ `AppSettings.reset()` 重建空配置（清掉 `setting.*` 与全部 `plugin.*`），随后遍历各插件 `load_settings()` 让控件回到硬编码默认。
+- 旧版本兼容：启动 `load()` 时 `_migrate_legacy_sections()` 自动把 v1 平铺节（`[general]`/`[window]`/`[nav]`/`[meta]`）迁入 `setting.*`，目标已存在时不覆盖，迁移后旧节移除、`config_version` 升级。
+
+### 公共读写方法（新增配置项必须使用）
+
+插件级配置一律走 `ToolPlugin` 基类方法（`toolbox.py`），不要直接操作 parser：
+
+| 方法 | 用途 |
+|------|------|
+| `load_setting(key, default, type)` | 读本插件 `[plugin.<id>]` 键；缺键/空值/类型失败回退 default（`type` 支持 `int`/`str`/`bool`） |
+| `save_setting(key, value)` | 写本插件键（仅内存，不落盘） |
+| `set_combo_by_data(combo, value)` | 按 data 匹配下拉框选项（int/str data 均可） |
+| `load_settings()` / `save_settings()` | 钩子：子类覆写，完成控件 ↔ 键的映射（框架在注册后/关闭时调用） |
+
+`AppSettings` 级公共方法：`get`/`set`/`save`/`load`/`reset`/`remove_section`/`is_explicit`。
+
+### 新增配置项操作清单
+
+新增**插件设置项**时：
+
+1. 在该插件的 `load_settings()`/`save_settings()` 中加一行 `load_setting`/`save_setting` 映射（键名用 snake_case）。
+2. `create_ui()` 中的控件默认值保持硬编码——它就是缺键时的回退默认，不要重复定义默认值常量。
+3. 在 `test/test_plugin_settings.py` 或对应插件测试中补往返断言。
+4. 更新 `docs/2026-10-19-插件设置项持久化方案.md` 第 7 节清单与 README 的保存内容说明（如影响用户可见行为）。
+
+新增**全局配置项**时：
+
+1. 确定归属：全局项放 `setting.*`（如需新子节，如 `[setting.editor]`，同时加入 `_DEFAULTS`）。
+2. 读取方在启动/使用处用 `settings.get(section, key, default)`；写入方确定时机（即时 `save()` vs 关闭时统一 `save()`），参考上表同类项。
+3. 若该项需纳入「恢复默认」范围，确认 `reset()` 语义已覆盖（`_DEFAULTS` 有默认值即自动覆盖）。
+4. 跨版本兼容时提升 `CONFIG_VERSION` 并在 `_migrate_legacy_sections()` 补迁移。
+
+---
+
 ## File Operations
 
 ### File Operations (MANDATORY)
@@ -667,7 +731,7 @@ for batch_start in range(0, total, self.BATCH_SIZE):
 ## Theme System
 
 - Two themes: `Theme.DARK` (default) and `Theme.LIGHT`
-- Theme switching via `SettingsPlugin` with persistent storage in `config.ini` (`[general]` theme)
+- Theme switching via `SettingsPlugin` with persistent storage in `config.ini` (`[setting]` theme)
 - All plugins MUST implement `update_theme(theme)` to respond to theme changes
 - Global stylesheet applied to main window with theme-specific colors
 

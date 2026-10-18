@@ -478,3 +478,23 @@ class PDFSplitter(ToolPlugin):
         self.title_label = self.widget.title_label
         self.desc_label = self.widget.desc_label
         return self.widget
+
+    def load_settings(self):
+        w = self.widget
+        fmt = self.load_setting("output_format", "pdf")
+        if fmt == "image":
+            w.image_radio.setChecked(True)
+        else:
+            w.pdf_radio.setChecked(True)
+        w.pages_spin.setValue(self.load_setting("pages_per_split", 1, int))
+        self.set_combo_by_data(w.image_format_combo, self.load_setting("image_format", "JPG"))
+        w.quality_slider.setValue(self.load_setting("quality", 85, int))
+        w.output_path.setText(self.load_setting("output_dir", ""))
+
+    def save_settings(self):
+        w = self.widget
+        self.save_setting("output_format", "image" if w.image_radio.isChecked() else "pdf")
+        self.save_setting("pages_per_split", w.pages_spin.value())
+        self.save_setting("image_format", w.image_format_combo.currentData())
+        self.save_setting("quality", w.quality_slider.value())
+        self.save_setting("output_dir", w.output_path.text().strip())

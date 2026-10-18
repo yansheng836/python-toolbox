@@ -1221,6 +1221,21 @@ class FileDeduplicator(ToolPlugin):
         self.desc_label = self.widget.desc_label
         return self.widget
 
+    def load_settings(self):
+        w = self.widget
+        self.set_combo_by_data(w.rule_combo, self.load_setting("rule", 0, int))
+        # send2trash 不可用时复选框被禁用，保留禁用状态下的默认勾选
+        if SEND2TRASH_AVAILABLE:
+            w.use_trash_checkbox.setChecked(self.load_setting("use_trash", True, bool))
+        w.auto_rescan_checkbox.setChecked(self.load_setting("auto_rescan", False, bool))
+
+    def save_settings(self):
+        w = self.widget
+        self.save_setting("rule", w.rule_combo.currentData())
+        if SEND2TRASH_AVAILABLE:
+            self.save_setting("use_trash", 1 if w.use_trash_checkbox.isChecked() else 0)
+        self.save_setting("auto_rescan", 1 if w.auto_rescan_checkbox.isChecked() else 0)
+
     def retranslate_ui(self):
         """语言切换后重放文件去重页全部静态文本"""
         widget = getattr(self, 'widget', None)

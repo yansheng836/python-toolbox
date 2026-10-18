@@ -70,7 +70,7 @@ def test_language_combo_populated(tmp_path):
 
 @pytest.mark.usefixtures("qapp")
 def test_switch_language_persists_and_retranslates(tmp_path, en_dict_injected):
-    """选 en → INI general.language=en 且 current_language 变化；选回恢复"""
+    """选 en → INI setting.language=en 且 current_language 变化；选回恢复"""
     win = _make_window(tmp_path)
     try:
         sp = win.plugins["settings"]
@@ -80,12 +80,12 @@ def test_switch_language_persists_and_retranslates(tmp_path, en_dict_injected):
         combo.setCurrentIndex(combo.findData("en"))
         assert i18n.manager.current_language == "en"
         ini = _read_ini(tmp_path / "config.ini")
-        assert ini.get("general", "language") == "en"
+        assert ini.get("setting", "language") == "en"
 
         combo.setCurrentIndex(combo.findData("zh_CN"))
         assert i18n.manager.current_language == "zh_CN"
         ini = _read_ini(tmp_path / "config.ini")
-        assert ini.get("general", "language") == "zh_CN"
+        assert ini.get("setting", "language") == "zh_CN"
     finally:
         win.close()
 
@@ -124,7 +124,7 @@ def test_theme_still_works(tmp_path):
 
         assert win._current_theme is Theme.LIGHT
         ini = _read_ini(tmp_path / "config.ini")
-        assert ini.get("general", "theme") == "light"
+        assert ini.get("setting", "theme") == "light"
     finally:
         win.close()
 
@@ -152,8 +152,8 @@ def test_reset_defaults_restores_language_and_theme(tmp_path, monkeypatch):
         assert i18n.manager.current_language == "zh_CN"
         assert win.current_theme is Theme.DARK
         ini = _read_ini(tmp_path / "config.ini")
-        assert ini.get("general", "language") == "zh_CN"
-        assert ini.get("general", "theme") == "dark"
+        assert ini.get("setting", "language") == "zh_CN"
+        assert ini.get("setting", "theme") == "dark"
     finally:
         win.close()
 
@@ -175,7 +175,7 @@ def test_reset_defaults_cancelled_keeps_settings(tmp_path, monkeypatch):
 
         assert win.current_theme is Theme.LIGHT
         ini = _read_ini(tmp_path / "config.ini")
-        assert ini.get("general", "theme") == "light"
+        assert ini.get("setting", "theme") == "light"
     finally:
         win.close()
 
@@ -199,6 +199,6 @@ def test_reset_defaults_keeps_detected_language_when_unchanged(tmp_path, monkeyp
 
         assert i18n.manager.current_language == "en"
         ini = _read_ini(tmp_path / "config.ini")
-        assert ini.get("general", "language") == "en"
+        assert ini.get("setting", "language") == "en"
     finally:
         win.close()

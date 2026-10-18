@@ -267,7 +267,7 @@ At runtime the app also reads and writes `config.ini` to persist user settings:
 |------|-------------|
 | Default location | Windows: `%LOCALAPPDATA%\Toolbox\config.ini`; macOS: `~/Library/Application Support/Toolbox/config.ini` |
 | Portable mode | If a writable `portable.flag` exists next to the executable (project root when running from source), `config.ini` is stored in the same directory |
-| Stored settings | `[general]` UI language and theme, `[window]` window geometry and state, `[nav]` navigation order and tool visibility, `[meta]` config version |
+| Stored settings | `[setting]` UI language and theme, `[setting.window]` window geometry and state, `[setting.nav]` navigation order and tool visibility, `[plugin.<id>]` per-plugin settings (compression quality, scale mode, page size, etc.), `[setting.meta]` config version |
 | First launch | The file is created with defaults if missing; the UI language is initialized from the system language (Chinese → `zh_CN`, otherwise → `en`), a notice dialog appears after this first automatic setup, and later changes made on the Settings page take precedence |
 | Legacy migration | Theme and window geometry/state are imported from the legacy `QSettings` registry only when the INI has no value yet; registry data is not deleted |
 | Write safety | The old file is backed up as `config.ini.bak` and replaced atomically via a temp file; missing or corrupt files fall back to defaults with an error logged; if the config directory is not writable, settings apply to the current run only |

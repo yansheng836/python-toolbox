@@ -4,7 +4,7 @@ nav_config — 侧边栏导航的顺序与可见性配置
 
 设计依据 docs/2026-10-18-导航栏排序与隐藏方案分析.md：
 
-- 配置以逗号分隔的插件 id 列表存于 config.ini 的 [nav] 段
+- 配置以逗号分隔的插件 id 列表存于 config.ini 的 [setting.nav] 段
 - order 为空表示沿用 config.py 中 PLUGIN_MODULES 的默认顺序
 - hidden 为隐藏的插件 id 列表
 - 合并规则保证版本升级兼容：已删除的插件 id 被丢弃，新增插件按默认顺序追加到末尾
@@ -12,7 +12,7 @@ nav_config — 侧边栏导航的顺序与可见性配置
 """
 
 PINNED_ORDER = 999  # 与 config.py 中「设置」等固定项使用的哨兵值一致
-SECTION = "nav"
+SECTION = "setting.nav"
 KEY_ORDER = "order"
 KEY_HIDDEN = "hidden"
 

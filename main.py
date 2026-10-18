@@ -24,11 +24,11 @@ def resolve_startup_language(settings):
 
     返回 (语言代码, 是否为首次启动自动检测)。
     """
-    if settings.is_explicit("general", "language"):
-        return settings.get("general", "language", i18n.DEFAULT_LANGUAGE), False
+    if settings.is_explicit("setting", "language"):
+        return settings.get("setting", "language", i18n.DEFAULT_LANGUAGE), False
 
     code = i18n.detect_system_language()
-    settings.set("general", "language", code)
+    settings.set("setting", "language", code)
     try:
         settings.save()
     except OSError as e:

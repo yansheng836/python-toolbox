@@ -333,6 +333,60 @@ class ToolPlugin:
     def retranslate_ui(self):
         """语言切换时刷新界面文本 - 由子类实现（与 update_theme 对称）"""
 
+    # ==================== 插件设置持久化（公共方法） ====================
+
+    def app_settings(self):
+        """返回父窗口的 AppSettings；无则 None（与 SettingsPlugin._settings_ref 同源）"""
+        return getattr(self.parent, "app_settings", None)
+
+    def _settings_section(self):
+        """本插件在 config.ini 中的节名：plugin.<id>"""
+        return f"plugin.{self.id}"
+
+    def load_setting(self, key, default=None, type=str):
+        """读取本插件配置项；缺键、空值或类型转换失败时返回 default"""
+        settings = self.app_settings()
+        if settings is None:
+            return default
+        raw = settings.get(self._settings_section(), key, None)
+        if raw is None or raw == "":
+            return default
+        try:
+            if type is bool:
+                return str(raw).strip().lower() in ("1", "true", "yes", "on")
+            return type(raw)
+        except (ValueError, TypeError):
+            return default
+
+    def save_setting(self, key, value):
+        """写入本插件配置项（仅内存，不落盘；由 ToolboxWindow.closeEvent 统一 save）"""
+        settings = self.app_settings()
+        if settings is None:
+            return
+        settings.set(self._settings_section(), key, str(value))
+
+    def set_combo_by_data(self, combo, value):
+        """按 data 匹配下拉框选项（兼容 int/str data，按字符串形式比较）"""
+        target = str(value)
+        for i in range(combo.count()):
+            if str(combo.itemData(i)) == target:
+                combo.setCurrentIndex(i)
+                return
+
+    def load_settings(self):
+        """启动时与恢复默认后由框架调用：把 INI 值应用到控件（子类覆写）"""
+
+    def save_settings(self):
+        """窗口关闭前由框架调用：把控件值写入 INI（子类覆写，仅 set 不 save）"""
+
+    def reset_settings(self):
+        """清空本插件 INI 节并重新加载默认值"""
+        settings = self.app_settings()
+        if settings is not None:
+            settings.remove_section(self._settings_section())
+            settings.save()
+        self.load_settings()
+
     # ==================== 共享辅助方法 ====================
 
     def _setup_header(self, layout, title=None, desc=None, theme=None):
@@ -1170,9 +1224,9 @@ class SettingsPlugin(ToolPlugin):
             self.parent.theme_changed.emit(theme_name)
 
     def save_theme_setting(self, theme_name):
-        """主题持久化到 INI [general] theme（旧 QSettings 注册表已弃用）"""
+        """主题持久化到 INI [setting] theme（旧 QSettings 注册表已弃用）"""
         if self._settings_ref is not None:
-            self._settings_ref.set("general", "theme", theme_name)
+            self._settings_ref.set("setting", "theme", theme_name)
             self._settings_ref.save()
 
     # ==================== 导航栏管理 ====================
@@ -1337,6 +1391,13 @@ class SettingsPlugin(ToolPlugin):
         if hasattr(self.parent, "apply_default_geometry"):
             self.parent.apply_default_geometry()
 
+        # 各插件控件恢复到硬编码默认（INI 已清空，load_setting 全部回退 default）
+        for plugin in getattr(self.parent, "plugins", {}).values():
+            try:
+                plugin.load_settings()
+            except Exception as e:
+                print(f"重置插件设置失败 {getattr(plugin, 'id', '?')}: {e}")
+
         show_info(
             self.parent,
             t("settings.dialog.reset_title"),
@@ -1344,9 +1405,9 @@ class SettingsPlugin(ToolPlugin):
             theme=self.parent.current_theme)
 
     def _persist_language(self, code):
-        """把语言代码持久化到 INI [general] language"""
+        """把语言代码持久化到 INI [setting] language"""
         if self._settings_ref is not None:
-            self._settings_ref.set("general", "language", code)
+            self._settings_ref.set("setting", "language", code)
             self._settings_ref.save()
 
     def _on_language_changed(self, index):
@@ -1552,6 +1613,12 @@ class ToolboxWindow(QMainWindow):
             # 视口背景与滚动条样式由 apply_theme 统一设置
             plugin.scroll_area = scroll_area
             self.content.addWidget(scroll_area)
+
+            # 加载本插件已保存的设置（覆盖 create_ui 中的硬编码默认）
+            try:
+                plugin.load_settings()
+            except Exception as e:
+                print(f"加载插件设置失败 {getattr(plugin, 'id', '?')}: {e}")
         except Exception as e:
             name = getattr(plugin_class, 'id', None) or getattr(plugin_class, 'name', 'unknown')
             print(f"注册插件失败 {name}: {e}")
@@ -1872,7 +1939,7 @@ class ToolboxWindow(QMainWindow):
 
     def init_theme(self):
         """启动时从 INI 读取已保存主题应用；绝不写回（反覆盖旧 init_theme bug）"""
-        theme_name = self.app_settings.get("general", "theme", "dark")
+        theme_name = self.app_settings.get("setting", "theme", "dark")
         theme = Theme.LIGHT if theme_name == "light" else Theme.DARK
         self.apply_theme(theme)
 
@@ -2122,26 +2189,35 @@ class ToolboxWindow(QMainWindow):
             self.activateWindow()
 
     def closeEvent(self, event):
+        self.save_plugins_settings()
         self.save_geometry()
         event.accept()
 
+    def save_plugins_settings(self):
+        """把各插件控件值写入内存（仅 set），随 save_geometry 的 save() 一并落盘"""
+        for plugin in self.plugins.values():
+            try:
+                plugin.save_settings()
+            except Exception as e:
+                print(f"保存插件设置失败 {getattr(plugin, 'id', '?')}: {e}")
+
     def save_geometry(self):
         self.app_settings.set(
-            "window", "geometry",
+            "setting.window", "geometry",
             bytes(self.saveGeometry().toBase64()).decode("ascii"),
         )
         self.app_settings.set(
-            "window", "state",
+            "setting.window", "state",
             bytes(self.saveState().toBase64()).decode("ascii"),
         )
         self.app_settings.save()
 
     def load_geometry(self):
         from common.app_settings import bytes_to_qbytearray
-        geometry = self.app_settings.get("window", "geometry", "")
+        geometry = self.app_settings.get("setting.window", "geometry", "")
         if geometry:
             self.restoreGeometry(bytes_to_qbytearray(geometry))
-        state = self.app_settings.get("window", "state", "")
+        state = self.app_settings.get("setting.window", "state", "")
         if state:
             self.restoreState(bytes_to_qbytearray(state))
         if not geometry:

@@ -452,6 +452,26 @@ class ImageScaler(ToolPlugin):
         self.widget = widget
         return widget
 
+    def load_settings(self):
+        w = self.widget
+        self.set_combo_by_data(w.scale_type_combo, self.load_setting("scale_type", "percent"))
+        w.scale_value_input.setValue(self.load_setting("scale_value", 50, int))
+        w.width_input.setValue(self.load_setting("width", 800, int))
+        w.height_input.setValue(self.load_setting("height", 600, int))
+        w.maintain_aspect.setChecked(self.load_setting("maintain_aspect", True, bool))
+        self.set_combo_by_data(w.quality_combo, self.load_setting("quality", 85, int))
+        w.output_path.setText(self.load_setting("output_dir", ""))
+
+    def save_settings(self):
+        w = self.widget
+        self.save_setting("scale_type", w.scale_type_combo.currentData())
+        self.save_setting("scale_value", w.scale_value_input.value())
+        self.save_setting("width", w.width_input.value())
+        self.save_setting("height", w.height_input.value())
+        self.save_setting("maintain_aspect", 1 if w.maintain_aspect.isChecked() else 0)
+        self.save_setting("quality", w.quality_combo.currentData())
+        self.save_setting("output_dir", w.output_path.text().strip())
+
     def retranslate_ui(self):
         """语言切换后重放图片缩放页全部用户可见文本"""
         widget = getattr(self, 'widget', None)

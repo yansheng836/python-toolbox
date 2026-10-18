@@ -65,14 +65,14 @@ def test_default_file_created(tmp_path):
     """首次 load 后文件存在、内容为默认值：language=zh_CN、theme=dark"""
     s = AppSettings(config_dir=tmp_path)
     assert (tmp_path / INI_NAME).exists()
-    assert s.get("general", "language") == "zh_CN"
-    assert s.get("general", "theme") == "dark"
+    assert s.get("setting", "language") == "zh_CN"
+    assert s.get("setting", "theme") == "dark"
 
     # 首次生成的文件本身即包含默认值（设计文档：缺失时用默认值初始化）
     ini = _read_ini(tmp_path / INI_NAME)
-    assert ini.get("general", "language") == "zh_CN"
-    assert ini.get("general", "theme") == "dark"
-    assert ini.get("meta", "config_version") == "1"
+    assert ini.get("setting", "language") == "zh_CN"
+    assert ini.get("setting", "theme") == "dark"
+    assert ini.get("setting.meta", "config_version") == "2"
 
 
 def test_auto_path_has_single_app_layer(tmp_path):
@@ -89,32 +89,32 @@ def test_auto_path_has_single_app_layer(tmp_path):
 def test_persist_roundtrip(tmp_path):
     """set + save 后，新建 AppSettings 能读回相同值"""
     s1 = AppSettings(config_dir=tmp_path)
-    s1.set("general", "language", "en_US")
-    s1.set("general", "theme", "light")
+    s1.set("setting", "language", "en_US")
+    s1.set("setting", "theme", "light")
     s1.save()
 
     s2 = AppSettings(config_dir=tmp_path)
-    assert s2.get("general", "language") == "en_US"
-    assert s2.get("general", "theme") == "light"
+    assert s2.get("setting", "language") == "en_US"
+    assert s2.get("setting", "theme") == "light"
 
 
 def test_reset_restores_defaults(tmp_path):
     """reset 清空所有已保存值并恢复默认值，旧文件保留 .bak 备份"""
     s = AppSettings(config_dir=tmp_path)
-    s.set("general", "language", "en")
-    s.set("general", "theme", "light")
-    s.set("window", "geometry", "abc")
+    s.set("setting", "language", "en")
+    s.set("setting", "theme", "light")
+    s.set("setting.window", "geometry", "abc")
     s.save()
 
     s.reset()
 
     ini = _read_ini(tmp_path / INI_NAME)
-    assert ini.get("general", "language") == "zh_CN"
-    assert ini.get("general", "theme") == "dark"
-    assert ini.get("window", "geometry") == ""
+    assert ini.get("setting", "language") == "zh_CN"
+    assert ini.get("setting", "theme") == "dark"
+    assert ini.get("setting.window", "geometry") == ""
     assert (tmp_path / (INI_NAME + ".bak")).exists()
     # 恢复后的值视为默认值，而非用户显式保存
-    assert not s.is_explicit("general", "language")
+    assert not s.is_explicit("setting", "language")
 
 
 # ==================== 3. 损坏文件回退 ====================
@@ -125,15 +125,15 @@ def test_corrupt_file_falls_back(tmp_path, capsys):
     (tmp_path / INI_NAME).write_text("{{{ this is not an ini", encoding="utf-8")
 
     s = AppSettings(config_dir=tmp_path)  # 不应抛出
-    assert s.get("general", "language") == "zh_CN"
-    assert s.get("general", "theme") == "dark"
+    assert s.get("setting", "language") == "zh_CN"
+    assert s.get("setting", "theme") == "dark"
 
     out = capsys.readouterr().out
     assert "配置文件" in out  # 错误信息已报告，不静默
 
     # 损坏文件被默认值内容替换，便于用户查看和手工修复
     ini = _read_ini(tmp_path / INI_NAME)
-    assert ini.get("general", "language") == "zh_CN"
+    assert ini.get("setting", "language") == "zh_CN"
 
 
 def test_corrupt_non_utf8_bytes_falls_back(tmp_path, capsys):
@@ -146,14 +146,14 @@ def test_corrupt_non_utf8_bytes_falls_back(tmp_path, capsys):
     (tmp_path / INI_NAME).write_bytes(b"[general]\ntheme=\xd6\xd0\xce\xc4\n")
 
     s = AppSettings(config_dir=tmp_path)  # 不应抛出 UnicodeDecodeError
-    assert s.get("general", "theme") == "dark"
+    assert s.get("setting", "theme") == "dark"
 
     out = capsys.readouterr().out
     assert "配置文件" in out  # 错误信息已报告，不静默
 
     # 损坏文件被默认值内容替换
     ini = _read_ini(tmp_path / INI_NAME)
-    assert ini.get("general", "theme") == "dark"
+    assert ini.get("setting", "theme") == "dark"
 
 
 # ==================== 4. 启动加载不覆盖已存值 ====================
@@ -166,9 +166,9 @@ def test_no_overwrite_on_load(tmp_path):
 
     s = AppSettings(config_dir=tmp_path)
     s.load()
-    assert s.get("general", "language") == "en"
+    assert s.get("setting", "language") == "en"
     # 缺失的键在内存中用默认值填充
-    assert s.get("general", "theme") == "dark"
+    assert s.get("setting", "theme") == "dark"
     # 文件本身未被默认值覆盖（加载是只读修复缺失项，不重写）
     assert "language=en" in ini_path.read_text(encoding="utf-8")
 
@@ -179,9 +179,9 @@ def test_no_overwrite_on_load(tmp_path):
 def test_backup_created(tmp_path):
     """save 两次后存在 config.ini.bak，且 bak 保存上一次的内容"""
     s = AppSettings(config_dir=tmp_path)
-    s.set("general", "language", "v1")
+    s.set("setting", "language", "v1")
     s.save()  # 首次保存：此前无 config.ini，不产生备份
-    s.set("general", "language", "v2")
+    s.set("setting", "language", "v2")
     s.save()  # 第二次保存：旧 config.ini(v1) 备份为 .bak
 
     bak = tmp_path / (INI_NAME + ".bak")
@@ -226,14 +226,14 @@ def test_migrate_from_qsettings(tmp_path, monkeypatch):
     _FakeLegacySettings.payload = {"theme": "light"}
 
     s = AppSettings(config_dir=tmp_path)
-    assert s.get("general", "theme") == "dark"  # 迁移前为默认值
+    assert s.get("setting", "theme") == "dark"  # 迁移前为默认值
 
     assert s.migrate_from_qsettings() is True
-    assert s.get("general", "theme") == "light"
+    assert s.get("setting", "theme") == "light"
 
     # 迁移结果已写入 INI 文件
     ini = _read_ini(tmp_path / INI_NAME)
-    assert ini.get("general", "theme") == "light"
+    assert ini.get("setting", "theme") == "light"
 
     # 迁移读取的是旧身份 QSettings("Toolbox", "App")
     legacy = _FakeLegacySettings("Toolbox", "App")
@@ -244,9 +244,9 @@ def test_migrate_from_qsettings(tmp_path, monkeypatch):
     assert _FakeLegacySettings.payload == {"theme": "light"}
 
     # 用户改过之后，再次迁移不覆盖
-    s.set("general", "theme", "custom")
+    s.set("setting", "theme", "custom")
     assert s.migrate_from_qsettings() is False  # 已有已保存值，无可迁移
-    assert s.get("general", "theme") == "custom"
+    assert s.get("setting", "theme") == "custom"
 
 
 def test_migrate_empty_registry_is_noop(tmp_path, monkeypatch):
@@ -278,17 +278,17 @@ def test_migrate_qbytearray_stored_as_base64(tmp_path, monkeypatch):
     s = AppSettings(config_dir=tmp_path)
     assert s.migrate_from_qsettings() is True
 
-    stored = s.get("window", "geometry")
+    stored = s.get("setting.window", "geometry")
     # 不含 repr 特征（b' 前缀），可无损还原为原始字节
     assert not stored.startswith("b'")
     assert bytes_to_qbytearray(stored) == geometry_payload
-    assert bytes_to_qbytearray(s.get("window", "state")) == QByteArray(
+    assert bytes_to_qbytearray(s.get("setting.window", "state")) == QByteArray(
         b"\x00\x00\xff\x01"
     )
 
     # 落盘后重读仍能还原
     s2 = AppSettings(config_dir=tmp_path)
-    assert bytes_to_qbytearray(s2.get("window", "geometry")) == geometry_payload
+    assert bytes_to_qbytearray(s2.get("setting.window", "geometry")) == geometry_payload
 
 
 def test_bytes_to_qbytearray_falls_back_for_plain_text():
@@ -304,16 +304,16 @@ def test_bytes_to_qbytearray_falls_back_for_plain_text():
 def test_geometry_state_roundtrip(tmp_path):
     """[window] 节 geometry/state 读写与持久化"""
     s = AppSettings(config_dir=tmp_path)
-    assert s.get("window", "geometry") == ""  # 默认空
-    assert s.get("window", "state") == ""
+    assert s.get("setting.window", "geometry") == ""  # 默认空
+    assert s.get("setting.window", "state") == ""
 
-    s.set("window", "geometry", "GEO-BYTES")
-    s.set("window", "state", "STATE-BYTES")
+    s.set("setting.window", "geometry", "GEO-BYTES")
+    s.set("setting.window", "state", "STATE-BYTES")
     s.save()
 
     s2 = AppSettings(config_dir=tmp_path)
-    assert s2.get("window", "geometry") == "GEO-BYTES"
-    assert s2.get("window", "state") == "STATE-BYTES"
+    assert s2.get("setting.window", "geometry") == "GEO-BYTES"
+    assert s2.get("setting.window", "state") == "STATE-BYTES"
 
 
 # ==================== 9. 应用身份设置 ====================
@@ -325,3 +325,71 @@ def test_setup_app_identity():
     setup_app_identity(app)
     assert app.organizationName() == ORG_NAME
     assert app.applicationName() == APP_NAME
+
+
+# ==================== 10. 旧全局节 → setting.* 迁移 ====================
+
+
+def test_migrate_legacy_sections(tmp_path):
+    """v1 平铺节 [general]/[window]/[nav]/[meta] 启动时自动迁到 setting.*"""
+    (tmp_path / INI_NAME).write_text(
+        "[general]\nlanguage=en\ntheme=light\n"
+        "[window]\ngeometry=GEO\nstate=STATE\n"
+        "[nav]\norder=a,b\nhidden=c\n"
+        "[meta]\nconfig_version=1\n",
+        encoding="utf-8",
+    )
+
+    s = AppSettings(config_dir=tmp_path)
+
+    # 全部值迁到 setting.* 且不丢失
+    assert s.get("setting", "language") == "en"
+    assert s.get("setting", "theme") == "light"
+    assert s.get("setting.window", "geometry") == "GEO"
+    assert s.get("setting.window", "state") == "STATE"
+    assert s.get("setting.nav", "order") == "a,b"
+    assert s.get("setting.nav", "hidden") == "c"
+    assert s.get("setting.meta", "config_version") == "2"
+
+    # 旧节已从文件移除
+    ini = _read_ini(tmp_path / INI_NAME)
+    for old in ("general", "window", "nav", "meta"):
+        assert not ini.has_section(old)
+
+    # 迁移结果视为已保存值（语言检测等依赖 is_explicit）
+    assert s.is_explicit("setting", "language")
+
+    # 重建后值保持（迁移幂等）
+    s2 = AppSettings(config_dir=tmp_path)
+    assert s2.get("setting", "theme") == "light"
+
+
+def test_migrate_legacy_sections_no_overwrite_existing(tmp_path):
+    """目标 setting.* 已有值时不被旧节覆盖"""
+    (tmp_path / INI_NAME).write_text(
+        "[setting]\ntheme=dark\n"
+        "[general]\ntheme=light\nlanguage=en\n",
+        encoding="utf-8",
+    )
+
+    s = AppSettings(config_dir=tmp_path)
+    assert s.get("setting", "theme") == "dark"   # 已保存值优先
+    assert s.get("setting", "language") == "en"  # 缺失的键照常迁入
+    ini = _read_ini(tmp_path / INI_NAME)
+    assert not ini.has_section("general")
+
+
+def test_fresh_config_has_setting_sections(tmp_path):
+    """全新配置直接生成 setting.* 节，无旧节"""
+    s = AppSettings(config_dir=tmp_path)
+    assert s.get("setting", "language") == "zh_CN"
+    assert s.get("setting", "theme") == "dark"
+    assert s.get("setting.window", "geometry") == ""
+    assert s.get("setting.nav", "order") == ""
+    assert s.get("setting.meta", "config_version") == "2"
+
+    ini = _read_ini(tmp_path / INI_NAME)
+    for section in ("setting", "setting.window", "setting.nav", "setting.meta"):
+        assert ini.has_section(section)
+    for old in ("general", "window", "nav", "meta"):
+        assert not ini.has_section(old)

@@ -270,6 +270,12 @@ class PDFMerger(ToolPlugin):
         self.desc_label = self.widget.desc_label
         return self.widget
 
+    def load_settings(self):
+        self.widget.output_path.setText(self.load_setting("output_file", ""))
+
+    def save_settings(self):
+        self.save_setting("output_file", self.widget.output_path.text().strip())
+
     def retranslate_ui(self):
         """语言切换后重放全部用户可见文本"""
         if getattr(self, 'widget', None) is not None:

@@ -322,6 +322,14 @@ class FormatConverter(ToolPlugin):
         self.update_theme(Theme.DARK)
         return widget
 
+    def load_settings(self):
+        self.set_combo_by_data(self.fmt_combo, self.load_setting("target_format", "JPG"))
+        self.output_path.setText(self.load_setting("output_dir", ""))
+
+    def save_settings(self):
+        self.save_setting("target_format", self.fmt_combo.currentData())
+        self.save_setting("output_dir", self.output_path.text().strip())
+
     def browse_output(self):
         parent = self.widget if self.widget else None
         path = get_existing_directory(

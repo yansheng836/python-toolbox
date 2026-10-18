@@ -493,6 +493,18 @@ class ImageToPDF(ToolPlugin):
         self.update_theme(Theme.DARK)
         return widget
 
+    def load_settings(self):
+        self.set_combo_by_data(self.size_combo, self.load_setting("page_size", "smart"))
+        self.compress_check.setChecked(self.load_setting("compress", True, bool))
+        self.quality_slider.setValue(self.load_setting("quality", 85, int))
+        self.output_path.setText(self.load_setting("output_file", ""))
+
+    def save_settings(self):
+        self.save_setting("page_size", self.size_combo.currentData())
+        self.save_setting("compress", 1 if self.compress_check.isChecked() else 0)
+        self.save_setting("quality", self.quality_slider.value())
+        self.save_setting("output_file", self.output_path.text().strip())
+
     def browse_output(self):
         parent = self.widget if self.widget else None
         path = get_save_file_name(

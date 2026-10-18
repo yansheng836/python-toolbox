@@ -22,16 +22,23 @@ app_settings — INI 配置持久化（含旧 QSettings 注册表迁移与便携
 
 INI 结构::
 
-    [general]
+    [setting]
     language=zh_CN
     theme=dark
 
-    [window]
+    [setting.window]
     geometry=
     state=
 
-    [meta]
-    config_version=1
+    [setting.nav]
+    order=
+    hidden=
+
+    [setting.meta]
+    config_version=2
+
+    [plugin.<id>]
+    ...
 """
 
 import base64
@@ -51,21 +58,21 @@ _LEGACY_ORG = "Toolbox"
 _LEGACY_APP = "App"
 # 旧键名 -> (INI 节, INI 键)
 _LEGACY_KEY_MAP = {
-    "theme": ("general", "theme"),
-    "geometry": ("window", "geometry"),
-    "windowState": ("window", "state"),
+    "theme": ("setting", "theme"),
+    "geometry": ("setting.window", "geometry"),
+    "windowState": ("setting.window", "state"),
 }
 
 CONFIG_FILE_NAME = "config.ini"
 PORTABLE_FLAG_DEFAULT_NAME = "portable.flag"
-CONFIG_VERSION = 1
+CONFIG_VERSION = 2
 
 # 默认值：仅用于填充缺失项，加载时绝不覆盖文件中已有的值
 _DEFAULTS = {
-    "general": {"language": "zh_CN", "theme": "dark"},
-    "window": {"geometry": "", "state": ""},
-    "nav": {"order": "", "hidden": ""},
-    "meta": {"config_version": str(CONFIG_VERSION)},
+    "setting": {"language": "zh_CN", "theme": "dark"},
+    "setting.window": {"geometry": "", "state": ""},
+    "setting.nav": {"order": "", "hidden": ""},
+    "setting.meta": {"config_version": str(CONFIG_VERSION)},
 }
 
 
@@ -188,6 +195,11 @@ class AppSettings:
         else:
             print(f"配置文件不存在，使用默认值初始化：{path}")
 
+        # 旧版全局节 [general]/[window]/[nav]/[meta] → setting.*（v1 → v2），
+        # 发生迁移时需重写文件
+        if self._migrate_legacy_sections():
+            rewrite_needed = True
+
         self._fill_defaults()
         self._check_version()
         if rewrite_needed:
@@ -197,6 +209,44 @@ class AppSettings:
                 # 配置目录不可写时降级为仅内存配置，不阻塞启动
                 print(f"警告：无法写入配置文件，本次设置将不会持久化：{e}")
         return True
+
+    def _migrate_legacy_sections(self):
+        """把旧版全局节 [general]/[window]/[nav]/[meta] 迁到 setting.* 节
+
+        v1 配置的全局节与插件节 [plugin.*] 平铺；v2 起全局项统一收进
+        setting.* 命名空间，与插件配置区分清晰。目标键已存在则不覆盖
+        （用户已保存值优先）。迁移后移除旧节并升级 config_version。
+        返回是否发生改动。
+        """
+        legacy_map = {
+            "general": "setting",
+            "window": "setting.window",
+            "nav": "setting.nav",
+            "meta": "setting.meta",
+        }
+        touched = False
+        for old_section, new_section in legacy_map.items():
+            if not self._parser.has_section(old_section):
+                continue
+            touched = True
+            for key, value in self._parser.items(old_section):
+                if self._parser.has_option(new_section, key):
+                    continue  # 目标已存在，不覆盖
+                if not self._parser.has_section(new_section):
+                    self._parser.add_section(new_section)
+                self._parser.set(new_section, key, value)
+                self._explicit_keys.add(f"{new_section}.{key}")
+            # 旧节已无用途，移除并同步清理 explicit_keys
+            self._parser.remove_section(old_section)
+            self._explicit_keys = {
+                k for k in self._explicit_keys
+                if not k.startswith(f"{old_section}.")
+            }
+        if touched:
+            if not self._parser.has_section("setting.meta"):
+                self._parser.add_section("setting.meta")
+            self._parser.set("setting.meta", "config_version", str(CONFIG_VERSION))
+        return touched
 
     def _check_version(self):
         """配置文件版本高于当前程序时提示可能不兼容（仅警告，不阻断启动）"""
@@ -269,6 +319,11 @@ class AppSettings:
                 print(f"警告：无法清理临时文件 {tmp_path}：{e}")
             raise
         return True
+
+    def remove_section(self, section):
+        """删除指定节；不存在则无操作（供插件 reset_settings 清空本插件配置）"""
+        if self._parser.has_section(section):
+            self._parser.remove_section(section)
 
     def reset(self):
         """清空所有已保存设置并恢复默认值（旧文件备份为 config.ini.bak）"""
