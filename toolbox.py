@@ -12,8 +12,8 @@ from typing import Dict
 
 # 从config.py导入全局配置
 from config import (
-    APP_VERSION, APP_COPYRIGHT,
-    APP_WEBSITE_URL, APP_WEBSITE_LINK_TEXT,
+    APP_VERSION,
+    APP_WEBSITE_URL,
     APP_UPDATE_URL, APP_ISSUE_URL,
     PLUGIN_MODULES, UI_CONFIG,
     TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_20,
@@ -23,18 +23,19 @@ from config import (
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QStackedWidget, QFrame,
+    QLabel, QPushButton, QStackedWidget, QFrame, QComboBox,
     QGraphicsDropShadowEffect, QGraphicsOpacityEffect,
     QSystemTrayIcon, QMenu, QScrollArea
 )
 from PyQt6.QtCore import (
-    Qt, QSize, QPropertyAnimation, QParallelAnimationGroup, QEasingCurve, QSettings, QTimer, QEvent
+    Qt, QSize, QPropertyAnimation, QParallelAnimationGroup, QEasingCurve, QTimer, QEvent
 )
 from PyQt6.QtGui import (
     QIcon, QPixmap, QColor, QAction, QPainter, QPainterPath, QPen
 )
 
-from common.i18n import t
+from common import i18n
+from common.i18n import t, bind_combo, install_qt_translator
 
 
 # ==================== 主题配置 ====================
@@ -728,7 +729,10 @@ class SettingsPlugin(ToolPlugin):
         layout.setContentsMargins(40, 40, 40, 40)
         layout.setSpacing(24)
 
-        self.title_label = SelectableLabel(f"{self.icon} {self.name}")
+        # INI 配置引用（ToolboxWindow 已在 P2-A 接线中保证存在）
+        self._settings_ref = getattr(self.parent, "app_settings", None)
+
+        self.title_label = SelectableLabel(f"{self.icon} {t('plugin.settings.name')}")
         self.title_label.setStyleSheet(
             f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']};")
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -740,15 +744,16 @@ class SettingsPlugin(ToolPlugin):
         line.setMaximumHeight(1)
         layout.addWidget(line)
 
-        general_card = Card(title="通用设置")
+        general_card = Card(title=t("settings.card.general"))
+        self._general_card = general_card
 
-        self.theme_label = SelectableLabel("外观:")
+        self.theme_label = SelectableLabel(t("settings.label.appearance"))
         self.theme_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};")
         general_card.content_layout.addWidget(self.theme_label)
 
         theme_btn_layout = QHBoxLayout()
 
-        light_theme_btn = QPushButton("☀️ 浅色主题")
+        light_theme_btn = QPushButton(t("settings.button.light_theme"))
         light_theme_btn.setMinimumHeight(44)
         light_theme_btn.setStyleSheet("""
             QPushButton {
@@ -768,7 +773,7 @@ class SettingsPlugin(ToolPlugin):
             }
         """)
 
-        dark_theme_btn = QPushButton("🌙 深色主题")
+        dark_theme_btn = QPushButton(t("settings.button.dark_theme"))
         dark_theme_btn.setMinimumHeight(44)
         dark_theme_btn.setStyleSheet("""
             QPushButton {
@@ -800,11 +805,32 @@ class SettingsPlugin(ToolPlugin):
         theme_btn_layout.addStretch()
 
         general_card.content_layout.addLayout(theme_btn_layout)
+
+        # 语言切换行：bind_combo 自动填充并在语言切换时重放（保持选中 data）
+        self.language_label = SelectableLabel(t("settings.label.language"))
+        self.language_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};")
+        general_card.content_layout.addWidget(self.language_label)
+
+        language_layout = QHBoxLayout()
+        self.language_combo = QComboBox()
+        bind_combo(self.language_combo, [
+            ("settings.combo.zh_CN", "zh_CN"),
+            ("settings.combo.en", "en"),
+        ])
+        self.language_combo.setCurrentIndex(
+            self.language_combo.findData(i18n.manager.current_language))
+        self.language_combo.currentIndexChanged.connect(self._on_language_changed)
+
+        language_layout.addWidget(self.language_combo)
+        language_layout.addStretch()
+        general_card.content_layout.addLayout(language_layout)
+
         general_card.content_layout.addStretch()
 
-        about_card = Card(title="关于")
+        about_card = Card(title=t("settings.card.about"))
+        self._about_card = about_card
 
-        self.version_label = SelectableLabel(f"版本: v{APP_VERSION}")
+        self.version_label = SelectableLabel(t("settings.label.version", version=APP_VERSION))
         self.version_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};")
         self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.version_label)
@@ -812,23 +838,25 @@ class SettingsPlugin(ToolPlugin):
         # 检查更新
         update_label = SelectableLabel(
             f"<a href='{APP_UPDATE_URL}' style='color: #6366f1; text-decoration: none;'>"
-            f"检查更新</a>")
+            f"{t('settings.link.check_update')}</a>")
         update_label.setOpenExternalLinks(True)
         update_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         update_label.setStyleSheet(f"font-size: {FONT_SIZE_14}; padding: 2px;")
+        self._update_label = update_label
         about_card.content_layout.addWidget(update_label)
 
         # 问题反馈
         issue_label = SelectableLabel(
             f"<a href='{APP_ISSUE_URL}' style='color: #6366f1; text-decoration: none;'>"
-            f"问题反馈</a>")
+            f"{t('settings.link.feedback')}</a>")
         issue_label.setOpenExternalLinks(True)
         issue_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         issue_label.setStyleSheet(f"font-size: {FONT_SIZE_14}; padding: 2px;")
+        self._issue_label = issue_label
         about_card.content_layout.addWidget(issue_label)
 
         self.website_label = SelectableLabel(
-            f"<a href='{APP_WEBSITE_URL}' style='color: #6366f1; text-decoration: none;'>{APP_WEBSITE_LINK_TEXT}</a>")
+            f"<a href='{APP_WEBSITE_URL}' style='color: #6366f1; text-decoration: none;'>{t('app.website_link_text')}</a>")
         self.website_label.setOpenExternalLinks(True)
         self.website_label.setStyleSheet(f"""
             font-size: {FONT_SIZE_16};
@@ -838,7 +866,7 @@ class SettingsPlugin(ToolPlugin):
         self.website_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.website_label)
 
-        self.copyright_label = SelectableLabel(APP_COPYRIGHT)
+        self.copyright_label = SelectableLabel(t("app.copyright"))
         self.copyright_label.setStyleSheet(f"color: #64748b; font-size: {FONT_SIZE_12};")
         self.copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.copyright_label)
@@ -877,8 +905,41 @@ class SettingsPlugin(ToolPlugin):
         print(f"主题已切换为: {theme_name}")
 
     def save_theme_setting(self, theme_name):
-        settings = QSettings("Toolbox", "App")
-        settings.setValue("theme", theme_name)
+        """主题持久化到 INI [general] theme（旧 QSettings 注册表已弃用）"""
+        if self._settings_ref is not None:
+            self._settings_ref.set("general", "theme", theme_name)
+            self._settings_ref.save()
+
+    def _on_language_changed(self, index):
+        """语言下拉变化：持久化到 INI 并切换语言（触发全窗 retranslate）"""
+        code = self.language_combo.itemData(index)
+        if not code or code == i18n.manager.current_language:
+            return
+        if self._settings_ref is not None:
+            self._settings_ref.set("general", "language", code)
+            self._settings_ref.save()
+        i18n.set_language(code)
+        install_qt_translator(QApplication.instance(), code)
+
+    def retranslate_ui(self):
+        """语言切换后重放设置页全部静态文本（语言下拉由 bind_combo 自动重放）"""
+        self.title_label.setText(f"{self.icon} {t('plugin.settings.name')}")
+        self._general_card.title_label.setText(t("settings.card.general"))
+        self.theme_label.setText(t("settings.label.appearance"))
+        self.language_label.setText(t("settings.label.language"))
+        self.light_theme_btn.setText(t("settings.button.light_theme"))
+        self.dark_theme_btn.setText(t("settings.button.dark_theme"))
+        self._about_card.title_label.setText(t("settings.card.about"))
+        self.version_label.setText(t("settings.label.version", version=APP_VERSION))
+        self._update_label.setText(
+            f"<a href='{APP_UPDATE_URL}' style='color: #6366f1; text-decoration: none;'>"
+            f"{t('settings.link.check_update')}</a>")
+        self._issue_label.setText(
+            f"<a href='{APP_ISSUE_URL}' style='color: #6366f1; text-decoration: none;'>"
+            f"{t('settings.link.feedback')}</a>")
+        self.website_label.setText(
+            f"<a href='{APP_WEBSITE_URL}' style='color: #6366f1; text-decoration: none;'>{t('app.website_link_text')}</a>")
+        self.copyright_label.setText(t("app.copyright"))
 
 class ToolboxWindow(QMainWindow):
     def __init__(self, app=None, settings=None):
@@ -924,7 +985,6 @@ class ToolboxWindow(QMainWindow):
         self.setup_menu()
 
         # 语言切换：信号驱动全窗重放（构造时语言已由 main.py 设置，文本即正确）
-        from common import i18n
         i18n.manager.language_changed.connect(self.retranslate_ui)
 
     def setup_ui(self):
