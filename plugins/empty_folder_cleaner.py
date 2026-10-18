@@ -23,6 +23,7 @@ from toolbox import (
 from common.action_panel import ActionPanel
 from common.base_worker import BaseWorker
 from common.directory_drop_line_edit import DirectoryDropLineEdit
+from common.i18n import t
 from common.message_utils import show_error, show_info, show_question, show_warning
 from common.utils import WINDOWS_RESERVED_NAMES, get_lineedit_style
 
@@ -120,14 +121,18 @@ def find_empty_folder_candidates(root_path: str) -> list[str]:
     """
     root = os.path.abspath(os.fspath(root_path))
     if _is_link_path(root) or not os.path.isdir(root):
-        raise ValueError(f"扫描根目录不是有效目录: {root_path}")
+        raise ValueError(
+            t("plugin.empty_folder_cleaner.error.invalid_root", path=root_path)
+        )
 
     try:
         with os.scandir(root) as entries:
             entries = list(entries)
     except OSError as exc:
         print(f"无法读取根目录 {root}: {exc}")
-        raise ValueError(f"无法读取扫描根目录: {root_path}") from exc
+        raise ValueError(
+            t("plugin.empty_folder_cleaner.error.root_unreadable", path=root_path)
+        ) from exc
 
     candidates = []
     for entry in entries:
@@ -180,19 +185,25 @@ def _remove_empty_folder_tree_details(folder_path: str) -> tuple[bool, str, list
     folder = os.path.abspath(os.fspath(folder_path))
 
     if _is_link_path(folder):
-        message = f"目标目录是符号链接或 junction，已跳过：\n{folder}"
+        message = t("plugin.empty_folder_cleaner.error.skip_symlink", path=folder)
         return False, message, [folder]
     if not os.path.exists(folder):
-        return True, f"目录已不存在：\n{folder}", []
+        return True, t("plugin.empty_folder_cleaner.msg.already_gone", path=folder), []
     if not os.path.isdir(folder):
-        message = f"目标路径不是目录：\n{folder}"
+        message = t(
+            "plugin.empty_folder_cleaner.error.not_a_directory", path=folder
+        )
         return False, message, [folder]
 
     try:
         directories = _collect_real_directories(folder)
     except OSError as exc:
         print(f"无法扫描待删除目录 {folder}: {exc}")
-        message = f"无法扫描目录，已保留：\n{folder}\n{exc}"
+        message = t(
+            "plugin.empty_folder_cleaner.error.scan_dir_failed",
+            path=folder,
+            error=str(exc),
+        )
         return False, message, [folder]
 
     failed = []
@@ -205,12 +216,12 @@ def _remove_empty_folder_tree_details(folder_path: str) -> tuple[bool, str, list
 
     if failed:
         message = (
-            "以下目录无法删除（可能已变为非空、被占用或权限不足）：\n"
+            t("plugin.empty_folder_cleaner.error.rmdir_failed_header")
             + "\n".join(failed)
         )
         return False, message, failed
 
-    return True, f"已删除空目录：\n{folder}", []
+    return True, t("plugin.empty_folder_cleaner.msg.deleted", path=folder), []
 
 
 def remove_empty_folder_tree(folder_path: str) -> tuple[bool, str]:
@@ -250,16 +261,17 @@ class EmptyFolderWorker(BaseWorker):
         self.folder_paths = folder_paths
 
     def _run_scan(self):
-        self.status.emit("正在扫描空目录...")
+        self.status.emit(t("plugin.empty_folder_cleaner.msg.worker_scanning"))
         folders = find_empty_folder_candidates(self.root_path)
         self.folders_found.emit(folders)
         self.progress.emit(100)
         self.finished.emit(
-            True, f"扫描完成，找到 {len(folders)} 个可删除的空目录"
+            True,
+            t("plugin.empty_folder_cleaner.msg.worker_scan_done", count=len(folders)),
         )
 
     def _run_delete(self):
-        self.status.emit("正在删除空目录...")
+        self.status.emit(t("plugin.empty_folder_cleaner.msg.worker_deleting"))
         candidates = self.folder_paths or []
         deleted = []
         failed = []
@@ -271,7 +283,12 @@ class EmptyFolderWorker(BaseWorker):
                 print(f"跳过不安全的候选目录: {candidate_abs}")
                 failed.append(candidate_abs)
             else:
-                self.status.emit(f"正在删除：{candidate_abs}")
+                self.status.emit(
+                    t(
+                        "plugin.empty_folder_cleaner.msg.worker_deleting_path",
+                        path=candidate_abs,
+                    )
+                )
                 success, message, failures = _remove_empty_folder_tree_details(
                     candidate_abs
                 )
@@ -283,11 +300,19 @@ class EmptyFolderWorker(BaseWorker):
             self.progress.emit(int(index * 100 / total) if total else 100)
 
         self.deleted.emit(deleted, failed)
-        message = f"清理完成：成功 {len(deleted)} 个，失败 {len(failed)} 个"
+        message = t(
+            "plugin.empty_folder_cleaner.msg.worker_cleanup_done",
+            success=len(deleted),
+            failed=len(failed),
+        )
         if failed:
-            message += "\n\n失败路径：\n" + "\n".join(failed[:10])
+            message += t("plugin.empty_folder_cleaner.error.failed_paths_header")
+            message += "\n".join(failed[:10])
             if len(failed) > 10:
-                message += f"\n... 还有 {len(failed) - 10} 个失败路径"
+                message += t(
+                    "plugin.empty_folder_cleaner.error.failed_more",
+                    count=len(failed) - 10,
+                )
         self.finished.emit(not failed, message)
 
     def run(self):
@@ -298,13 +323,24 @@ class EmptyFolderWorker(BaseWorker):
             elif self.operation == "delete":
                 self._run_delete()
             else:
-                raise ValueError(f"不支持的操作: {self.operation}")
+                raise ValueError(
+                    t(
+                        "plugin.empty_folder_cleaner.error.unsupported_operation",
+                        operation=self.operation,
+                    )
+                )
         except (OSError, ValueError) as exc:
             print(f"空文件夹任务失败: {exc}")
-            self.finished.emit(False, f"操作失败: {exc}")
+            self.finished.emit(
+                False,
+                t("plugin.empty_folder_cleaner.error.operation_failed", error=str(exc)),
+            )
         except Exception as exc:
             print(f"空文件夹任务发生未预期错误: {exc}")
-            self.finished.emit(False, f"操作失败: {exc}")
+            self.finished.emit(
+                False,
+                t("plugin.empty_folder_cleaner.error.operation_failed", error=str(exc)),
+            )
 
 
 class EmptyFolderCleanerWidget(QWidget):
@@ -326,40 +362,52 @@ class EmptyFolderCleanerWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setSpacing(16)
 
-        self.title_label = SelectableLabel(f"{self.icon} {self.name}")
+        self.title_label = SelectableLabel(
+            f"{self.icon} {t('plugin.empty_folder_cleaner.name')}"
+        )
         layout.addWidget(self.title_label)
 
-        self.desc_label = SelectableLabel(self.description)
+        self.desc_label = SelectableLabel(
+            t("plugin.empty_folder_cleaner.description")
+        )
         layout.addWidget(self.desc_label)
 
-        folder_card = Card(title="选择扫描文件夹（支持拖拽）")
+        self.folder_card = Card(
+            title=t("plugin.empty_folder_cleaner.card.select_folder")
+        )
         folder_layout = QHBoxLayout()
         self.folder_display = DirectoryDropLineEdit()
         self.folder_display.setPlaceholderText(
-            "选择要清理的根目录，或将文件夹拖拽到此..."
+            t("plugin.empty_folder_cleaner.placeholder.folder")
         )
         self.folder_display.directory_dropped.connect(self.on_folder_dropped)
         folder_layout.addWidget(self.folder_display)
 
-        self.browse_btn = AnimatedButton("浏览")
+        self.browse_btn = AnimatedButton(
+            t("plugin.empty_folder_cleaner.button.browse")
+        )
         self.browse_btn.setMaximumWidth(80)
         self.browse_btn.clicked.connect(self.browse_folder)
         folder_layout.addWidget(self.browse_btn)
-        folder_card.content_layout.addLayout(folder_layout)
+        self.folder_card.content_layout.addLayout(folder_layout)
 
         self.scan_panel = ActionPanel(
-            button_text="开始扫描",
+            button_text=t("plugin.empty_folder_cleaner.button.start_scan"),
             use_gradient=True,
-            status_text="请选择文件夹开始扫描",
+            status_text=t("plugin.empty_folder_cleaner.msg.status_idle_scan"),
         )
         self.scan_panel.clicked.connect(self.start_scan)
         self.scan_panel.btn.setEnabled(False)
-        folder_card.content_layout.addWidget(self.scan_panel)
-        layout.addWidget(folder_card)
+        self.folder_card.content_layout.addWidget(self.scan_panel)
+        layout.addWidget(self.folder_card)
 
-        results_card = Card(title="可删除的空目录（扫描后勾选）")
+        self.results_card = Card(
+            title=t("plugin.empty_folder_cleaner.card.results")
+        )
         self.results_tree = QTreeWidget()
-        self.results_tree.setHeaderLabels(["目录路径"])
+        self.results_tree.setHeaderLabels(
+            [t("plugin.empty_folder_cleaner.column.path")]
+        )
         self.results_tree.setColumnCount(1)
         self.results_tree.header().setSectionResizeMode(
             0, QHeaderView.ResizeMode.Stretch
@@ -369,28 +417,36 @@ class EmptyFolderCleanerWidget(QWidget):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
         self.results_tree.setUniformRowHeights(True)
-        results_card.content_layout.addWidget(self.results_tree)
+        self.results_card.content_layout.addWidget(self.results_tree)
 
         select_layout = QHBoxLayout()
-        self.select_all_btn = AnimatedButton("全选")
+        self.select_all_btn = AnimatedButton(
+            t("plugin.empty_folder_cleaner.button.select_all")
+        )
         self.select_all_btn.setMaximumWidth(80)
         self.select_all_btn.clicked.connect(self.select_all_candidates)
         select_layout.addWidget(self.select_all_btn)
 
-        self.deselect_all_btn = AnimatedButton("取消全选")
+        self.deselect_all_btn = AnimatedButton(
+            t("plugin.empty_folder_cleaner.button.deselect_all")
+        )
         self.deselect_all_btn.setMaximumWidth(100)
         self.deselect_all_btn.clicked.connect(self.deselect_all_candidates)
         select_layout.addWidget(self.deselect_all_btn)
         select_layout.addStretch()
-        results_card.content_layout.addLayout(select_layout)
+        self.results_card.content_layout.addLayout(select_layout)
 
-        self.stats_label = SelectableLabel("未扫描")
-        results_card.content_layout.addWidget(self.stats_label)
-        layout.addWidget(results_card)
+        self.stats_label = SelectableLabel(
+            t("plugin.empty_folder_cleaner.msg.stats_not_scanned")
+        )
+        self.results_card.content_layout.addWidget(self.stats_label)
+        layout.addWidget(self.results_card)
 
-        delete_card = Card(title="删除操作")
+        self.delete_card = Card(
+            title=t("plugin.empty_folder_cleaner.card.delete")
+        )
         self.delete_panel = ActionPanel(
-            button_text="删除选中目录",
+            button_text=t("plugin.empty_folder_cleaner.button.delete_selected"),
             use_gradient=True,
             gradient_colors=(
                 Theme.DARK["error"], Theme.DARK["error_gradient_end"]
@@ -398,12 +454,12 @@ class EmptyFolderCleanerWidget(QWidget):
             gradient_hover_colors=(
                 Theme.DARK["error_hover"], Theme.DARK["error_gradient_end"]
             ),
-            status_text="请先扫描并勾选要删除的目录",
+            status_text=t("plugin.empty_folder_cleaner.msg.status_idle_delete"),
         )
         self.delete_panel.clicked.connect(self.delete_selected)
         self.delete_panel.btn.setEnabled(False)
-        delete_card.content_layout.addWidget(self.delete_panel)
-        layout.addWidget(delete_card)
+        self.delete_card.content_layout.addWidget(self.delete_panel)
+        layout.addWidget(self.delete_card)
 
         self.apply_theme(self.theme)
 
@@ -475,7 +531,9 @@ class EmptyFolderCleanerWidget(QWidget):
     def browse_folder(self):
         """选择扫描根目录"""
         dir_path = QFileDialog.getExistingDirectory(
-            self, "选择要清理的根目录", self.selected_folder or ""
+            self,
+            t("plugin.empty_folder_cleaner.dialog.choose_root"),
+            self.selected_folder or "",
         )
         if dir_path:
             self.set_folder(dir_path)
@@ -491,21 +549,34 @@ class EmptyFolderCleanerWidget(QWidget):
         self.selected_folder = dir_path
         self.folder_display.setText(dir_path)
         self.scan_panel.btn.setEnabled(True)
-        self.scan_panel.update_status(f"已选择文件夹: {dir_path}")
+        self.scan_panel.update_status(
+            t("plugin.empty_folder_cleaner.msg.folder_selected", path=dir_path)
+        )
 
     def start_scan(self):
         """启动后台扫描"""
         if not self.selected_folder or not os.path.isdir(self.selected_folder):
-            show_warning(self, "警告", "请先选择有效的文件夹！")
+            show_warning(
+                self,
+                t("plugin.empty_folder_cleaner.dialog.warning_title"),
+                t("plugin.empty_folder_cleaner.warning.invalid_folder"),
+            )
             return
 
         self.scan_panel.btn.setEnabled(False)
-        self.scan_panel.start_task(maximum=0, status="正在扫描空目录...")
+        self.scan_panel.start_task(
+            maximum=0,
+            status=t("plugin.empty_folder_cleaner.msg.status_scanning"),
+        )
         self.delete_panel.btn.setEnabled(False)
-        self.delete_panel.update_status("扫描完成后可选择要删除的目录")
+        self.delete_panel.update_status(
+            t("plugin.empty_folder_cleaner.msg.delete_panel_after_scan")
+        )
         self.results_tree.clear()
         self.candidates = []
-        self.stats_label.setText("正在扫描...")
+        self.stats_label.setText(
+            t("plugin.empty_folder_cleaner.msg.stats_scanning")
+        )
 
         self.worker = EmptyFolderWorker(self.selected_folder, "scan")
         self.worker.folders_found.connect(self.show_candidates)
@@ -526,15 +597,23 @@ class EmptyFolderCleanerWidget(QWidget):
             item.setCheckState(0, Qt.CheckState.Unchecked)
 
         self.stats_label.setText(
-            f"找到 {len(self.candidates)} 个可删除的空目录"
+            t(
+                "plugin.empty_folder_cleaner.msg.scan_found",
+                count=len(self.candidates),
+            )
         )
         self.delete_panel.btn.setEnabled(bool(self.candidates))
         if self.candidates:
             self.delete_panel.update_status(
-                f"找到 {len(self.candidates)} 个可删除目录，请勾选后删除"
+                t(
+                    "plugin.empty_folder_cleaner.msg.scan_found_check",
+                    count=len(self.candidates),
+                )
             )
         else:
-            self.delete_panel.update_status("未找到可删除的空目录")
+            self.delete_panel.update_status(
+                t("plugin.empty_folder_cleaner.msg.scan_none")
+            )
 
     def scan_finished(self, success, message):
         """扫描完成回调"""
@@ -542,10 +621,18 @@ class EmptyFolderCleanerWidget(QWidget):
         self.scan_panel.btn.setEnabled(True)
         if not success:
             self.delete_panel.btn.setEnabled(False)
-            show_error(self, "扫描失败", message)
+            show_error(
+                self,
+                t("plugin.empty_folder_cleaner.dialog.scan_failed_title"),
+                message,
+            )
             return
         if not self.candidates:
-            show_info(self, "扫描完成", message)
+            show_info(
+                self,
+                t("plugin.empty_folder_cleaner.dialog.scan_done_title"),
+                message,
+            )
 
     def get_checked_paths(self):
         """返回用户勾选的目录路径"""
@@ -574,21 +661,44 @@ class EmptyFolderCleanerWidget(QWidget):
         """确认并删除勾选的空目录"""
         paths = self.get_checked_paths()
         if not paths:
-            show_warning(self, "警告", "请先勾选要删除的目录！")
+            show_warning(
+                self,
+                t("plugin.empty_folder_cleaner.dialog.warning_title"),
+                t("plugin.empty_folder_cleaner.warning.no_checked"),
+            )
             return
 
-        confirm_message = f"即将删除 {len(paths)} 个空目录，是否继续？\n\n"
+        confirm_message = t(
+            "plugin.empty_folder_cleaner.msg.confirm_delete_header",
+            count=len(paths),
+        )
         for index, path in enumerate(paths[:10], start=1):
-            confirm_message += f"{index}. {path}\n"
+            confirm_message += t(
+                "plugin.empty_folder_cleaner.msg.confirm_delete_item",
+                index=index,
+                path=path,
+            )
         if len(paths) > 10:
-            confirm_message += f"... 还有 {len(paths) - 10} 个目录未显示\n"
-        confirm_message += "\n删除操作不可恢复，请确认！"
+            confirm_message += t(
+                "plugin.empty_folder_cleaner.msg.confirm_delete_more",
+                count=len(paths) - 10,
+            )
+        confirm_message += t(
+            "plugin.empty_folder_cleaner.msg.confirm_delete_footer"
+        )
 
-        if not show_question(self, "确认删除", confirm_message):
+        if not show_question(
+            self,
+            t("plugin.empty_folder_cleaner.dialog.confirm_delete_title"),
+            confirm_message,
+        ):
             return
 
         self.scan_panel.btn.setEnabled(False)
-        self.delete_panel.start_task(maximum=100, status="正在删除空目录...")
+        self.delete_panel.start_task(
+            maximum=100,
+            status=t("plugin.empty_folder_cleaner.msg.status_deleting"),
+        )
 
         self.worker = EmptyFolderWorker(
             self.selected_folder, "delete", paths
@@ -605,19 +715,29 @@ class EmptyFolderCleanerWidget(QWidget):
         self.scan_panel.btn.setEnabled(True)
         self.results_tree.clear()
         self.candidates = []
-        self.stats_label.setText("删除完成 — 可重新扫描")
-        self.delete_panel.update_status("请重新扫描以刷新结果")
+        self.stats_label.setText(
+            t("plugin.empty_folder_cleaner.msg.stats_deleted")
+        )
+        self.delete_panel.update_status(
+            t("plugin.empty_folder_cleaner.msg.rescan_hint")
+        )
         if success:
-            show_info(self, "删除完成", message)
+            show_info(
+                self,
+                t("plugin.empty_folder_cleaner.dialog.delete_done_title"),
+                message,
+            )
         else:
-            show_error(self, "删除结果", message)
+            show_error(
+                self,
+                t("plugin.empty_folder_cleaner.dialog.delete_result_title"),
+                message,
+            )
 
 
 class EmptyFolderCleaner(ToolPlugin):
     """空文件夹清理插件"""
 
-    name = "空文件夹清理"
-    description = "递归查找并删除完全为空的文件夹，支持多层空目录"
     icon = "🗑️"
     order = 205
 
@@ -635,6 +755,49 @@ class EmptyFolderCleaner(ToolPlugin):
         self.scan_panel = self.widget.scan_panel
         self.delete_panel = self.widget.delete_panel
         return self.widget
+
+    def retranslate_ui(self):
+        """语言切换后重放空文件夹清理页全部静态文本"""
+        widget = getattr(self, "widget", None)
+        if widget is None:
+            return
+
+        widget.title_label.setText(
+            f"{widget.icon} {t('plugin.empty_folder_cleaner.name')}"
+        )
+        widget.desc_label.setText(
+            t("plugin.empty_folder_cleaner.description")
+        )
+        widget.folder_card.title_label.setText(
+            t("plugin.empty_folder_cleaner.card.select_folder")
+        )
+        widget.folder_display.setPlaceholderText(
+            t("plugin.empty_folder_cleaner.placeholder.folder")
+        )
+        widget.browse_btn.setText(
+            t("plugin.empty_folder_cleaner.button.browse")
+        )
+        widget.scan_panel.btn.setText(
+            t("plugin.empty_folder_cleaner.button.start_scan")
+        )
+        widget.results_card.title_label.setText(
+            t("plugin.empty_folder_cleaner.card.results")
+        )
+        widget.results_tree.setHeaderLabels(
+            [t("plugin.empty_folder_cleaner.column.path")]
+        )
+        widget.select_all_btn.setText(
+            t("plugin.empty_folder_cleaner.button.select_all")
+        )
+        widget.deselect_all_btn.setText(
+            t("plugin.empty_folder_cleaner.button.deselect_all")
+        )
+        widget.delete_card.title_label.setText(
+            t("plugin.empty_folder_cleaner.card.delete")
+        )
+        widget.delete_panel.btn.setText(
+            t("plugin.empty_folder_cleaner.button.delete_selected")
+        )
 
     def update_theme(self, theme):
         """更新主题"""
