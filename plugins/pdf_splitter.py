@@ -374,6 +374,7 @@ class PDFSplitterWidget(QWidget):
             t("plugin.pdf_splitter.card.file_list"))
         # 文件选择过滤器在下次打开对话框时生效（扩展名解析结果不变）
         self.file_panel.file_filter = t("plugin.pdf_splitter.filter.add_files")
+        self.file_panel.retranslate_ui()
         self.settings_card.title_label.setText(
             t("plugin.pdf_splitter.card.settings"))
         self.pdf_radio.setText(t("plugin.pdf_splitter.radio.pdf"))

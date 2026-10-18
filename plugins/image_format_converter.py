@@ -187,6 +187,7 @@ class FormatConverter(ToolPlugin):
         # FileListPanel 内部按钮/水印属于共享组件，此处只同步本插件传入的过滤器
         self.file_panel.file_filter = t(
             "plugin.image_format_converter.filter.images")
+        self.file_panel.retranslate_ui()
 
     def create_ui(self) -> QWidget:
         widget = QWidget()

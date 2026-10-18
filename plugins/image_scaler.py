@@ -471,5 +471,6 @@ class ImageScaler(ToolPlugin):
         widget.action_panel.btn.setText(t("plugin.image_scaler.button.start"))
         # 文件选择过滤器在每次打开对话框时读取，需同步更新
         widget.file_panel.file_filter = t("plugin.image_scaler.filter.images")
+        widget.file_panel.retranslate_ui()
         # 组合框由 bind_combo 自动重放；这里刷新「(自动)」后缀等动态文本
         widget.on_scale_type_changed()

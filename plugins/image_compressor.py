@@ -269,6 +269,7 @@ class ImageCompressor(ToolPlugin):
         self.file_card.title_label.setText(t("plugin.image_compressor.card.select_images"))
         # 文件选择过滤器在下次打开对话框时生效（扩展名解析结果不变）
         self.file_panel.file_filter = t("plugin.image_compressor.filter.images")
+        self.file_panel.retranslate_ui()
         self.settings_card.title_label.setText(t("plugin.image_compressor.card.settings"))
         self.format_label.setText(t("plugin.image_compressor.label.format"))
         self.quality_caption_label.setText(t("plugin.image_compressor.label.quality"))

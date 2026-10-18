@@ -453,6 +453,7 @@ class ImageStitcher(ToolPlugin):
         self.browse_btn.setText(t("plugin.image_stitcher.button.browse"))
         self.action_panel.btn.setText(t("plugin.image_stitcher.button.start"))
         self.file_panel.file_filter = t("plugin.image_stitcher.filter.images")
+        self.file_panel.retranslate_ui()
         self._retranslate_columns()
         # 组合框由 bind_combo 自动重放，无需处理
 

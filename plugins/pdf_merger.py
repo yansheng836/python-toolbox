@@ -220,6 +220,7 @@ class PDFMergerWidget(QWidget):
             t("plugin.pdf_merger.card.file_list"))
         # 文件选择过滤器在下次打开对话框时生效（扩展名解析结果不变）
         self.file_panel.file_filter = t("plugin.pdf_merger.filter.add_files")
+        self.file_panel.retranslate_ui()
         self.output_card.title_label.setText(t("plugin.pdf_merger.card.output"))
         self.output_file_label.setText(t("plugin.pdf_merger.label.output_file"))
         self.output_path.setPlaceholderText(
