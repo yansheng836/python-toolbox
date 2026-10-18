@@ -20,6 +20,7 @@ from common.action_panel import ActionPanel
 from common.utils import get_create_time, get_modify_time, WINDOWS_RESERVED_NAMES, get_combo_style
 from common.base_worker import BaseWorker
 from common.directory_drop_line_edit import DirectoryDropLineEdit
+from common.i18n import t, bind_combo
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QBrush
@@ -42,12 +43,12 @@ class FileDeduplicationWorker(BaseWorker):
 
     def run(self):
         try:
-            self.status.emit("正在扫描文件夹...")
+            self.status.emit(t("plugin.file_deduplicator.msg.scanning_folder"))
             # 第一遍：收集所有文件及大小
             all_files = []
             for root, dirs, files in os.walk(self.folder_path):
                 if self.cancel_requested:
-                    self.finished.emit(False, "扫描已取消")
+                    self.finished.emit(False, t("plugin.file_deduplicator.msg.scan_cancelled"))
                     return
                 for file in files:
                     # 跳过 Windows 保留设备名（如 con.log），open() 会阻塞
@@ -61,7 +62,7 @@ class FileDeduplicationWorker(BaseWorker):
                         continue
                     all_files.append((file_path, file_size))
             total_files = len(all_files)
-            self.status.emit(f"找到 {total_files} 个文件，按大小分组...")
+            self.status.emit(t("plugin.file_deduplicator.msg.found_files", count=total_files))
 
             # 按文件大小分组，只保留大小相同的文件（大小唯一不可能重复）
             all_files.sort(key=lambda x: x[1])
@@ -77,7 +78,8 @@ class FileDeduplicationWorker(BaseWorker):
 
             candidate_count = len(size_candidates)
             self.status.emit(
-                f"大小唯一文件已排除，需计算Hash: {candidate_count}/{total_files} 个文件"
+                t("plugin.file_deduplicator.msg.size_filter_done",
+                  count=candidate_count, total=total_files)
             )
 
             # 第二轮：快速Hash（首尾各64KB + 文件大小），排除明显不同的文件
@@ -85,7 +87,7 @@ class FileDeduplicationWorker(BaseWorker):
             scanned = 0
             for file_path in size_candidates:
                 if self.cancel_requested:
-                    self.finished.emit(False, "扫描已取消")
+                    self.finished.emit(False, t("plugin.file_deduplicator.msg.scan_cancelled"))
                     return
                 try:
                     quick_hash = self.compute_quick_hash(file_path)
@@ -105,7 +107,8 @@ class FileDeduplicationWorker(BaseWorker):
             full_count = len(full_hash_candidates)
             if full_count > 0:
                 self.status.emit(
-                    f"快速Hash筛选完成，需完整Hash: {full_count}/{candidate_count} 个文件"
+                    t("plugin.file_deduplicator.msg.quick_hash_done",
+                      count=full_count, total=candidate_count)
                 )
 
             # 第三轮：完整Hash
@@ -113,7 +116,7 @@ class FileDeduplicationWorker(BaseWorker):
             scanned = 0
             for file_path in full_hash_candidates:
                 if self.cancel_requested:
-                    self.finished.emit(False, "扫描已取消")
+                    self.finished.emit(False, t("plugin.file_deduplicator.msg.scan_cancelled"))
                     return
                 try:
                     file_hash = self.compute_file_hash(file_path)
@@ -121,17 +124,26 @@ class FileDeduplicationWorker(BaseWorker):
                         hash_to_files[file_hash].append(file_path)
                 except Exception as e:
                     print(f"compute_file_hash error: {e}")
-                    self.error.emit(f"无法读取文件 {file_path}: {str(e)}")
+                    self.error.emit(
+                        t("plugin.file_deduplicator.error.read_failed",
+                          path=file_path, error=str(e))
+                    )
                 scanned += 1
                 self.progress.emit(scanned, full_count)
 
             # 过滤出重复文件（Hash对应多个文件）
             duplicates = {h: files for h, files in hash_to_files.items() if len(files) > 1}
             self.duplicates_found.emit(duplicates)
-            self.finished.emit(True, f"扫描完成，找到 {len(duplicates)} 组重复文件")
+            self.finished.emit(
+                True,
+                t("plugin.file_deduplicator.msg.scan_done", count=len(duplicates))
+            )
         except Exception as e:
             print(f"Error in FileDeduplicator: {e}")
-            self.finished.emit(False, f"扫描失败: {str(e)}")
+            self.finished.emit(
+                False,
+                t("plugin.file_deduplicator.error.scan_failed", error=str(e))
+            )
 
     def compute_file_hash(self, file_path, chunk_size=65536):
         """计算文件的完整SHA-256哈希值"""
@@ -186,82 +198,94 @@ class FileDeduplicatorWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setSpacing(16)
 
-        # 标题（使用 PLUGIN_MODULES 配置中的 icon + name）
-        self.title_label = SelectableLabel(f"{self.icon} {self.name}")
+        # 标题（使用词典中的 icon + name）
+        self.title_label = SelectableLabel(
+            f"{self.icon} {t('plugin.file_deduplicator.name')}"
+        )
         self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700};")
         layout.addWidget(self.title_label)
 
-        # 描述（使用 PLUGIN_MODULES 配置中的 description）
-        self.desc_label = SelectableLabel(self.description)
+        # 描述（使用词典）
+        self.desc_label = SelectableLabel(
+            t("plugin.file_deduplicator.description")
+        )
         self.desc_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
         # 文件夹选择卡片
-        folder_card = Card(title="选择扫描文件夹（支持拖拽）")
+        self.folder_card = Card(title=t("plugin.file_deduplicator.card.select_folder"))
         folder_layout = QHBoxLayout()
         self.folder_display = DirectoryDropLineEdit()
-        self.folder_display.setPlaceholderText("选择要扫描的文件夹，或将文件夹拖拽到此...")
+        self.folder_display.setPlaceholderText(
+            t("plugin.file_deduplicator.placeholder.folder")
+        )
         self.folder_display.directory_dropped.connect(self.on_folder_dropped)
         folder_layout.addWidget(self.folder_display)
 
-        self.browse_btn = AnimatedButton("浏览")
+        self.browse_btn = AnimatedButton(t("plugin.file_deduplicator.button.browse"))
         self.browse_btn.setMaximumWidth(80)
         self.browse_btn.clicked.connect(self.browse_folder)
         folder_layout.addWidget(self.browse_btn)
-        folder_card.content_layout.addLayout(folder_layout)
+        self.folder_card.content_layout.addLayout(folder_layout)
 
         # 扫描操作面板（按钮 + 进度条 + 状态）
         self.scan_panel = ActionPanel(
-            button_text="开始扫描",
+            button_text=t("plugin.file_deduplicator.button.scan"),
             use_gradient=True,
-            status_text="请选择文件夹开始扫描"
+            status_text=t("plugin.file_deduplicator.msg.select_folder_hint")
         )
         self.scan_panel.clicked.connect(self.start_scan)
         self.scan_panel.btn.setEnabled(False)
-        folder_card.content_layout.addWidget(self.scan_panel)
+        self.folder_card.content_layout.addWidget(self.scan_panel)
 
-        layout.addWidget(folder_card)
+        layout.addWidget(self.folder_card)
 
         # 结果卡片
-        results_card = Card(title="重复文件列表")
+        self.results_card = Card(title=t("plugin.file_deduplicator.card.results"))
         self.results_tree = QTreeWidget()
-        self.results_tree.setHeaderLabels(["文件信息", "大小", "创建时间", "修改时间"])
+        self.results_tree.setHeaderLabels([
+            t("plugin.file_deduplicator.column.file_info"),
+            t("plugin.file_deduplicator.column.size"),
+            t("plugin.file_deduplicator.column.created"),
+            t("plugin.file_deduplicator.column.modified"),
+        ])
         self.results_tree.setColumnWidth(0, 580)
         self.results_tree.setColumnWidth(1, 80)
         self.results_tree.setColumnWidth(2, 140)
         self.results_tree.setColumnWidth(3, 140)
         self.results_tree.setMinimumHeight(400)
         self.results_tree.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        results_card.content_layout.addWidget(self.results_tree)
+        self.results_card.content_layout.addWidget(self.results_tree)
 
         # 统计标签
-        self.stats_label = SelectableLabel("未扫描")
+        self.stats_label = SelectableLabel(t("plugin.file_deduplicator.msg.not_scanned"))
         self.stats_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_14};")
-        results_card.content_layout.addWidget(self.stats_label)
-        layout.addWidget(results_card)
+        self.results_card.content_layout.addWidget(self.stats_label)
+        layout.addWidget(self.results_card)
 
         # 删除规则卡片
-        deletion_card = Card(title="删除规则设置")
+        self.deletion_card = Card(title=t("plugin.file_deduplicator.card.deletion_rules"))
         rule_row_layout = QHBoxLayout()
 
         # 左半：删除规则下拉框
         left_half = QHBoxLayout()
-        left_half.addWidget(SelectableLabel("删除规则:"))
+        self.rule_label = SelectableLabel(t("plugin.file_deduplicator.label.rule"))
+        left_half.addWidget(self.rule_label)
         self.rule_combo = QComboBox()
-        self.rule_combo.addItems([
-            "按创建时间升序排序（旧→新，时间相同按修改时间，含副本标记的放后面）",
-            "按创建时间降序排序（新→旧，时间相同按修改时间，含副本标记的放后面）",
-            "按文件名升序排序（A→Z，保留首个，删除后续）",
-            "按文件名降序排序（Z→A，保留首个，删除后续）",
-            "智能识别副本（优先删除含(1)/_copy/_backup等标记的文件，其余按创建时间升序）",
-            "智能识别副本（优先删除含(1)/_copy/_backup等标记的文件，其余按创建时间降序）"
+        bind_combo(self.rule_combo, [
+            ("plugin.file_deduplicator.combo.rule_ctime_asc", 0),
+            ("plugin.file_deduplicator.combo.rule_ctime_desc", 1),
+            ("plugin.file_deduplicator.combo.rule_name_asc", 2),
+            ("plugin.file_deduplicator.combo.rule_name_desc", 3),
+            ("plugin.file_deduplicator.combo.rule_smart_asc", 4),
+            ("plugin.file_deduplicator.combo.rule_smart_desc", 5),
         ])
         left_half.addWidget(self.rule_combo, 1)
         self.rule_combo.currentIndexChanged.connect(self._sort_by_rule)
 
         # 右半：删除后是否自动扫描（文字在前，勾选框在后，与"启用压缩"样式一致）
         right_half = QHBoxLayout()
-        self.auto_rescan_label = SelectableLabel("删除后自动扫描")
+        self.auto_rescan_label = SelectableLabel(t("plugin.file_deduplicator.label.auto_rescan"))
         right_half.addWidget(self.auto_rescan_label)
         self.auto_rescan_checkbox = QCheckBox()
         self.auto_rescan_checkbox.setChecked(False)
@@ -270,47 +294,47 @@ class FileDeduplicatorWidget(QWidget):
 
         rule_row_layout.addLayout(left_half, 1)
         rule_row_layout.addLayout(right_half, 1)
-        deletion_card.content_layout.addLayout(rule_row_layout)
+        self.deletion_card.content_layout.addLayout(rule_row_layout)
 
         # 全选/取消全选按钮
         select_btn_layout = QHBoxLayout()
-        self.select_all_btn = AnimatedButton("全选")
+        self.select_all_btn = AnimatedButton(t("plugin.file_deduplicator.button.select_all"))
         self.select_all_btn.setMaximumWidth(80)
         self.select_all_btn.clicked.connect(self._select_all)
         select_btn_layout.addWidget(self.select_all_btn)
-        self.deselect_all_btn = AnimatedButton("取消全选")
+        self.deselect_all_btn = AnimatedButton(t("plugin.file_deduplicator.button.deselect_all"))
         self.deselect_all_btn.setMaximumWidth(80)
         self.deselect_all_btn.clicked.connect(self._deselect_all)
         select_btn_layout.addWidget(self.deselect_all_btn)
 
-        self.toggle_expand_btn = AnimatedButton("折叠")
+        self.toggle_expand_btn = AnimatedButton(t("plugin.file_deduplicator.button.collapse"))
         self.toggle_expand_btn.setMaximumWidth(80)
         self.toggle_expand_btn.clicked.connect(self._toggle_expand)
         select_btn_layout.addWidget(self.toggle_expand_btn)
 
-        self.sort_by_rule_btn = AnimatedButton("按规则排序")
+        self.sort_by_rule_btn = AnimatedButton(t("plugin.file_deduplicator.button.sort_by_rule"))
         self.sort_by_rule_btn.setMaximumWidth(100)
         self.sort_by_rule_btn.clicked.connect(self._sort_by_rule)
         select_btn_layout.addWidget(self.sort_by_rule_btn)
 
         select_btn_layout.addStretch()
-        deletion_card.content_layout.addLayout(select_btn_layout)
+        self.deletion_card.content_layout.addLayout(select_btn_layout)
 
         # 连接父节点勾选变化信号
         self.results_tree.itemChanged.connect(self._on_parent_checked)
 
         # 删除操作面板
         self.delete_panel = ActionPanel(
-            button_text="删除重复文件",
+            button_text=t("plugin.file_deduplicator.button.delete_duplicates"),
             use_gradient=True,
             gradient_colors=(Theme.DARK['error'], Theme.DARK['error_gradient_end']),
             gradient_hover_colors=(Theme.DARK['error_hover'], Theme.DARK['error_gradient_end']),
         )
         self.delete_panel.clicked.connect(self.delete_duplicates)
         self.delete_panel.btn.setEnabled(False)
-        deletion_card.content_layout.addWidget(self.delete_panel)
+        self.deletion_card.content_layout.addWidget(self.delete_panel)
 
-        layout.addWidget(deletion_card)
+        layout.addWidget(self.deletion_card)
 
         # 应用初始主题
         if Theme is not None:
@@ -436,7 +460,7 @@ class FileDeduplicatorWidget(QWidget):
         """选择文件夹"""
         dir_path = QFileDialog.getExistingDirectory(
             self,
-            "选择要扫描的文件夹",
+            t("plugin.file_deduplicator.dialog.select_folder"),
             self.selected_folder if self.selected_folder else ""
         )
         if dir_path:
@@ -453,18 +477,26 @@ class FileDeduplicatorWidget(QWidget):
         self.selected_folder = dir_path
         self.folder_display.setText(dir_path)
         self.scan_panel.btn.setEnabled(True)
-        self.scan_panel.update_status(f"已选择文件夹: {dir_path}")
+        self.scan_panel.update_status(
+            t("plugin.file_deduplicator.msg.folder_selected", dir=dir_path)
+        )
 
     def start_scan(self):
         """开始扫描"""
         if not self.selected_folder or not os.path.exists(self.selected_folder):
-            show_warning(self, "警告", "请先选择有效的文件夹！")
+            show_warning(
+                self,
+                t("plugin.file_deduplicator.dialog.warning_title"),
+                t("plugin.file_deduplicator.warning.invalid_folder"),
+            )
             return
 
         self.scan_panel.btn.setEnabled(False)
-        self.scan_panel.start_task(maximum=0, status="正在扫描...")
+        self.scan_panel.start_task(
+            maximum=0, status=t("plugin.file_deduplicator.msg.scanning")
+        )
         self.results_tree.clear()
-        self.stats_label.setText("扫描中...")
+        self.stats_label.setText(t("plugin.file_deduplicator.msg.stats_scanning"))
         self.delete_panel.btn.setEnabled(False)
         self.duplicates = {}
 
@@ -481,7 +513,10 @@ class FileDeduplicatorWidget(QWidget):
         if total > 0:
             self.scan_panel.progress.setMaximum(total)
             self.scan_panel.progress.setValue(scanned)
-            self.scan_panel.update_status(f"已扫描 {scanned}/{total} 个文件...")
+            self.scan_panel.update_status(
+                t("plugin.file_deduplicator.msg.scanned_progress",
+                  count=scanned, total=total)
+            )
 
     def update_status(self, message):
         """更新状态标签"""
@@ -500,7 +535,10 @@ class FileDeduplicatorWidget(QWidget):
         for file_hash, file_list in duplicates.items():
             # 创建重复组顶级项（父节点，可勾选）
             group_item = QTreeWidgetItem(self.results_tree)
-            group_item.setText(0, f"重复组: {file_hash[:8]}... (共 {len(file_list)} 个文件)")
+            group_item.setText(0, t(
+                "plugin.file_deduplicator.tree.group_label",
+                hash=file_hash[:8], count=len(file_list)
+            ))
             group_item.setFont(0, QFont("Arial", 10, QFont.Weight.Bold))
             group_item.setBackground(0, self.group_bg_color)
             group_item.setForeground(0, QBrush(QColor(text_color)))
@@ -532,7 +570,7 @@ class FileDeduplicatorWidget(QWidget):
                     file_item.setForeground(1, QBrush(QColor(text_color)))
                 except OSError as e:
                     print(f"getsize error: {e}")
-                    file_item.setText(1, "未知")
+                    file_item.setText(1, t("plugin.file_deduplicator.tree.unknown"))
                 # 创建时间
                 file_item.setText(2, get_create_time(file_path))
                 file_item.setForeground(2, QBrush(QColor(text_color)))
@@ -542,12 +580,17 @@ class FileDeduplicatorWidget(QWidget):
                 total_duplicates += 1
 
         self.stats_label.setText(
-            f"找到 {len(duplicates)} 组重复文件，共 {total_duplicates} 个重复文件，可节省空间: {self.format_size(total_savings)}"
+            t("plugin.file_deduplicator.msg.stats_duplicates",
+              count=len(duplicates),
+              total=total_duplicates,
+              size=self.format_size(total_savings))
         )
         # 自动展开所有重复组
         self.results_tree.expandAll()
         if hasattr(self, 'toggle_expand_btn'):
-            self.toggle_expand_btn.setText("折叠")
+            self.toggle_expand_btn.setText(
+                t("plugin.file_deduplicator.button.collapse")
+            )
         # 扫描完成后，启用删除按钮
         self.delete_panel.btn.setEnabled(bool(duplicates))
         # 按默认规则排序并标记保留/删除
@@ -589,10 +632,10 @@ class FileDeduplicatorWidget(QWidget):
         expanded = self.results_tree.topLevelItemCount() > 0 and self.results_tree.topLevelItem(0).isExpanded()
         if expanded:
             self.results_tree.collapseAll()
-            self.toggle_expand_btn.setText("展开")
+            self.toggle_expand_btn.setText(t("plugin.file_deduplicator.button.expand"))
         else:
             self.results_tree.expandAll()
-            self.toggle_expand_btn.setText("折叠")
+            self.toggle_expand_btn.setText(t("plugin.file_deduplicator.button.collapse"))
 
     def _get_sorted_files(self, file_list, rule):
         """按指定规则排序文件列表，返回排序后的列表"""
@@ -630,7 +673,7 @@ class FileDeduplicatorWidget(QWidget):
         """按当前选择的删除规则重排树节点，并标记保留/删除"""
         if not self.duplicates:
             return
-        rule = self.rule_combo.currentIndex()
+        rule = self.rule_combo.currentData()
         theme = self.current_theme if hasattr(self, 'current_theme') else self.theme
 
         for i in range(self.results_tree.topLevelItemCount()):
@@ -660,15 +703,21 @@ class FileDeduplicatorWidget(QWidget):
                 parent.insertChild(idx, child)
                 # 标记保留/删除
                 if idx == 0:
-                    child.setText(0, f"✅ 保留: {file_path}")
+                    child.setText(0, t(
+                        "plugin.file_deduplicator.tree.keep", path=file_path
+                    ))
                     child.setForeground(0, QBrush(QColor(theme['success'])))
                 else:
-                    child.setText(0, f"❌ 删除: {file_path}")
+                    child.setText(0, t(
+                        "plugin.file_deduplicator.tree.delete", path=file_path
+                    ))
                     child.setForeground(0, QBrush(QColor(theme['error'])))
 
         self.results_tree.expandAll()
         if hasattr(self, 'toggle_expand_btn'):
-            self.toggle_expand_btn.setText("折叠")
+            self.toggle_expand_btn.setText(
+                t("plugin.file_deduplicator.button.collapse")
+            )
 
     def format_size(self, bytes):
         """格式化文件大小"""
@@ -706,9 +755,15 @@ class FileDeduplicatorWidget(QWidget):
         self.scan_panel.btn.setEnabled(True)
         if success:
             if not self.duplicates:
-                show_info(self, "完成", "未找到重复文件")
+                show_info(
+                    self,
+                    t("plugin.file_deduplicator.dialog.done_title"),
+                    t("plugin.file_deduplicator.msg.no_duplicates"),
+                )
         else:
-            show_error(self, "错误", message)
+            show_error(
+                self, t("plugin.file_deduplicator.dialog.error_title"), message
+            )
 
     def show_error(self, error_msg):
         """显示错误"""
@@ -717,11 +772,15 @@ class FileDeduplicatorWidget(QWidget):
     def delete_duplicates(self):
         """删除重复文件（只处理勾选的组）"""
         if not self.duplicates:
-            show_warning(self, "警告", "没有可删除的重复文件！")
+            show_warning(
+                self,
+                t("plugin.file_deduplicator.dialog.warning_title"),
+                t("plugin.file_deduplicator.warning.nothing_to_delete"),
+            )
             return
 
         # 收集待删除文件（只处理勾选的父节点）
-        rule = self.rule_combo.currentIndex()
+        rule = self.rule_combo.currentData()
         files_to_delete = []
 
         for i in range(self.results_tree.topLevelItemCount()):
@@ -742,24 +801,41 @@ class FileDeduplicatorWidget(QWidget):
             files_to_delete.extend(sorted_files[1:])
 
         if not files_to_delete:
-            show_info(self, "提示", "没有需要删除的文件")
+            show_info(
+                self,
+                t("plugin.file_deduplicator.dialog.hint_title"),
+                t("plugin.file_deduplicator.msg.nothing_to_delete"),
+            )
             return
 
         # 确认删除对话框
-        confirm_msg = f"即将删除 {len(files_to_delete)} 个重复文件，是否继续？\n\n"
-        confirm_msg += f"删除规则: {self.rule_combo.currentText()}\n\n"
-        confirm_msg += "删除文件列表（前10个）:\n"
+        confirm_msg = t(
+            "plugin.file_deduplicator.msg.confirm_intro", count=len(files_to_delete)
+        )
+        confirm_msg += t(
+            "plugin.file_deduplicator.msg.confirm_rule",
+            rule=self.rule_combo.currentText()
+        )
+        confirm_msg += t("plugin.file_deduplicator.msg.confirm_file_list_header")
         for i, file in enumerate(files_to_delete[:10]):
             confirm_msg += f"{i+1}. {file}\n"
         if len(files_to_delete) > 10:
-            confirm_msg += f"... 还有 {len(files_to_delete)-10} 个文件未显示\n"
-        confirm_msg += "\n此操作不可恢复，请确认！"
+            confirm_msg += t(
+                "plugin.file_deduplicator.msg.confirm_more_files",
+                count=len(files_to_delete) - 10
+            )
+        confirm_msg += t("plugin.file_deduplicator.msg.confirm_irreversible")
 
-        reply = show_question(self, "确认删除", confirm_msg)
+        reply = show_question(
+            self, t("plugin.file_deduplicator.dialog.confirm_delete"), confirm_msg
+        )
 
         if reply:
             # 执行删除
-            self.delete_panel.start_task(maximum=len(files_to_delete), status="正在删除...")
+            self.delete_panel.start_task(
+                maximum=len(files_to_delete),
+                status=t("plugin.file_deduplicator.msg.deleting")
+            )
             deleted = 0
             failed = 0
             failed_files = []
@@ -778,13 +854,24 @@ class FileDeduplicatorWidget(QWidget):
                     failed_files.append(f"{file_path}: {str(e)}")
                 self.delete_panel.update_progress(i + 1)
 
-            result_msg = f"删除完成: 成功 {deleted} 个，失败 {failed} 个"
+            result_msg = t(
+                "plugin.file_deduplicator.msg.delete_done",
+                count=deleted, failed_count=failed
+            )
             if failed_files:
-                result_msg += "\n\n失败文件:\n" + "\n".join(failed_files[:5])
+                result_msg += t("plugin.file_deduplicator.msg.failures_header")
+                result_msg += "\n".join(failed_files[:5])
                 if len(failed_files) > 5:
-                    result_msg += f"\n... 还有 {len(failed_files)-5} 个失败文件"
+                    result_msg += t(
+                        "plugin.file_deduplicator.msg.more_failures",
+                        count=len(failed_files) - 5
+                    )
             self.delete_panel.finish_task(result_msg)
-            show_info(self, "删除结果", result_msg)
+            show_info(
+                self,
+                t("plugin.file_deduplicator.dialog.delete_result"),
+                result_msg,
+            )
             # 根据勾选状态决定是否自动重新扫描
             if self.auto_rescan_checkbox.isChecked():
                 self.start_scan()
@@ -792,7 +879,9 @@ class FileDeduplicatorWidget(QWidget):
                 # 清空重复文件列表和扫描信息（避免数据不对应）
                 self.results_tree.clear()
                 self.duplicates = {}
-                self.stats_label.setText("已删除 — 请重新扫描以刷新结果")
+                self.stats_label.setText(
+                    t("plugin.file_deduplicator.msg.deleted_rescan")
+                )
                 self.delete_panel.btn.setEnabled(False)
 
 
@@ -811,3 +900,64 @@ class FileDeduplicator(ToolPlugin):
         self.title_label = self.widget.title_label
         self.desc_label = self.widget.desc_label
         return self.widget
+
+    def retranslate_ui(self):
+        """语言切换后重放文件去重页全部静态文本"""
+        widget = getattr(self, 'widget', None)
+        if widget is None:
+            return
+
+        widget.title_label.setText(f"{widget.icon} {t('plugin.file_deduplicator.name')}")
+        widget.desc_label.setText(t("plugin.file_deduplicator.description"))
+        widget.folder_card.title_label.setText(
+            t("plugin.file_deduplicator.card.select_folder")
+        )
+        widget.folder_display.setPlaceholderText(
+            t("plugin.file_deduplicator.placeholder.folder")
+        )
+        widget.browse_btn.setText(t("plugin.file_deduplicator.button.browse"))
+        widget.scan_panel.btn.setText(t("plugin.file_deduplicator.button.scan"))
+        widget.results_card.title_label.setText(
+            t("plugin.file_deduplicator.card.results")
+        )
+        widget.results_tree.setHeaderLabels([
+            t("plugin.file_deduplicator.column.file_info"),
+            t("plugin.file_deduplicator.column.size"),
+            t("plugin.file_deduplicator.column.created"),
+            t("plugin.file_deduplicator.column.modified"),
+        ])
+        widget.deletion_card.title_label.setText(
+            t("plugin.file_deduplicator.card.deletion_rules")
+        )
+        widget.rule_label.setText(t("plugin.file_deduplicator.label.rule"))
+        widget.auto_rescan_label.setText(
+            t("plugin.file_deduplicator.label.auto_rescan")
+        )
+        widget.select_all_btn.setText(
+            t("plugin.file_deduplicator.button.select_all")
+        )
+        widget.deselect_all_btn.setText(
+            t("plugin.file_deduplicator.button.deselect_all")
+        )
+        widget.sort_by_rule_btn.setText(
+            t("plugin.file_deduplicator.button.sort_by_rule")
+        )
+        widget.delete_panel.btn.setText(
+            t("plugin.file_deduplicator.button.delete_duplicates")
+        )
+        # 组合框由 bind_combo 自动重放
+
+        # 结果树中的分组标签与保留/删除前缀：有数据时按当前语言重建
+        # （勾选状态会被重置，避免语言切换后误删旧勾选）
+        if widget.duplicates:
+            widget.show_duplicates(widget.duplicates)
+
+        # 展开/折叠按钮文字跟随当前树状态
+        tree = widget.results_tree
+        expanded = (
+            tree.topLevelItemCount() > 0 and tree.topLevelItem(0).isExpanded()
+        )
+        widget.toggle_expand_btn.setText(
+            t("plugin.file_deduplicator.button.expand") if not expanded
+            else t("plugin.file_deduplicator.button.collapse")
+        )
