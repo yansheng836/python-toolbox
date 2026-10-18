@@ -1,5 +1,7 @@
 # 打包检查清单
 
+简体中文 | [English](BUILD_CHECKLIST.en.md)
+
 ## 打包前检查
 
 ### 1. 必要文件检查

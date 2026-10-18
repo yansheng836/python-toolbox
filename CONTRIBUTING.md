@@ -1,5 +1,7 @@
 # 贡献指南 (Contributing Guide)
 
+简体中文 | [English](CONTRIBUTING.en.md)
+
 欢迎贡献！请花几分钟阅读以下指南，让协作更顺畅。
 
 ## 目录

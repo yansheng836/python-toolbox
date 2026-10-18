@@ -1,5 +1,7 @@
 # PyInstaller Excludes 参考指南
 
+简体中文 | [English](PYINSTALLER_EXCLUDES.en.md)
+
 ## ⚠️ 重要提示
 
 排除模块时要非常谨慎！某些看似不需要的模块实际上是 PyInstaller 或其他库的依赖。
