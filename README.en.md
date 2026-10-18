@@ -10,7 +10,7 @@
 
 [Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Usage Guide](#usage-guide) · [Plugin Development](#plugin-development) · [User Manual](UserManual.en.md)
 
-English | [简体中文](README.md)
+English \| [简体中文](README.md)
 
 </div>
 
