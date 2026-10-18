@@ -38,6 +38,7 @@ English \| [简体中文](README.md)
 - 🔌 **Fully offline** — everything runs locally; no data ever leaves your machine
 - 🧩 **Plugin extensibility** — drop a Python file into `plugins/` and it loads automatically
 - ↔️ **Collapsible sidebar** — toggle via the collapse button or the `Ctrl+B` shortcut
+- 🧭 **Navigation management** — reorder tools by dragging or hide them in Settings; the sidebar and home page update instantly
 
 ---
 
@@ -251,7 +252,7 @@ At runtime the app also reads and writes `config.ini` to persist user settings:
 |------|-------------|
 | Default location | Windows: `%LOCALAPPDATA%\Toolbox\config.ini`; macOS: `~/Library/Application Support/Toolbox/config.ini` |
 | Portable mode | If a writable `portable.flag` exists next to the executable (project root when running from source), `config.ini` is stored in the same directory |
-| Stored settings | `[general]` UI language and theme, `[window]` window geometry and state, `[meta]` config version |
+| Stored settings | `[general]` UI language and theme, `[window]` window geometry and state, `[nav]` navigation order and tool visibility, `[meta]` config version |
 | First launch | The file is created with defaults if missing; the UI language is initialized from the system language (Chinese → `zh_CN`, otherwise → `en`), a notice dialog appears after this first automatic setup, and later changes made on the Settings page take precedence |
 | Legacy migration | Theme and window geometry/state are imported from the legacy `QSettings` registry only when the INI has no value yet; registry data is not deleted |
 | Write safety | The old file is backed up as `config.ini.bak` and replaced atomically via a temp file; missing or corrupt files fall back to defaults with an error logged; if the config directory is not writable, settings apply to the current run only |

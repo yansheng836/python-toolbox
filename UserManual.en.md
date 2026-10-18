@@ -28,13 +28,13 @@ The ToolBox interface has two main parts:
 - Click the arrow button on the right edge of the sidebar to collapse/expand the menu; when collapsed, only icons are shown, saving workspace space
 - Child widgets fade in/out during collapse/expand for a smoother transition
 - Press `Ctrl+B` to quickly toggle the sidebar collapse/expand state
-- The "Settings" entry at the bottom lets you switch themes or view about info
+- The "Settings" entry at the bottom lets you switch themes, manage navigation, or view about info
 
 ### Right: Workspace
 
 - **Home page**: shows all features; click a card to jump in quickly
 - **Tool pages**: each tool's UI, containing the file list, action buttons, progress display, etc.
-- **Settings page**: switch between dark/light themes and view app info
+- **Settings page**: switch between dark/light themes, manage navigation, and view app info
 
 ### Common UI Elements
 
@@ -280,6 +280,19 @@ ToolBox supports dark and light themes:
 |-------|-------------|
 | 🌙 Dark Theme | Black background, easy on the eyes; great at night or in dim environments |
 | ☀️ Light Theme | White background, clear and bright; great for daytime use |
+
+### Navigation Management
+
+In "Settings → Navigation", you can customize the order and visibility of the tools in the sidebar (the list does not include "Settings" itself):
+
+1. **Reorder**: drag a list item up or down to change the tool order; the sidebar menu and the home page cards update immediately
+2. **Hide a tool**: uncheck a tool to hide it from the sidebar and home page; the tool itself is still loaded with the app, and checking it again restores it
+3. **Show All**: click "Show All" to check every tool again (the order is kept)
+4. **Reset Order**: click "Reset Order" to return both the order and visibility to their defaults (the built-in default order, all tools visible)
+
+All changes take effect immediately and are written to the config file automatically — there is no "Save" button. The "Settings" page is always shown at the end of the sidebar; it cannot be hidden and does not take part in sorting.
+
+> 📌 **Tip**: If you hide every tool, the sidebar only keeps "Home" and "Settings", and the home page shows a hint: "All tools are hidden. Restore them in Settings → Navigation." The "Reset to Defaults" button at the bottom of the settings page also restores the default navigation order and visibility.
 
 ### About ToolBox
 
