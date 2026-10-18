@@ -64,6 +64,7 @@ CONFIG_VERSION = 1
 _DEFAULTS = {
     "general": {"language": "zh_CN", "theme": "dark"},
     "window": {"geometry": "", "state": ""},
+    "nav": {"order": "", "hidden": ""},
     "meta": {"config_version": str(CONFIG_VERSION)},
 }
 

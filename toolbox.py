@@ -26,6 +26,7 @@ from PyQt6.QtWidgets import (
     QLabel, QPushButton, QStackedWidget, QFrame, QComboBox,
     QGraphicsDropShadowEffect, QGraphicsOpacityEffect,
     QSystemTrayIcon, QMenu, QScrollArea,
+    QListWidget, QListWidgetItem, QAbstractItemView, QSizePolicy,
     QStylePainter, QStyleOptionComboBox, QStyle
 )
 from PyQt6.QtCore import (
@@ -36,6 +37,7 @@ from PyQt6.QtGui import (
 )
 
 from common import i18n
+from common import nav_config
 from common.i18n import t, bind_combo, install_qt_translator
 from common.utils import get_combo_style
 
@@ -545,6 +547,12 @@ class WelcomePage(QWidget):
         for label in self.desc_labels:
             label.setStyleSheet(f"color: {theme['text_secondary']};")
 
+        if hasattr(self, "empty_hint"):
+            self.empty_hint.setStyleSheet(f"""
+                font-size: {FONT_SIZE_16};
+                color: {theme['text_secondary']};
+            """)
+
         # 更新滚动条主题
         if self.scroll_area:
             self.scroll_area.setStyleSheet(f"""
@@ -578,6 +586,8 @@ class WelcomePage(QWidget):
             self.subtitle.setText(t("welcome.subtitle"))
         if self.hint:
             self.hint.setText(t("welcome.hint"))
+        if hasattr(self, "empty_hint"):
+            self.empty_hint.setText(t("welcome.no_tools_hint"))
         for pid, text_label, desc_label in zip(
             self._feature_ids, self.text_labels, self.desc_labels
         ):
@@ -668,76 +678,24 @@ class WelcomePage(QWidget):
         self.scroll_area.installEventFilter(self)
 
         self.features_widget = QWidget()
-        features_layout = QHBoxLayout(self.features_widget)
+        self.features_layout = QHBoxLayout(self.features_widget)
         # 卡片间距
-        features_layout.setSpacing(10)
-        features_layout.setContentsMargins(5, 10, 5, 10)
-
-        # 卡片按 PLUGIN_MODULES 顺序创建；记录稳定 id 供语言切换重放
-        self._feature_ids = [p["id"] for p in PLUGIN_MODULES if p["order"] < 999]
-        for p in PLUGIN_MODULES:
-            if p["order"] >= 999:
-                continue
-            icon, text, desc = p["icon"], t(f"plugin.{p['id']}.name"), t(f"plugin.{p['id']}.description")
-            card = QFrame()
-            card.setObjectName("card")
-            # 卡片内边距：左右调小至8px，使内容更紧凑（原12px）
-            card.setContentsMargins(6, 10, 6, 10)
-            card.setMinimumWidth(200)
-
-            card_layout = QVBoxLayout(card)
-            card_layout.setSpacing(10)
-
-            icon_label = QLabel(icon)
-            icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-            font = icon_label.font()
-            font.setPointSize(20)
-            font.setBold(True)
-            icon_label.setFont(font)
-            icon_label.setMinimumSize(36, 36)
-            card_layout.addWidget(icon_label)
-
-            # 分隔线
-            line1 = QFrame()
-            line1.setFrameShape(QFrame.Shape.HLine)
-            line1.setStyleSheet(f"background-color: {Theme.DARK['surface']}; max-height: 1px;")
-            self.separators.append(line1)
-            card_layout.addWidget(line1)
-
-            text_label = SelectableLabel(text)
-            font = text_label.font()
-            font.setPointSize(14)
-            font.setBold(True)
-            text_label.setFont(font)
-            text_label.setStyleSheet(f"color: {Theme.DARK['text']};")
-            text_label.setWordWrap(True)
-            text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.text_labels.append(text_label)
-            card_layout.addWidget(text_label)
-
-            # 分隔线
-            line2 = QFrame()
-            line2.setFrameShape(QFrame.Shape.HLine)
-            line2.setStyleSheet(f"background-color: {Theme.DARK['surface']}; max-height: 1px;")
-            self.separators.append(line2)
-            card_layout.addWidget(line2)
-
-            desc_text = desc[:40] + "..." if len(desc) > 40 else desc
-            desc_label = SelectableLabel(desc_text)
-            desc_font = desc_label.font()
-            desc_font.setPointSize(10)
-            desc_label.setFont(desc_font)
-            desc_label.setWordWrap(True)
-            desc_label.setStyleSheet(f"color: {Theme.DARK['text_secondary']};")
-            desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.desc_labels.append(desc_label)
-            card_layout.addWidget(desc_label)
-
-            features_layout.addWidget(card)
+        self.features_layout.setSpacing(10)
+        self.features_layout.setContentsMargins(5, 10, 5, 10)
 
         self.scroll_area.setWidget(self.features_widget)
         layout.addWidget(self.scroll_area)
+
+        # 全部工具被隐藏时替代轮播区显示
+        self.empty_hint = SelectableLabel(t("welcome.no_tools_hint"))
+        self.empty_hint.setStyleSheet(f"""
+            font-size: {FONT_SIZE_16};
+            color: {Theme.DARK['text_secondary']};
+        """)
+        self.empty_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.empty_hint.setWordWrap(True)
+        self.empty_hint.setVisible(False)
+        layout.addWidget(self.empty_hint)
 
         self.hint = SelectableLabel(t("welcome.hint"))
         self.hint.setStyleSheet(f"""
@@ -749,6 +707,116 @@ class WelcomePage(QWidget):
         layout.addWidget(self.hint)
 
         layout.addStretch()
+
+        # 先按 config.py 默认顺序创建卡片；应用启动后由
+        # ToolboxWindow.rebuild_navigation() 按用户配置重建
+        self.rebuild_feature_cards(
+            [p["id"] for p in PLUGIN_MODULES if p["order"] < 999])
+
+    def _create_feature_card(self, plugin_config):
+        """创建单个功能卡片，并把标签登记到语言切换/主题更新用的列表"""
+        pid = plugin_config["id"]
+        icon = plugin_config["icon"]
+        text = t(f"plugin.{pid}.name")
+        desc = t(f"plugin.{pid}.description")
+
+        card = QFrame()
+        card.setObjectName("card")
+        # 卡片内边距：左右调小至8px，使内容更紧凑（原12px）
+        card.setContentsMargins(6, 10, 6, 10)
+        card.setMinimumWidth(200)
+
+        card_layout = QVBoxLayout(card)
+        card_layout.setSpacing(10)
+
+        icon_label = QLabel(icon)
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        font = icon_label.font()
+        font.setPointSize(20)
+        font.setBold(True)
+        icon_label.setFont(font)
+        icon_label.setMinimumSize(36, 36)
+        card_layout.addWidget(icon_label)
+
+        # 分隔线
+        line1 = QFrame()
+        line1.setFrameShape(QFrame.Shape.HLine)
+        line1.setStyleSheet(f"background-color: {Theme.DARK['surface']}; max-height: 1px;")
+        self.separators.append(line1)
+        card_layout.addWidget(line1)
+
+        text_label = SelectableLabel(text)
+        font = text_label.font()
+        font.setPointSize(14)
+        font.setBold(True)
+        text_label.setFont(font)
+        text_label.setStyleSheet(f"color: {Theme.DARK['text']};")
+        text_label.setWordWrap(True)
+        text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.text_labels.append(text_label)
+        card_layout.addWidget(text_label)
+
+        # 分隔线
+        line2 = QFrame()
+        line2.setFrameShape(QFrame.Shape.HLine)
+        line2.setStyleSheet(f"background-color: {Theme.DARK['surface']}; max-height: 1px;")
+        self.separators.append(line2)
+        card_layout.addWidget(line2)
+
+        desc_text = desc[:40] + "..." if len(desc) > 40 else desc
+        desc_label = SelectableLabel(desc_text)
+        desc_font = desc_label.font()
+        desc_font.setPointSize(10)
+        desc_label.setFont(desc_font)
+        desc_label.setWordWrap(True)
+        desc_label.setStyleSheet(f"color: {Theme.DARK['text_secondary']};")
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.desc_labels.append(desc_label)
+        card_layout.addWidget(desc_label)
+
+        return card
+
+    def rebuild_feature_cards(self, visible_ids):
+        """按可见插件 id 重建首页功能卡片（顺序与侧边栏一致）
+
+        重建同时重置 text_labels/desc_labels/separators/_feature_ids，
+        保证语言切换重放与主题更新只作用于当前卡片（这些列表只增不清
+        会导致重放错位）。
+        """
+        if not hasattr(self, "features_layout"):
+            return
+
+        # 清空旧卡片：逐个摘除并销毁，避免布局项与控件残留
+        while self.features_layout.count():
+            item = self.features_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+                widget.deleteLater()
+
+        self.text_labels = []
+        self.desc_labels = []
+        self.separators = []
+        self._feature_ids = []
+
+        by_id = {p["id"]: p for p in PLUGIN_MODULES}
+        for pid in visible_ids:
+            plugin_config = by_id.get(pid)
+            if plugin_config is None:
+                continue
+            self.features_layout.addWidget(self._create_feature_card(plugin_config))
+            self._feature_ids.append(pid)
+
+        # 轮播状态复位，避免定时器继续指向旧的滚动范围
+        self._scroll_direction = 1
+        self._at_end_pause = 0
+        self.scroll_area.horizontalScrollBar().setValue(0)
+
+        has_tools = bool(self._feature_ids)
+        self.scroll_area.setVisible(has_tools)
+        if hasattr(self, "empty_hint"):
+            self.empty_hint.setVisible(not has_tools)
 
 class SettingsPlugin(ToolPlugin):
     """设置插件 - 包含通用设置和关于信息"""
@@ -791,6 +859,16 @@ class SettingsPlugin(ToolPlugin):
 
         if hasattr(self, 'reset_btn'):
             self._apply_reset_style(theme)
+
+        if hasattr(self, 'nav_hint_label'):
+            self.nav_hint_label.setStyleSheet(
+                f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_12};")
+
+        if hasattr(self, 'nav_list'):
+            self.nav_list.setStyleSheet(self._nav_list_style(theme))
+
+        if hasattr(self, 'nav_show_all_btn'):
+            self._apply_nav_button_style(theme)
 
     def _apply_reset_style(self, theme):
         """恢复默认设置标题/提示文字/按钮随主题更新（红色描边，强调不可逆操作）"""
@@ -948,6 +1026,43 @@ class SettingsPlugin(ToolPlugin):
 
         general_card.content_layout.addStretch()
 
+        # 导航栏管理：拖拽排序 + 勾选控制可见性，改动即时生效并持久化
+        nav_card = Card(title=t("settings.card.nav"))
+        self._nav_card = nav_card
+
+        self.nav_hint_label = SelectableLabel(t("settings.label.nav_hint"))
+        self.nav_hint_label.setWordWrap(True)
+        nav_card.content_layout.addWidget(self.nav_hint_label)
+
+        self.nav_list = QListWidget()
+        self.nav_list.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.nav_list.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.nav_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.nav_list.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.nav_list.setStyleSheet(self._nav_list_style(self.parent.current_theme))
+        self._populate_nav_list()
+        self.nav_list.itemChanged.connect(self._on_nav_item_changed)
+        self.nav_list.model().rowsMoved.connect(self._on_nav_rows_moved)
+        nav_card.content_layout.addWidget(self.nav_list)
+
+        self.nav_show_all_btn = QPushButton(t("settings.button.nav_show_all"))
+        self.nav_show_all_btn.setFixedHeight(self.CONTROL_HEIGHT)
+        self.nav_show_all_btn.setMinimumWidth(self.CONTROL_WIDTH)
+        self.nav_show_all_btn.clicked.connect(self._show_all_nav_items)
+
+        self.nav_reset_btn = QPushButton(t("settings.button.nav_reset"))
+        self.nav_reset_btn.setFixedHeight(self.CONTROL_HEIGHT)
+        self.nav_reset_btn.setMinimumWidth(self.CONTROL_WIDTH)
+        self.nav_reset_btn.clicked.connect(self._reset_nav_config)
+
+        nav_btn_layout = QHBoxLayout()
+        nav_btn_layout.addWidget(self.nav_show_all_btn)
+        nav_btn_layout.addWidget(self.nav_reset_btn)
+        nav_btn_layout.addStretch()
+        nav_card.content_layout.addLayout(nav_btn_layout)
+        self._apply_nav_button_style(self.parent.current_theme)
+
         about_card = Card(title=t("settings.card.about"))
         self._about_card = about_card
 
@@ -995,6 +1110,7 @@ class SettingsPlugin(ToolPlugin):
         about_card.content_layout.addStretch()
 
         layout.addWidget(general_card)
+        layout.addWidget(nav_card)
         layout.addWidget(about_card)
         layout.addStretch()
 
@@ -1031,6 +1147,122 @@ class SettingsPlugin(ToolPlugin):
             self._settings_ref.set("general", "theme", theme_name)
             self._settings_ref.save()
 
+    # ==================== 导航栏管理 ====================
+
+    @staticmethod
+    def _nav_list_style(theme):
+        """导航列表样式（深浅主题下背景与文字均需可读）"""
+        return f"""
+            QListWidget {{
+                background-color: {theme['bg']};
+                border: 1px solid {theme['surface']};
+                border-radius: 8px;
+                color: {theme['text']};
+                padding: 4px;
+                font-size: {FONT_SIZE_14};
+            }}
+            QListWidget::item {{
+                padding: 6px 4px;
+                border-radius: 6px;
+            }}
+            QListWidget::item:selected {{
+                background-color: {theme['primary']};
+                color: #ffffff;
+            }}
+        """
+
+    def _apply_nav_button_style(self, theme):
+        """导航管理按钮：中性描边样式，与红色「恢复默认设置」区分"""
+        style = f"""
+            QPushButton {{
+                background-color: transparent;
+                color: {theme['text']};
+                border: 1px solid {theme['surface']};
+                border-radius: 8px;
+                padding: 8px 16px;
+                font-size: {FONT_SIZE_14};
+                font-weight: {FONT_WEIGHT_600};
+            }}
+            QPushButton:hover {{
+                background-color: {theme['surface']};
+            }}
+        """
+        self.nav_show_all_btn.setStyleSheet(style)
+        self.nav_reset_btn.setStyleSheet(style)
+
+    def _populate_nav_list(self):
+        """按当前配置填充导航列表（回填期间屏蔽信号，避免误触发持久化）"""
+        order, hidden = nav_config.load_nav_state(self._settings_ref, PLUGIN_MODULES)
+        meta = {p["id"]: p for p in PLUGIN_MODULES}
+
+        self.nav_list.blockSignals(True)
+        try:
+            self.nav_list.clear()
+            for pid in order:
+                plugin_config = meta.get(pid, {})
+                item = QListWidgetItem(
+                    f"{plugin_config.get('icon', '🔧')} {t(f'plugin.{pid}.name')}")
+                item.setData(Qt.ItemDataRole.UserRole, pid)
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                item.setCheckState(
+                    Qt.CheckState.Unchecked if pid in hidden else Qt.CheckState.Checked)
+                self.nav_list.addItem(item)
+        finally:
+            self.nav_list.blockSignals(False)
+
+        # 按条目实际行高给出最小高度：插件增多时可滚动，减少时不留大片空白
+        row_height = self.nav_list.sizeHintForRow(0) if self.nav_list.count() else 0
+        if row_height <= 0:
+            row_height = 30
+        self.nav_list.setMinimumHeight(
+            min(360, row_height * self.nav_list.count() + 16))
+
+    def _current_nav_selection(self):
+        """从列表读出 (order, hidden)"""
+        order = []
+        hidden = []
+        for row in range(self.nav_list.count()):
+            item = self.nav_list.item(row)
+            pid = item.data(Qt.ItemDataRole.UserRole)
+            if not pid:
+                continue
+            order.append(pid)
+            if item.checkState() != Qt.CheckState.Checked:
+                hidden.append(pid)
+        return order, hidden
+
+    def _apply_nav_config(self):
+        """保存列表当前状态并立即生效（侧边栏与首页卡片同步重建）"""
+        order, hidden = self._current_nav_selection()
+        nav_config.save_nav_state(self._settings_ref, order, hidden)
+        if hasattr(self.parent, "rebuild_navigation"):
+            self.parent.rebuild_navigation()
+
+    def _on_nav_item_changed(self, item):
+        """勾选状态变化：立即应用（item 参数为信号签名所需）"""
+        self._apply_nav_config()
+
+    def _on_nav_rows_moved(self, *args):
+        """拖拽排序完成：立即应用（*args 为 rowsMoved 信号参数）"""
+        self._apply_nav_config()
+
+    def _show_all_nav_items(self):
+        """全部显示：勾选所有条目，顺序保持不变"""
+        self.nav_list.blockSignals(True)
+        try:
+            for row in range(self.nav_list.count()):
+                self.nav_list.item(row).setCheckState(Qt.CheckState.Checked)
+        finally:
+            self.nav_list.blockSignals(False)
+        self._apply_nav_config()
+
+    def _reset_nav_config(self):
+        """恢复默认顺序与全部可见"""
+        nav_config.reset_nav_state(self._settings_ref)
+        self._populate_nav_list()
+        if hasattr(self.parent, "rebuild_navigation"):
+            self.parent.rebuild_navigation()
+
     def reset_defaults(self):
         """恢复默认设置：清空 INI 保存值，按全新安装状态重新初始化
 
@@ -1056,6 +1288,11 @@ class SettingsPlugin(ToolPlugin):
                 t("settings.dialog.reset_failed", error=e),
                 theme=theme)
             return
+
+        # 导航栏恢复默认顺序与全部可见
+        self._populate_nav_list()
+        if hasattr(self.parent, "rebuild_navigation"):
+            self.parent.rebuild_navigation()
 
         # 主题回到默认深色
         self.switch_theme("dark")
@@ -1104,6 +1341,11 @@ class SettingsPlugin(ToolPlugin):
         self.reset_label.setText(t("settings.label.reset_defaults"))
         self.reset_hint_label.setText(t("settings.label.reset_hint"))
         self.reset_btn.setText(t("settings.button.reset_defaults"))
+        self._nav_card.title_label.setText(t("settings.card.nav"))
+        self.nav_hint_label.setText(t("settings.label.nav_hint"))
+        self.nav_show_all_btn.setText(t("settings.button.nav_show_all"))
+        self.nav_reset_btn.setText(t("settings.button.nav_reset"))
+        self._populate_nav_list()
         self._about_card.title_label.setText(t("settings.card.about"))
         self.version_label.setText(t("settings.label.version", version=APP_VERSION))
         self._update_label.setText(
@@ -1147,6 +1389,8 @@ class ToolboxWindow(QMainWindow):
         self.load_geometry()
 
         self.plugins: Dict[str, ToolPlugin] = {}
+        self.nav_buttons: Dict[str, SidebarButton] = {}  # 插件 id -> 导航按钮
+        self._hidden_plugins = set()  # 被用户隐藏的插件 id，供切换时防护
         self.current_plugin = None
         self.sidebar_expanded = True
         self._sidebar_animating = False
@@ -1297,6 +1541,7 @@ class ToolboxWindow(QMainWindow):
             from functools import partial
             btn.clicked.connect(partial(self.switch_plugin, plugin.id))
             self.nav_layout.addWidget(btn)
+            self.nav_buttons[plugin.id] = btn
 
             widget = plugin.get_widget()
             scroll_area = QScrollArea()
@@ -1350,6 +1595,38 @@ class ToolboxWindow(QMainWindow):
         for plugin_class in plugin_classes:
             self.register_plugin(plugin_class)
 
+        # 注册完成后按用户配置重排/隐藏导航项与首页卡片
+        self.rebuild_navigation()
+
+    def rebuild_navigation(self):
+        """按用户配置重排侧边栏导航项，并同步首页功能卡片
+
+        只调整已存在按钮的布局位置与可见性，不重建插件页面——页面在
+        QStackedWidget 中按 plugin.scroll_area 定位，与导航顺序无关。
+        """
+        order, hidden = nav_config.load_nav_state(self.app_settings, PLUGIN_MODULES)
+        self._hidden_plugins = set(hidden)
+
+        position = 0
+        for plugin_id in order:
+            btn = self.nav_buttons.get(plugin_id)
+            if btn is None:
+                # 插件加载失败时没有对应按钮，跳过且不影响其余项顺序
+                continue
+            self.nav_layout.removeWidget(btn)
+            self.nav_layout.insertWidget(position, btn)
+            btn.setVisible(plugin_id not in self._hidden_plugins)
+            position += 1
+
+        # 当前停留的页面被隐藏时回到首页
+        if self.current_plugin in self._hidden_plugins:
+            self.switch_to_welcome()
+
+        if hasattr(self, "welcome_page"):
+            self.welcome_page.rebuild_feature_cards(
+                [pid for pid in order if pid not in self._hidden_plugins])
+            self.welcome_page.update_theme(self._current_theme)
+
     def _resolve_size(self, size):
         """解析尺寸配置，支持像素值或百分比（如(0.7, 0.8)表示70%宽、80%高）"""
         w, h = size
@@ -1374,6 +1651,9 @@ class ToolboxWindow(QMainWindow):
         self.home_btn.setChecked(True)
 
     def switch_plugin(self, plugin_id):
+        # 被用户隐藏的导航项不可切入（防止程序化调用绕过可见性）
+        if plugin_id in self._hidden_plugins:
+            return
         for i in range(self.nav_layout.count()):
             widget = self.nav_layout.itemAt(i).widget()
             if isinstance(widget, SidebarButton):

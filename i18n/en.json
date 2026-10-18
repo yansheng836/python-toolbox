@@ -361,9 +361,12 @@
   "plugin.settings.name": "Settings",
   "settings.button.dark_theme": "🌙 Dark Theme",
   "settings.button.light_theme": "☀️ Light Theme",
+  "settings.button.nav_reset": "Reset Order",
+  "settings.button.nav_show_all": "Show All",
   "settings.button.reset_defaults": "Reset to Defaults",
   "settings.card.about": "About",
   "settings.card.general": "General Settings",
+  "settings.card.nav": "Navigation",
   "settings.combo.en": "English",
   "settings.combo.zh_CN": "简体中文",
   "settings.dialog.auto_language_title": "Interface Language",
@@ -374,6 +377,7 @@
   "settings.dialog.reset_failed": "Failed to reset settings: {error}",
   "settings.label.appearance": "Appearance",
   "settings.label.language": "Language",
+  "settings.label.nav_hint": "Drag to reorder. Uncheck a tool to hide it (Settings is always shown and cannot be hidden).",
   "settings.label.reset_defaults": "Reset to Defaults",
   "settings.label.reset_hint": "Restore settings such as the interface language, theme, and window layout to their defaults.",
   "settings.label.version": "Version: v{version}",
@@ -389,6 +393,7 @@
   "tray.tooltip": "Toolbox",
   "welcome.feature_title": "Features",
   "welcome.hint": "👈 Choose a tool from the sidebar menu to get started",
+  "welcome.no_tools_hint": "All tools are hidden. Restore them in Settings → Navigation.",
   "welcome.subtitle": "A collection of offline, efficient, and beautifully designed desktop tools",
   "welcome.title": "Toolbox"
 }

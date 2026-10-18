@@ -51,6 +51,7 @@ toolbox/
 │   ├── action_panel.py        # ActionPanel — button + progress bar + status label
 │   ├── dialog_utils.py        # Dialog helpers (get_save_file_name, etc.)
 │   ├── message_utils.py       # Themed message boxes (show_info, show_error, etc.)
+│   ├── nav_config.py         # Sidebar order/visibility config ([nav] in config.ini)
 │   └── utils.py              # Helpers: get_image_size, get_file_size, get_pdf_pages,
 │                               get_create_time, get_modify_time, PDF_COLUMNS, IMAGE_COLUMNS,
 │                               PIL_AVAILABLE, FITZ_AVAILABLE, IMG2PDF_AVAILABLE
