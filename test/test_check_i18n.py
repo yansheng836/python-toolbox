@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts.check_i18n import (
+    check_code_references,
     check_dictionaries,
     check_fragments,
     extract_placeholders,
@@ -213,3 +214,71 @@ def test_main_fragments_conflict_exit_1(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "CONFLICT" in out
     assert "4 files checked" in out
+
+
+# ==================== 源码引用校验（--refs） ====================
+
+
+def make_code_root(tmp_path):
+    """在 tmp_path 下创建一个待扫描的源码目录"""
+    root = tmp_path / "src"
+    root.mkdir()
+    return root
+
+
+def test_refs_known_keys_ok(tmp_path):
+    """t()/bind()/bind_combo() 的常量 key 都存在 → 无错误；动态 key 与中立条目跳过"""
+    d = make_dict_dir(tmp_path)
+    write_dict(d, "zh_CN.json", {"a.hello": "你好", "a.choice": "选项"})
+    code = make_code_root(tmp_path)
+    (code / "sample.py").write_text(
+        "from common.i18n import t, bind, bind_combo\n"
+        "t('a.hello')\n"
+        "t('a.hello' if True else 'a.choice')\n"
+        "bind(widget, 'setText', 'a.choice')\n"
+        "bind_combo(combo, [('JPG', 'JPG'), ('a.choice', 'x')])\n"
+        "t(f'dynamic.{name}')\n",
+        encoding="utf-8",
+    )
+    assert check_code_references(d, code) == []
+
+
+def test_refs_unknown_key_reported(tmp_path):
+    """源码引用的 key 不在 zh_CN.json → UNKNOWN_KEY 错误并带文件行号"""
+    d = make_dict_dir(tmp_path)
+    write_dict(d, "zh_CN.json", {"a.hello": "你好"})
+    code = make_code_root(tmp_path)
+    (code / "sample.py").write_text(
+        "from common.i18n import t, bind_combo\n"
+        "t('a.missing')\n"
+        "bind_combo(combo, [('A4', 'A4'), ('a.missing2', 1)])\n",
+        encoding="utf-8",
+    )
+    errors = check_code_references(d, code)
+    assert len(errors) == 2
+    assert all("UNKNOWN_KEY" in e for e in errors)
+    assert "a.missing" in errors[0] and "a.missing2" in errors[1]
+    assert "sample.py:2" in errors[0]
+
+
+def test_refs_skips_test_and_build_dirs(tmp_path):
+    """test/、build/ 等目录不参与引用校验（脚本式用例不是产品文案）"""
+    d = make_dict_dir(tmp_path)
+    write_dict(d, "zh_CN.json", {"a.hello": "你好"})
+    code = make_code_root(tmp_path)
+    for sub in ("test", "build"):
+        nested = code / sub
+        nested.mkdir()
+        (nested / "case.py").write_text("t('not.in.dict')\n", encoding="utf-8")
+    assert check_code_references(d, code) == []
+
+
+def test_main_refs_unknown_key_exit_1(tmp_path, capsys):
+    """--refs 发现未知 key → 退出码 1"""
+    d = make_dict_dir(tmp_path)
+    write_dict(d, "zh_CN.json", {"a.hello": "你好"})
+    write_dict(d, "en.json", {"a.hello": "Hello"})
+    code = make_code_root(tmp_path)
+    (code / "sample.py").write_text("t('a.missing')\n", encoding="utf-8")
+    assert main(["--dir", str(d), "--refs", "--code-root", str(code)]) == 1
+    assert "UNKNOWN_KEY" in capsys.readouterr().out

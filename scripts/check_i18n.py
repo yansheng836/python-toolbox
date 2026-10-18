@@ -9,12 +9,14 @@ i18n 词典校验脚本 — key 覆盖、占位符一致性、复数结构、空
     python scripts/check_i18n.py                 # 校验 i18n/ 下所有词典
     python scripts/check_i18n.py --dir <dir>     # 校验指定目录（测试用）
     python scripts/check_i18n.py --fragments     # 额外校验 i18n/fragments/*.json 之间的 key 冲突
+    python scripts/check_i18n.py --refs          # 额外校验源码 t()/bind()/bind_combo() 引用的 key
 
 退出码：0 全部通过；1 有错误。
-纯标准库实现（json、re、argparse、pathlib）。
+纯标准库实现（json、re、argparse、pathlib、ast）。
 """
 
 import argparse
+import ast
 import json
 import re
 import sys
@@ -27,6 +29,18 @@ PLURAL_KEYS = {"one", "other"}
 # 占位符：{name}，忽略 {{ }} 转义
 PLACEHOLDER_RE = re.compile(r"\{([a-z_][a-z0-9_]*)\}")
 ESCAPED_PLACEHOLDER_RE = re.compile(r"\{\{|\}\}")
+
+# 语言中立条目：直接作为 key 传给 bind_combo/t()，词典查不到时回退显示原文本。
+# 新增此类条目（如 A4、JPG）时同步加入这里，refs 校验才不会误报。
+LANGUAGE_NEUTRAL_KEYS = frozenset({"JPG", "JPEG", "PNG", "WebP", "A4", "A3"})
+
+# refs 校验时跳过的目录（测试、构建产物、文档、词典自身）
+REF_SKIP_DIRS = frozenset({
+    ".git", ".superpowers", "__pycache__", "build", "dist", "docs",
+    "i18n", "scripts", "test",
+})
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _safe_repr(value):
@@ -200,6 +214,89 @@ def _check_self(errors, file_name, data):
             errors.append(f"ERROR: {file_name}: {key} - EMPTY: 值为空字符串")
 
 
+def _iter_source_files(code_root):
+    """遍历参与 refs 校验的 Python 源文件，跳过测试、构建产物与文档目录"""
+    for path in sorted(Path(code_root).rglob("*.py")):
+        parts = path.relative_to(code_root).parts[:-1]
+        if any(part in REF_SKIP_DIRS or part.startswith(".") for part in parts):
+            continue
+        yield path
+
+
+def _constant_strings(node):
+    """提取节点中的常量字符串（支持 `a if cond else b` 三元表达式）"""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return [node.value]
+    if isinstance(node, ast.IfExp):
+        return _constant_strings(node.body) + _constant_strings(node.orelse)
+    return []
+
+
+def _referenced_keys(tree):
+    """从 AST 提取 t()/bind()/bind_combo() 的常量 key 及其行号
+
+    f-string 等动态 key（如 `plugin.{pid}.name`）无法静态解析，跳过。
+    """
+    keys = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if isinstance(func, ast.Name):
+            name = func.id
+        elif isinstance(func, ast.Attribute):
+            name = func.attr
+        else:
+            continue
+        if name == "t" and node.args:
+            for key in _constant_strings(node.args[0]):
+                keys.append((key, node.lineno))
+        elif name == "bind" and len(node.args) >= 3:
+            for key in _constant_strings(node.args[2]):
+                keys.append((key, node.lineno))
+        elif name == "bind_combo" and len(node.args) >= 2:
+            items = node.args[1]
+            if isinstance(items, (ast.List, ast.Tuple)):
+                for element in items.elts:
+                    if isinstance(element, ast.Tuple) and element.elts:
+                        for key in _constant_strings(element.elts[0]):
+                            keys.append((key, node.lineno))
+    return keys
+
+
+def check_code_references(dir_path, code_root=None):
+    """校验源码引用的 key 都存在于 zh_CN.json
+
+    仅检查 t()/bind()/bind_combo() 中的常量 key；语言中立条目
+    （LANGUAGE_NEUTRAL_KEYS）跳过。返回错误列表。
+    """
+    base_file = Path(dir_path) / f"{SOURCE_LOCALE}.json"
+    try:
+        data = json.loads(base_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as e:
+        return [f"ERROR: {base_file.name}: - INVALID_JSON: {e}"]
+    if not isinstance(data, dict):
+        return [f"ERROR: {base_file.name}: - INVALID_JSON: 顶层必须是 JSON 对象"]
+
+    root = Path(code_root) if code_root is not None else PROJECT_ROOT
+    errors = []
+    for source in _iter_source_files(root):
+        try:
+            tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+        except (OSError, UnicodeDecodeError, SyntaxError) as e:
+            errors.append(
+                f"ERROR: {source.relative_to(root)}: - INVALID_PY: {e}"
+            )
+            continue
+        for key, line in _referenced_keys(tree):
+            if key in data or key in LANGUAGE_NEUTRAL_KEYS:
+                continue
+            errors.append(
+                f"ERROR: {source.relative_to(root)}:{line} - UNKNOWN_KEY: {key}"
+            )
+    return errors
+
+
 def main(argv=None):
     """CLI 入口，返回退出码"""
     # 输出不可编码字符时降级为 ?，避免报告中途因 UnicodeEncodeError 崩溃
@@ -217,6 +314,16 @@ def main(argv=None):
         "--fragments",
         action="store_true",
         help="额外校验 <dir>/fragments/*.json 之间的 key 冲突",
+    )
+    parser.add_argument(
+        "--refs",
+        action="store_true",
+        help="额外校验源码 t()/bind()/bind_combo() 引用的 key 是否存在",
+    )
+    parser.add_argument(
+        "--code-root",
+        default=str(PROJECT_ROOT),
+        help="refs 校验的源码根目录（默认项目根目录）",
     )
     args = parser.parse_args(argv)
 
@@ -251,6 +358,9 @@ def main(argv=None):
         dict_files = [p for p in dir_path.glob("*.json") if p.is_file()]
         files_checked += len(dict_files)
         errors.extend(check_dictionaries(dir_path))
+
+    if args.refs and has_base:
+        errors.extend(check_code_references(dir_path, args.code_root))
 
     for error in errors:
         print(error)
