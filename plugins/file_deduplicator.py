@@ -482,27 +482,9 @@ class FileDeduplicatorWidget(QWidget):
         # 删除规则卡片
         self.deletion_card = Card(title=t("plugin.file_deduplicator.card.deletion_rules"))
 
-        # 删除到回收站（优先展示；send2trash 可用时默认勾选，不可用时禁用）
-        trash_layout = QHBoxLayout()
-        self.use_trash_label = SelectableLabel(
-            t("plugin.file_deduplicator.label.use_trash")
-        )
-        trash_layout.addWidget(self.use_trash_label)
-        self.use_trash_checkbox = QCheckBox()
-        self.use_trash_checkbox.setChecked(SEND2TRASH_AVAILABLE)
-        if not SEND2TRASH_AVAILABLE:
-            self.use_trash_checkbox.setEnabled(False)
-            self.use_trash_label.setText(
-                t("plugin.file_deduplicator.label.use_trash")
-                + t("plugin.file_deduplicator.msg.trash_unavailable")
-            )
-        trash_layout.addWidget(self.use_trash_checkbox)
-        trash_layout.addStretch()
-        self.deletion_card.content_layout.addLayout(trash_layout)
-
         rule_row_layout = QHBoxLayout()
 
-        # 左半：删除规则下拉框
+        # 左半：删除规则下拉框 + 删除到回收站选项
         left_half = QHBoxLayout()
         self.rule_label = SelectableLabel(t("plugin.file_deduplicator.label.rule"))
         left_half.addWidget(self.rule_label)
@@ -522,6 +504,21 @@ class FileDeduplicatorWidget(QWidget):
         self.rule_combo.setMinimumContentsLength(16)
         left_half.addWidget(self.rule_combo, 1)
         self.rule_combo.currentIndexChanged.connect(self._sort_by_rule)
+
+        # 删除到回收站（紧接删除规则；send2trash 可用时默认勾选，不可用时禁用）
+        self.use_trash_label = SelectableLabel(
+            t("plugin.file_deduplicator.label.use_trash")
+        )
+        left_half.addWidget(self.use_trash_label)
+        self.use_trash_checkbox = QCheckBox()
+        self.use_trash_checkbox.setChecked(SEND2TRASH_AVAILABLE)
+        if not SEND2TRASH_AVAILABLE:
+            self.use_trash_checkbox.setEnabled(False)
+            self.use_trash_label.setText(
+                t("plugin.file_deduplicator.label.use_trash")
+                + t("plugin.file_deduplicator.msg.trash_unavailable")
+            )
+        left_half.addWidget(self.use_trash_checkbox)
 
         # 右半：删除后是否自动扫描（文字在前，勾选框在后，与"启用压缩"样式一致）
         right_half = QHBoxLayout()
