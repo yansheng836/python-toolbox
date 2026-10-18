@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QGridLayout, QCheckBox
 )
 
-from common.i18n import t
+from common.i18n import t, bind_combo
 from common.dialog_utils import get_save_file_name
 from common.action_panel import ActionPanel
 from common.utils import PIL_AVAILABLE, IMG2PDF_AVAILABLE, FITZ_AVAILABLE
@@ -110,10 +110,16 @@ class PDFWorker(BaseWorker):
         temp_files = set()  # 使用集合避免重复文件名导致的清理问题
         try:
             # ========= 预检查：目标文件是否被占用 =========
-            from common.utils import check_file_writable
-            writable, err_msg = check_file_writable(self.output)
-            if not writable:
-                self.finished.emit(False, err_msg)
+            # 就地检查以便错误消息走 i18n 词典（common.utils 的同名辅助函数
+            # 仍返回中文硬编码，无法本地化）
+            try:
+                with open(self.output, 'ab'):
+                    pass
+            except PermissionError:
+                self.finished.emit(False, t("common.error.file_locked", path=self.output))
+                return
+            except Exception as e:
+                self.finished.emit(False, t("common.error.file_access", error=str(e)))
                 return
 
             total = len(self.files)
@@ -122,7 +128,7 @@ class PDFWorker(BaseWorker):
             # ========= 阶段1：智能缩放需要先扫描最大宽度 =========
             max_width = None
             if self.page_size == "smart":
-                self.status.emit("正在扫描图片尺寸...")
+                self.status.emit(t("plugin.image_to_pdf.msg.scanning"))
                 for f in self.files:
                     try:
                         img = self._load_oriented_image(f)
@@ -135,17 +141,20 @@ class PDFWorker(BaseWorker):
                         print(f"Error in image_to_pdf: {e}")
                         skipped += 1
                 if max_width is None:
-                    self.finished.emit(False, "没有成功读取任何图片，请检查图片文件是否损坏。")
+                    self.finished.emit(False, t("plugin.image_to_pdf.error.no_images_read"))
                     return
 
             # ========= 阶段2：分批处理图片 =========
             temp_pdfs = []
             processed_count = 0
-            self.status.emit("正在处理图片...")
+            self.status.emit(t("plugin.image_to_pdf.msg.processing"))
 
             for batch_start in range(0, total, self.BATCH_SIZE):
                 batch_files = self.files[batch_start:min(batch_start + self.BATCH_SIZE, total)]
-                self.status.emit(f"正在处理第 {batch_start // self.BATCH_SIZE + 1} 批图片...")
+                self.status.emit(t(
+                    "plugin.image_to_pdf.msg.batch",
+                    index=batch_start // self.BATCH_SIZE + 1,
+                ))
 
                 # 2a. 读取并处理本批图片
                 batch_imgs = []
@@ -248,7 +257,10 @@ class PDFWorker(BaseWorker):
 
                 # 验证临时PDF不为空
                 if os.path.getsize(temp_pdf) == 0:
-                    raise Exception(f"临时PDF生成失败（0字节）: {temp_pdf}")
+                    raise Exception(t(
+                        "plugin.image_to_pdf.error.temp_pdf_empty",
+                        path=temp_pdf,
+                    ))
 
                 # 使用相对路径存储，但确保临时文件能被找到
                 temp_pdfs.append(temp_pdf)
@@ -264,11 +276,11 @@ class PDFWorker(BaseWorker):
                         print(f"Error removing JPEG {jpg_file}: {e}")
 
             if not temp_pdfs:
-                self.finished.emit(False, "没有成功处理任何图片，请检查图片文件是否损坏。")
+                self.finished.emit(False, t("plugin.image_to_pdf.error.no_images_processed"))
                 return
 
             # ========= 阶段3：合并所有临时 PDF =========
-            self.status.emit("正在合并PDF...")
+            self.status.emit(t("plugin.image_to_pdf.msg.merging"))
             if len(temp_pdfs) == 1:
                 import shutil
                 # 使用完整路径移动文件（处理相对路径情况）
@@ -290,11 +302,11 @@ class PDFWorker(BaseWorker):
                     doc.save(self.output, garbage=0, deflate=False)
                     doc.close()
                 else:
-                    self.finished.emit(False, "多批合并需要 PyMuPDF，请安装: pip install PyMuPDF")
+                    self.finished.emit(False, t("plugin.image_to_pdf.error.pymupdf_missing"))
                     return
 
             # ========= 阶段4：清理所有临时 PDF =========
-            self.status.emit("正在清理临时文件...")
+            self.status.emit(t("plugin.image_to_pdf.msg.cleaning"))
             for tpdf in temp_pdfs:
                 try:
                     # 使用完整路径删除临时文件
@@ -305,17 +317,20 @@ class PDFWorker(BaseWorker):
                 except OSError as e:
                     print(f"Error removing temp PDF {tpdf}: {e}")
 
-            msg = f"PDF已保存至:\n{self.output}"
+            msg = t("plugin.image_to_pdf.msg.saved", path=self.output)
             if skipped > 0:
-                msg += f"\n（已跳过 {skipped} 张损坏图片）"
+                msg += t("plugin.image_to_pdf.msg.skipped", count=skipped)
             self.progress.emit(processed_count + 1)  # 合并阶段完成
             # 验证输出PDF不为空
             if os.path.getsize(self.output) == 0:
-                raise Exception(f"输出PDF为空（0字节）: {self.output}")
+                raise Exception(t(
+                    "plugin.image_to_pdf.error.output_empty",
+                    path=self.output,
+                ))
             self.finished.emit(True, msg)
         except Exception as e:
             print(f"Error in image_to_pdf: {e}")
-            self.finished.emit(False, f"转换失败: {str(e)}")
+            self.finished.emit(False, t("plugin.image_to_pdf.error.convert_failed", error=str(e)))
         finally:
             # 异常或正常结束时，清理所有未删除的临时文件
             for tf in list(temp_files):
@@ -352,6 +367,39 @@ class ImageToPDF(ToolPlugin):
         except RuntimeError:
             pass  # C++ object already deleted
 
+    @staticmethod
+    def _build_columns():
+        """按当前语言重建列定义（IMAGE_COLUMNS 是共享常量，其标签不随语言切换）"""
+        columns = [
+            Column(col.id, t(f"column.{col.id}"), col.func)
+            for col in IMAGE_COLUMNS
+        ]
+        columns.append(Column("created", t("column.created"), get_create_time))
+        return columns
+
+    def _retranslate_columns(self):
+        """重建文件列表表头文本（表头标签在表格创建时固定）"""
+        columns = self._build_columns()
+        self.file_panel.columns = columns
+        self.file_panel.table.setHorizontalHeaderLabels([col.label for col in columns])
+
+    def retranslate_ui(self):
+        """语言切换后重放全部用户可见文本"""
+        self.title_label.setText(f"{self.icon} {t('plugin.image_to_pdf.name')}")
+        self.desc_label.setText(t("plugin.image_to_pdf.description"))
+        self.file_card.title_label.setText(t("plugin.image_to_pdf.card.list"))
+        self.settings_card.title_label.setText(t("plugin.image_to_pdf.card.pdf_settings"))
+        self.page_size_label.setText(t("plugin.image_to_pdf.label.page_size"))
+        self.compress_label.setText(t("plugin.image_to_pdf.label.compress"))
+        self.quality_title_label.setText(t("plugin.image_to_pdf.label.quality"))
+        self.output_file_label.setText(t("plugin.image_to_pdf.label.output_file"))
+        self.output_path.setPlaceholderText(t("plugin.image_to_pdf.placeholder.output_file"))
+        self.browse_btn.setText(t("plugin.image_to_pdf.button.browse"))
+        self.action_panel.btn.setText(t("plugin.image_to_pdf.button.start"))
+        self.file_panel.file_filter = t("plugin.image_to_pdf.filter.images")
+        self._retranslate_columns()
+        # 组合框由 bind_combo 自动重放，无需处理
+
     def create_ui(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
@@ -360,42 +408,53 @@ class ImageToPDF(ToolPlugin):
         self.theme = Theme.DARK
 
         # 标题 + 描述
-        self._setup_header(layout, theme=self.theme)
+        self._setup_header(
+            layout,
+            title=f"{self.icon} {t('plugin.image_to_pdf.name')}",
+            desc=t("plugin.image_to_pdf.description"),
+            theme=self.theme,
+        )
 
         # 图片列表
-        list_card = Card(title="图片列表（列表顺序即PDF顺序）")
+        self.file_card = Card(title=t("plugin.image_to_pdf.card.list"))
         self.file_panel = FileListPanel(
-            columns=IMAGE_COLUMNS + [Column("created", "创建时间", get_create_time)],
-            file_filter="图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff)",
+            columns=self._build_columns(),
+            file_filter=t("plugin.image_to_pdf.filter.images"),
             button_class=AnimatedButton,
             show_buttons=["add", "remove", "clear", "up", "down", "sort_name", "sort_time"]
         )
-        list_card.content_layout.addWidget(self.file_panel)
-        layout.addWidget(list_card)
+        self.file_card.content_layout.addWidget(self.file_panel)
+        layout.addWidget(self.file_card)
 
         # 设置
-        settings_card = Card(title="PDF设置")
+        self.settings_card = Card(title=t("plugin.image_to_pdf.card.pdf_settings"))
         settings_layout = QGridLayout()
-        settings_card.content_layout.addLayout(settings_layout)
+        self.settings_card.content_layout.addLayout(settings_layout)
 
-        settings_layout.addWidget(SelectableLabel("页面大小:"), 0, 0)
+        self.page_size_label = SelectableLabel(t("plugin.image_to_pdf.label.page_size"))
+        settings_layout.addWidget(self.page_size_label, 0, 0)
         self.size_combo = QComboBox()
-        self.size_combo.addItem("自动适应", "auto")
-        self.size_combo.addItem("A4", "A4")
-        self.size_combo.addItem("A3", "A3")
-        self.size_combo.addItem("原图尺寸", "original")
-        self.size_combo.addItem("智能缩放", "smart")
+        # A4/A3 无对应词典 key：t() 缺失时原样返回，作为语言中立标签
+        bind_combo(self.size_combo, [
+            ("plugin.image_to_pdf.combo.auto", "auto"),
+            ("A4", "A4"),
+            ("A3", "A3"),
+            ("plugin.image_to_pdf.combo.original", "original"),
+            ("plugin.image_to_pdf.combo.smart", "smart"),
+        ])
         # 默认 smart 在索引 4
         self.size_combo.setCurrentIndex(self.size_combo.findData("smart"))
         self.size_combo.setStyleSheet(get_combo_style(self.theme))
         settings_layout.addWidget(self.size_combo, 0, 1)
 
-        settings_layout.addWidget(SelectableLabel("启用压缩:"), 1, 0)
+        self.compress_label = SelectableLabel(t("plugin.image_to_pdf.label.compress"))
+        settings_layout.addWidget(self.compress_label, 1, 0)
         self.compress_check = QCheckBox()
         self.compress_check.setChecked(True)
         settings_layout.addWidget(self.compress_check, 1, 1)
 
-        settings_layout.addWidget(SelectableLabel("JPEG质量:"), 2, 0)
+        self.quality_title_label = SelectableLabel(t("plugin.image_to_pdf.label.quality"))
+        settings_layout.addWidget(self.quality_title_label, 2, 0)
         quality_layout = QHBoxLayout()
         self.quality_slider = QSlider(Qt.Orientation.Horizontal)
         self.quality_slider.setRange(1, 100)
@@ -408,22 +467,23 @@ class ImageToPDF(ToolPlugin):
         quality_layout.addWidget(self.quality_label)
         settings_layout.addLayout(quality_layout, 2, 1)
 
-        settings_layout.addWidget(SelectableLabel("输出文件:"), 3, 0)
+        self.output_file_label = SelectableLabel(t("plugin.image_to_pdf.label.output_file"))
+        settings_layout.addWidget(self.output_file_label, 3, 0)
         path_layout = QHBoxLayout()
         self.output_path = QLineEdit()
-        self.output_path.setPlaceholderText("选择保存位置...")
-        browse_btn = AnimatedButton("浏览")
-        browse_btn.setMaximumWidth(80)
-        browse_btn.clicked.connect(self.browse_output)
+        self.output_path.setPlaceholderText(t("plugin.image_to_pdf.placeholder.output_file"))
+        self.browse_btn = AnimatedButton(t("plugin.image_to_pdf.button.browse"))
+        self.browse_btn.setMaximumWidth(80)
+        self.browse_btn.clicked.connect(self.browse_output)
         path_layout.addWidget(self.output_path)
-        path_layout.addWidget(browse_btn)
+        path_layout.addWidget(self.browse_btn)
         settings_layout.addLayout(path_layout, 3, 1)
 
-        layout.addWidget(settings_card)
+        layout.addWidget(self.settings_card)
 
         # 操作面板（按钮 + 进度条 + 状态标签）
         self.action_panel = ActionPanel(
-            button_text="开始转换"
+            button_text=t("plugin.image_to_pdf.button.start")
         )
         self.action_panel.clicked.connect(self.start_conversion)
         layout.addWidget(self.action_panel)
@@ -436,7 +496,10 @@ class ImageToPDF(ToolPlugin):
     def browse_output(self):
         parent = self.widget if self.widget else None
         path = get_save_file_name(
-            parent, "保存PDF", "", "PDF文件 (*.pdf)"
+            parent,
+            t("plugin.image_to_pdf.dialog.save_pdf"),
+            "",
+            t("plugin.image_to_pdf.filter.pdf"),
         )
         if path:
             if not path.endswith('.pdf'):
@@ -453,7 +516,10 @@ class ImageToPDF(ToolPlugin):
         if not output:
             parent = self.widget if self.widget else None
             output = get_save_file_name(
-                parent, "保存PDF", "", "PDF文件 (*.pdf)"
+                parent,
+                t("plugin.image_to_pdf.dialog.save_pdf"),
+                "",
+                t("plugin.image_to_pdf.filter.pdf"),
             )
             if not output:
                 return
@@ -465,8 +531,9 @@ class ImageToPDF(ToolPlugin):
             parent = self.widget if self.widget else None
             from common.message_utils import show_error
             show_error(
-                parent, "错误",
-                "请先安装依赖: pip install img2pdf 或 pip install PyMuPDF 或 pip install Pillow"
+                parent,
+                t("plugin.image_to_pdf.dialog.error"),
+                t("plugin.image_to_pdf.error.pil_missing"),
             )
             return
 
