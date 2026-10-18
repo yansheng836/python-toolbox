@@ -1490,6 +1490,11 @@ class ToolboxWindow(QMainWindow):
         theme = Theme.LIGHT if theme_name == "light" else Theme.DARK
         self.apply_theme(theme)
 
+    @property
+    def current_theme(self):
+        """当前主题调色板（Theme.LIGHT / Theme.DARK）"""
+        return self._current_theme
+
     def apply_theme(self, theme):
         self._current_theme = theme
         self.setStyleSheet(f"""

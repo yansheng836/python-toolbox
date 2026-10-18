@@ -211,6 +211,10 @@ class AppSettings:
             return self._parser.get(section, key)
         return default
 
+    def is_explicit(self, section, key):
+        """键是否来自配置文件或 set()，而非启动时填充的默认值"""
+        return f"{section}.{key}" in self._explicit_keys
+
     # ==================== 写 ====================
 
     def set(self, section, key, value):

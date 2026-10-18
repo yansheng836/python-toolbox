@@ -365,6 +365,8 @@
   "settings.card.general": "General Settings",
   "settings.combo.en": "English",
   "settings.combo.zh_CN": "简体中文",
+  "settings.dialog.auto_language_title": "Interface Language",
+  "settings.dialog.auto_language_message": "Detected system language: {language}. The interface language has been set automatically.\nIf this is not expected, please change it manually on the Settings page.",
   "settings.label.appearance": "Appearance:",
   "settings.label.language": "Language:",
   "settings.label.version": "Version: v{version}",

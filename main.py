@@ -12,7 +12,28 @@ from PyQt6.QtWidgets import QApplication
 from common.app_settings import AppSettings, setup_app_identity
 from common import i18n
 from common.i18n import install_qt_translator
+from common.message_utils import show_info
 from toolbox import ToolboxWindow
+
+
+def resolve_startup_language(settings):
+    """确定启动语言：已有保存值则沿用，首次启动按系统语言初始化并写回
+
+    is_explicit 为 False 说明 language 键只是 load() 填充的默认值，
+    尚未经用户选择，此时用系统语言覆盖并持久化，之后以用户选择为准。
+
+    返回 (语言代码, 是否为首次启动自动检测)。
+    """
+    if settings.is_explicit("general", "language"):
+        return settings.get("general", "language", i18n.DEFAULT_LANGUAGE), False
+
+    code = i18n.detect_system_language()
+    settings.set("general", "language", code)
+    try:
+        settings.save()
+    except OSError as e:
+        print(f"警告：无法写入配置文件，本次语言设置将不会持久化：{e}")
+    return code, True
 
 
 def main():
@@ -24,12 +45,23 @@ def main():
     settings = AppSettings()
     settings.migrate_from_qsettings()
 
-    code = settings.get("general", "language", i18n.DEFAULT_LANGUAGE)
+    code, auto_detected = resolve_startup_language(settings)
     i18n.set_language(code)
     install_qt_translator(app, code)
 
     window = ToolboxWindow(app, settings=settings)
     window.show()
+
+    if auto_detected:
+        show_info(
+            window,
+            i18n.t("settings.dialog.auto_language_title"),
+            i18n.t(
+                "settings.dialog.auto_language_message",
+                language=i18n.LANGUAGES[code],
+            ),
+            theme=window.current_theme,
+        )
     sys.exit(app.exec())
 
 

@@ -16,12 +16,22 @@ import weakref
 from pathlib import Path
 
 import PyQt6
-from PyQt6.QtCore import QObject, QTranslator, pyqtSignal
+from PyQt6.QtCore import QLocale, QObject, QTranslator, pyqtSignal
 
 # ==================== 语言注册表（扩展语言只加这里） ====================
 
 LANGUAGES = {"zh_CN": "简体中文", "en": "English"}
 DEFAULT_LANGUAGE = "zh_CN"
+
+
+def detect_system_language():
+    """按系统语言推断界面语言：中文（含各地区变体）→ zh_CN，其余 → en
+
+    仅在首次启动（配置中尚无保存值）时调用。
+    """
+    if QLocale.system().name().startswith("zh"):
+        return "zh_CN"
+    return "en"
 
 # 复数词条的候选形式：值为 {"one": ..., "other": ...} 时按 count 选择
 _PLURAL_FORMS = ("one", "other")

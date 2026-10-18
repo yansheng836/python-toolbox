@@ -14,6 +14,8 @@
   "settings.button.light_theme": "☀️ 浅色主题",
   "settings.card.about": "关于",
   "settings.card.general": "通用设置",
+  "settings.dialog.auto_language_title": "界面语言",
+  "settings.dialog.auto_language_message": "检测到系统语言为「{language}」，已自动为您设置界面语言。\n如不符合预期，请到设置页手动切换语言。",
   "settings.label.appearance": "外观:",
   "settings.label.version": "版本: v{version}",
   "settings.link.check_update": "检查更新",

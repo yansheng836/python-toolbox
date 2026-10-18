@@ -12,6 +12,7 @@ import pytest
 
 from common import i18n
 from common.app_settings import AppSettings
+from main import resolve_startup_language
 from toolbox import ToolboxWindow, Theme
 
 
@@ -32,6 +33,27 @@ def test_main_startup_order_smoke(tmp_path):
 
     i18n.set_language(settings.get("general", "language", "zh_CN"))
     assert i18n.manager.current_language == "zh_CN"
+
+
+def test_resolve_startup_language_first_run(tmp_path, monkeypatch):
+    """首次启动：按系统语言初始化并写回 INI，标记为自动检测"""
+    monkeypatch.setattr(i18n, "detect_system_language", lambda: "en")
+    settings = AppSettings(config_dir=tmp_path)
+    assert not settings.is_explicit("general", "language")
+
+    assert resolve_startup_language(settings) == ("en", True)
+    assert _read_ini(tmp_path / INI_NAME).get("general", "language") == "en"
+
+
+def test_resolve_startup_language_keeps_saved_choice(tmp_path, monkeypatch):
+    """已有保存值（用户选择）优先，不再按系统语言重设，也不弹提示"""
+    first = AppSettings(config_dir=tmp_path)
+    first.set("general", "language", "zh_CN")
+    first.save()
+
+    monkeypatch.setattr(i18n, "detect_system_language", lambda: "en")
+    settings = AppSettings(config_dir=tmp_path)
+    assert resolve_startup_language(settings) == ("zh_CN", False)
 
 
 @pytest.mark.usefixtures("qapp")

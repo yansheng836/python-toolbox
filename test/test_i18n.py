@@ -215,3 +215,29 @@ def test_install_qt_translator(qapp):
 
     install_qt_translator(qapp, "en")
     assert i18n._qt_translator is None
+
+
+def _fake_qlocale_class(locale_name):
+    """构造只实现 name()/system() 的 QLocale 替身，避免依赖真实系统区域"""
+
+    class _FakeLocale:
+        def name(self):
+            return locale_name
+
+    _FakeLocale.system = staticmethod(lambda: _FakeLocale())
+    return _FakeLocale
+
+
+@pytest.mark.parametrize(
+    "locale_name, expected",
+    [
+        ("zh_CN", "zh_CN"),
+        ("zh_TW", "zh_CN"),
+        ("en_US", "en"),
+        ("fr_FR", "en"),
+    ],
+)
+def test_detect_system_language(locale_name, expected, monkeypatch):
+    """系统语言检测：中文各变体映射 zh_CN，其余回退 en"""
+    monkeypatch.setattr(i18n, "QLocale", _fake_qlocale_class(locale_name))
+    assert i18n.detect_system_language() == expected
