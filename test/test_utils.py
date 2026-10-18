@@ -3,10 +3,10 @@
 测试 common/utils.py 中的共享工具函数
 """
 
+import builtins
 import os
-import tempfile
-import pytest
 
+from common.i18n import t
 from common.utils import (
     WINDOWS_RESERVED_NAMES,
     is_reserved_filename,
@@ -15,7 +15,9 @@ from common.utils import (
     get_combo_style,
     get_lineedit_style,
     get_spinbox_style,
+    get_create_time,
     get_file_size,
+    get_modify_time,
     IMAGE_COLUMNS,
     PDF_COLUMNS,
 )
@@ -176,3 +178,59 @@ class TestTableColumns:
         # 锁定 Column(id, label, func) 契约：下标 0 为稳定 id
         assert PDF_COLUMNS[0].id == "filename"
         assert PDF_COLUMNS[0].label == "文件名"
+
+
+class TestTimeHelpersErrorPath:
+    """测试文件时间获取函数的错误路径（UnboundLocalError 回归）"""
+
+    def test_get_create_time_oserror(self, monkeypatch):
+        """stat 抛 OSError 时应返回未知占位文本，而非 UnboundLocalError"""
+
+        def raise_oserror(_path):
+            raise OSError("stat failed")
+
+        monkeypatch.setattr(os.path, "getctime", raise_oserror)
+        assert get_create_time("x") == t("common.cell.unknown")
+
+    def test_get_modify_time_oserror(self, monkeypatch):
+        """stat 抛 OSError 时应返回未知占位文本，而非 UnboundLocalError"""
+
+        def raise_oserror(_path):
+            raise OSError("stat failed")
+
+        monkeypatch.setattr(os.path, "getmtime", raise_oserror)
+        assert get_modify_time("x") == t("common.cell.unknown")
+
+
+class TestWritabilityErrorPath:
+    """测试可写性检查的权限错误路径（i18n 错误消息）"""
+
+    def test_check_file_writable_permission_error(self, monkeypatch):
+        """open 抛 PermissionError 时返回包含路径的 i18n 错误消息"""
+        file_path = "locked_file_marker.txt"
+
+        def fake_open(path, *args, **kwargs):
+            raise PermissionError("locked")
+
+        monkeypatch.setattr(builtins, "open", fake_open)
+        writable, msg = check_file_writable(file_path)
+        assert writable is False
+        assert file_path in msg
+
+    def test_check_dir_writable_permission_error(self, monkeypatch):
+        """写测试文件抛 PermissionError 时返回包含目录路径的 i18n 错误消息"""
+        dir_path = "locked_dir_marker"
+        real_open = builtins.open
+
+        def fake_open(path, *args, **kwargs):
+            # 仅让写测试文件的那次 open 失败，避免影响目录存在性判断
+            if str(path).endswith(".write_test.tmp"):
+                raise PermissionError("locked")
+            return real_open(path, *args, **kwargs)
+
+        # 让目录被视为已存在，避免在测试中真的创建目录
+        monkeypatch.setattr(os.path, "exists", lambda _path: True)
+        monkeypatch.setattr(builtins, "open", fake_open)
+        writable, msg = check_dir_writable(dir_path)
+        assert writable is False
+        assert dir_path in msg

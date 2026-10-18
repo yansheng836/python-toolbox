@@ -77,8 +77,8 @@ def get_create_time(file_path):
     """获取文件创建时间文本"""
     try:
         import time
-        t = os.path.getctime(file_path)
-        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t))
+        stamp = os.path.getctime(file_path)
+        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(stamp))
     except OSError as e:
         print(f"get_create_time error: {e}")
         return t("common.cell.unknown")
@@ -88,8 +88,8 @@ def get_modify_time(file_path):
     """获取文件修改时间文本"""
     try:
         import time
-        t = os.path.getmtime(file_path)
-        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t))
+        stamp = os.path.getmtime(file_path)
+        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(stamp))
     except OSError as e:
         print(f"get_modify_time error: {e}")
         return t("common.cell.unknown")
@@ -157,10 +157,7 @@ def check_dir_writable(dir_path):
         os.remove(test_file)
         return True, ""
     except PermissionError:
-        return False, (
-            f"输出目录被占用或无法写入：\n{dir_path}\n\n"
-            f"请检查目录权限，或关闭可能占用该目录的程序。"
-        )
+        return False, t("common.error.dir_locked", dir=dir_path)
     except Exception as e:
         return False, t("common.error.dir_access", error=str(e))
 
@@ -176,10 +173,7 @@ def check_file_writable(file_path):
             pass
         return True, ""
     except PermissionError:
-        return False, (
-            f"目标文件被占用，无法写入：\n{file_path}\n\n"
-            f"请先关闭该文件（如在 WPS、Adobe Reader 等软件中打开），然后重试。"
-        )
+        return False, t("common.error.file_locked", path=file_path)
     except Exception as e:
         return False, t("common.error.file_access", error=str(e))
 
