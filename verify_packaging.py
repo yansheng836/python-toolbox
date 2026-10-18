@@ -36,7 +36,7 @@ def test_imports():
     # 可选依赖
     optional_modules = [
         ('img2pdf', 'img2pdf PDF转换库'),
-        ('fitz', 'PyMuPDF PDF转换库'),
+        ('pymupdf', 'PyMuPDF PDF转换库'),
     ]
 
     print("=" * 60)

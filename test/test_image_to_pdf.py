@@ -6,7 +6,7 @@
 import pytest
 from PIL import Image
 
-fitz = pytest.importorskip("fitz")
+fitz = pytest.importorskip("pymupdf")
 
 from plugins.image_to_pdf import PDFWorker
 

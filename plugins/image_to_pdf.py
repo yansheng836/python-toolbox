@@ -24,7 +24,7 @@ if PIL_AVAILABLE:
 if IMG2PDF_AVAILABLE:
     import img2pdf
 if FITZ_AVAILABLE:
-    import fitz
+    import pymupdf as fitz
 
 # 导入主程序中的基类和组件
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

@@ -23,7 +23,7 @@ from common.utils import PDF_COLUMNS, get_lineedit_style
 from common.base_worker import BaseWorker
 
 if FITZ_AVAILABLE:
-    import fitz
+    import pymupdf as fitz
 
 
 class PDFMergeWorker(BaseWorker):

@@ -105,7 +105,7 @@ a = Analysis(
 
         # PDF 转换库
         'img2pdf',
-        'fitz',  # PyMuPDF
+        'pymupdf',  # PyMuPDF
     ],
     hookspath=[],
     hooksconfig={},

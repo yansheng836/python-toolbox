@@ -6,7 +6,6 @@ pytest conftest — 共享 fixtures
     pip install pytest pytest-qt Pillow PyMuPDF
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -18,7 +17,6 @@ if str(PROJECT_ROOT) not in sys.path:
 import pytest
 from PIL import Image
 from PyQt6.QtWidgets import QApplication
-from PyQt6.QtCore import Qt
 
 
 # ==================== 应用 fixture ====================
@@ -70,7 +68,7 @@ def few_test_images(tmp_path):
 def test_pdf(tmp_path):
     """生成一个测试 PDF 文件（需要 PyMuPDF）"""
     try:
-        import fitz
+        import pymupdf as fitz
         doc = fitz.open()
         page = doc.new_page(width=595, height=842)
         page.insert_text((72, 72), "Test PDF Page 1", fontsize=20)

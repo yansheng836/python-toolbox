@@ -36,7 +36,7 @@ def test_plugin_attributes():
         assert hasattr(plugin, 'create_ui'), "缺少 create_ui 方法"
         assert hasattr(plugin, 'update_theme'), "缺少 update_theme 方法"
 
-        print(f"[OK] 插件属性检查通过")
+        print("[OK] 插件属性检查通过")
         print(f"  名称: {plugin.name}")
         print(f"  图标: {plugin.icon}")
         return True
@@ -58,8 +58,8 @@ def test_worker_import():
 def test_fitz_availability():
     """测试 PyMuPDF 是否可用"""
     try:
-        import fitz
-        print(f"[OK] PyMuPDF 已安装 (版本: {fitz.version})")
+        import pymupdf as fitz
+        print(f"[OK] PyMuPDF 已安装 (版本: {fitz.__version__})")
         return True
     except ImportError:
         print("[WARN] PyMuPDF 未安装（可选依赖）")

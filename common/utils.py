@@ -18,7 +18,7 @@ except ImportError as e:
     PIL_AVAILABLE = False
 
 try:
-    import fitz
+    import pymupdf as fitz
     FITZ_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: {e}")
