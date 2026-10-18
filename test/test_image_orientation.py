@@ -83,7 +83,7 @@ def test_scaler_uses_exif_oriented_aspect_ratio(tmp_path):
 
     success, message = _run_worker(
         ScalingWorker(
-            [str(source)], str(output_dir), "指定宽度", 0, 85, True, width=60
+            [str(source)], str(output_dir), "width", 0, 85, True, width=60
         )
     )
 
