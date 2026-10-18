@@ -62,6 +62,7 @@ a = Analysis(
         ('menu_system.py', '.'),
         ('settings_page.py', '.'),
         ('plugins', 'plugins'),
+        ('i18n', 'i18n'),  # 语言词典（运行时从 _MEIPASS/i18n 加载）
         ('favicon.ico', '.'),
     ],
     hiddenimports=[
