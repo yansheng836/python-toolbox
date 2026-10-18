@@ -36,6 +36,7 @@ from PyQt6.QtGui import (
 
 from common import i18n
 from common.i18n import t, bind_combo, install_qt_translator
+from common.utils import get_combo_style
 
 
 # ==================== 主题配置 ====================
@@ -706,6 +707,9 @@ class SettingsPlugin(ToolPlugin):
         if hasattr(self, 'theme_label'):
             self.theme_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600}; color: {theme['text']};")
 
+        if hasattr(self, 'language_label'):
+            self.language_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600}; color: {theme['text']};")
+
         if hasattr(self, 'version_label'):
             self.version_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600}; color: {theme['text']};")
 
@@ -722,6 +726,9 @@ class SettingsPlugin(ToolPlugin):
 
         if hasattr(self, 'copyright_label'):
             self.copyright_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_12};")
+
+        if hasattr(self, 'language_combo'):
+            self.language_combo.setStyleSheet(get_combo_style(theme))
 
     def create_ui(self) -> QWidget:
         widget = QWidget()
@@ -813,6 +820,8 @@ class SettingsPlugin(ToolPlugin):
 
         language_layout = QHBoxLayout()
         self.language_combo = QComboBox()
+        self.language_combo.setMinimumHeight(36)
+        self.language_combo.setStyleSheet(get_combo_style(Theme.DARK))
         bind_combo(self.language_combo, [
             ("settings.combo.zh_CN", "zh_CN"),
             ("settings.combo.en", "en"),
