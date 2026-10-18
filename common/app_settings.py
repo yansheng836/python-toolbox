@@ -34,13 +34,14 @@ INI 结构::
     config_version=1
 """
 
+import base64
 import configparser
 import os
 import shutil
 import sys
 from pathlib import Path
 
-from PyQt6.QtCore import QSettings, QStandardPaths
+from PyQt6.QtCore import QByteArray, QSettings, QStandardPaths
 
 ORG_NAME = "yansheng836"
 APP_NAME = "Toolbox"
@@ -267,7 +268,10 @@ class AppSettings:
             value = legacy.value(legacy_key)
             if value is None:
                 continue
-            # QByteArray 等类型转字符串存储
+            # QByteArray（geometry/windowState 的 saveGeometry 载荷）用 base64
+            # 存储；str(QByteArray) 是 Python repr（b'...'），无法还原
+            if isinstance(value, QByteArray):
+                value = bytes(value.toBase64()).decode("ascii")
             self.set(section, key, str(value))
             migrated = True
         if migrated:
@@ -276,6 +280,19 @@ class AppSettings:
             except OSError as e:
                 print(f"警告：迁移结果无法写入配置文件：{e}")
         return migrated
+
+
+def bytes_to_qbytearray(encoded):
+    """把 migrate_from_qsettings 存的 base64 字符串还原为 QByteArray
+
+    用于接线阶段读取 [window] geometry/state 后传给 restoreGeometry/
+    restoreState。非 base64 字符串（如手工配置）原样转为 QByteArray。
+    """
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except (ValueError, TypeError):
+        raw = encoded.encode("utf-8")
+    return QByteArray(raw)
 
 
 def setup_app_identity(app):

@@ -21,6 +21,7 @@ from common.app_settings import (
     APP_NAME,
     ORG_NAME,
     AppSettings,
+    bytes_to_qbytearray,
     setup_app_identity,
 )
 
@@ -230,6 +231,44 @@ def test_migrate_empty_registry_is_noop(tmp_path, monkeypatch):
     before = (tmp_path / INI_NAME).read_text(encoding="utf-8")
     assert s.migrate_from_qsettings() is False
     assert (tmp_path / INI_NAME).read_text(encoding="utf-8") == before
+
+
+def test_migrate_qbytearray_stored_as_base64(tmp_path, monkeypatch):
+    """geometry/windowState 是 QByteArray：以 base64 存储（非 Python repr）
+
+    str(QByteArray) 会产生 b'...' 的 repr 字符串，restoreGeometry 无法
+    还原——迁移必须走 toBase64，且 bytes_to_qbytearray 能无损还原。
+    """
+    from PyQt6.QtCore import QByteArray
+
+    monkeypatch.setattr(app_settings, "QSettings", _FakeLegacySettings)
+    geometry_payload = QByteArray(b"\x01\xd9\x00\xdd\x01\x00\xff\xfe")
+    _FakeLegacySettings.payload = {
+        "geometry": geometry_payload,
+        "windowState": QByteArray(b"\x00\x00\xff\x01"),
+    }
+
+    s = AppSettings(config_dir=tmp_path)
+    assert s.migrate_from_qsettings() is True
+
+    stored = s.get("window", "geometry")
+    # 不含 repr 特征（b' 前缀），可无损还原为原始字节
+    assert not stored.startswith("b'")
+    assert bytes_to_qbytearray(stored) == geometry_payload
+    assert bytes_to_qbytearray(s.get("window", "state")) == QByteArray(
+        b"\x00\x00\xff\x01"
+    )
+
+    # 落盘后重读仍能还原
+    s2 = AppSettings(config_dir=tmp_path)
+    assert bytes_to_qbytearray(s2.get("window", "geometry")) == geometry_payload
+
+
+def test_bytes_to_qbytearray_falls_back_for_plain_text():
+    """非 base64 字符串（手工配置）按 UTF-8 原样转为 QByteArray"""
+    from PyQt6.QtCore import QByteArray
+
+    assert bytes_to_qbytearray("not base64!!") == QByteArray(b"not base64!!")
 
 
 # ==================== 8. window 节读写 ====================

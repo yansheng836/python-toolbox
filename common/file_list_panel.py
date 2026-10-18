@@ -61,7 +61,7 @@ class FileListPanel(QWidget):
         self._text_secondary = "#94a3b8"  # 默认次级文本颜色（深色模式）
         self.setAcceptDrops(True)  # 允许整个面板接收拖拽事件
         # 规范化列定义：接受 Column 或旧式 (label, func) / (id, label, func) 元组
-        raw_cols = columns or [("filename", lambda f: os.path.basename(f))]
+        raw_cols = columns or [Column("filename", "文件名", lambda f: os.path.basename(f))]
         self.columns = []
         for col in raw_cols:
             if isinstance(col, Column):
