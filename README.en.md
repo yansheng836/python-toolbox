@@ -24,14 +24,16 @@ English \| [简体中文](README.md)
 | 🔁 | **Image Format Converter** | Batch-convert between six formats: JPEG/PNG/WebP/BMP/TIFF/GIF |
 | 🧩 | **Image Stitcher** | Merge multiple images into one horizontally or vertically, with alignment options |
 | 🖨️ | **Image to PDF** | Combine multiple images into a single PDF; supports drag-and-drop reordering |
-| 🔍 | **Image Scaler** | Batch-resize images by percentage, width, height, or exact dimensions |
+| 🔍 | **Image Scaler** | Batch-resize images by percentage, width, or height |
 | 📚 | **PDF Merger** | Merge multiple PDFs into one; supports drag-and-drop reordering |
-| 📃 | **PDF Splitter** | Split a PDF into images or single-page PDFs; supports custom page counts |
-| 🔂 | **File Deduplicator** | Finds duplicate files by size pre-filtering + content hashing; supports rule-based sorting preview |
+| ✂️ | **PDF Splitter** | Split a PDF into images or single-page PDFs; supports custom page counts |
+| 🧹 | **File Deduplicator** | Finds duplicate files by size pre-filtering + content hashing; supports rule-based sorting preview |
+| 🗑️ | **Empty Folder Cleaner** | Recursively find and delete completely empty folders, including nested empty directories |
 
 ### Common Features
 
 - 🌙 **Dark/Light themes** — one-click switching with automatic preference memory
+- 🌐 **Bilingual UI (Chinese/English)** — chosen automatically from the system language, switchable in Settings anytime
 - 🖱️ **Drag-and-drop** — most tools accept files dragged directly into the list
 - 📊 **File list** — a consistent experience with add/remove/reorder/clear
 - 📈 **Progress display** — real-time progress and status updates
@@ -39,6 +41,7 @@ English \| [简体中文](README.md)
 - 🧩 **Plugin extensibility** — drop a Python file into `plugins/` and it loads automatically
 - ↔️ **Collapsible sidebar** — toggle via the collapse button or the `Ctrl+B` shortcut
 - 🧭 **Navigation management** — reorder tools by dragging or hide them in Settings; the sidebar and home page update instantly
+- ↩️ **Reset to defaults** — restore language, theme, window layout, and more in one click
 
 ---
 
@@ -73,8 +76,8 @@ pip install -r requirements.txt
 |---------|---------|
 | PyQt6 | GUI framework |
 | Pillow (PIL) | Image processing |
-| img2pdf | PDF conversion (primary) |
-| PyMuPDF (fitz) | PDF conversion (fallback) |
+| img2pdf | PDF conversion |
+| PyMuPDF (fitz) | PDF conversion |
 
 ### 2. Run the Application
 
@@ -132,8 +135,8 @@ pyinstaller --upx-dir=/path/to/upx toolbox.spec
 ### Image Scaler
 
 1. Click "Image Scaler" in the left sidebar
-2. Add images and choose a scaling mode (percentage / width / height / exact dimensions)
-3. Set the scaling parameters and check "Keep aspect ratio"
+2. Add images and choose a scaling mode (percentage / width / height)
+3. Set the scaling parameters and check "Maintain Aspect Ratio"
 4. Click "Start Scaling"
 
 ### PDF Merger
@@ -155,10 +158,20 @@ pyinstaller --upx-dir=/path/to/upx toolbox.spec
 ### File Deduplicator
 
 1. Click "File Deduplicator" in the left sidebar
-2. Choose a folder to scan; scanning starts automatically (three-stage filtering: file size → quick hash → full hash, for a major speedup)
+2. Click "Browse" to choose a folder to scan (or drag a folder into the input box); scanning starts automatically (three-stage filtering: file size → quick hash → full hash, for a major speedup)
 3. Choose a deduplication rule and click "Sort by Rule" to preview keep/delete markers
 4. After reviewing, check the groups you want to clean up
 5. Click "Delete Duplicates" and confirm
+
+### Empty Folder Cleaner
+
+1. Click "Empty Folder Cleaner" in the left sidebar
+2. Choose the root folder to clean (or drag a folder into the input box)
+3. Click "Start Scan" to recursively find completely empty folders (a directory tree containing only empty subfolders counts as empty)
+4. Check the folders to delete in the results list ("Select All" / "Deselect All" supported)
+5. Click "Delete Selected Folders" and confirm
+
+> 💡 The scan root is always kept, and deletion only uses `os.rmdir` — no file is ever removed. Symbolic links and junctions are skipped.
 
 ---
 
@@ -203,6 +216,7 @@ Add an entry to the `PLUGIN_MODULES` list in `config.py`:
 PLUGIN_MODULES = [
     # ... other plugins ...
     {
+        "id": "my_tool",
         "name": "我的工具",
         "icon": "🔧",
         "description": "工具描述",
@@ -225,6 +239,7 @@ PLUGIN_MODULES = [
 | `plugins/pdf_merger.py` | `PDFMerger` | PDF merging |
 | `plugins/pdf_splitter.py` | `PDFSplitter` | PDF splitting |
 | `plugins/file_deduplicator.py` | `FileDeduplicator` | File deduplication |
+| `plugins/empty_folder_cleaner.py` | `EmptyFolderCleaner` | Empty folder cleanup |
 
 ---
 
@@ -265,8 +280,8 @@ The file is managed by `AppSettings` in `common/app_settings.py` and normally do
 
 ### Requirements
 
-- Python 3.8+
-- Windows (other platforms may work after adjusting the spec file)
+- Python 3.10+ (required by PyQt6/PyMuPDF)
+- Windows (other platforms may work after adjusting the spec file; macOS can use `build_macos.py`)
 
 ### Build Steps
 
@@ -293,11 +308,15 @@ The built EXE is located in the `dist/` directory.
 - [x] Image format conversion (JPEG/PNG/WebP/BMP/TIFF/GIF)
 - [x] Image stitching (horizontal/vertical)
 - [x] Image to PDF (multi-image merge)
-- [x] Image scaling (percentage / exact dimensions)
+- [x] Image scaling (percentage / width / height)
 - [x] PDF merging (multi-file merge)
 - [x] PDF splitting (into images or single-page PDFs)
 - [x] File deduplication (by content hash)
+- [x] Empty folder cleanup (recursive empty-directory removal)
 - [x] Dark/light theme switching
+- [x] Bilingual UI (Chinese/English)
+- [x] Navigation reorder and hide
+- [x] Reset to defaults
 - [x] Automatic plugin discovery and loading
 
 ### Planned 🔨
