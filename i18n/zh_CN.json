@@ -251,6 +251,7 @@
   "plugin.image_stitcher.error.scaled_too_large_width": "智能缩放后图片宽度（{width}）超过 {limit}，请先缩小图片尺寸或使用其他对齐方式。",
   "plugin.image_stitcher.error.stitch_failed": "拼接失败: {error}",
   "plugin.image_stitcher.filter.images": "图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff *.tif *.gif)",
+  "plugin.image_stitcher.filter.save_image": "JPEG (*.jpg);;PNG (*.png);;WebP (*.webp)",
   "plugin.image_stitcher.label.align": "对齐方式:",
   "plugin.image_stitcher.label.bg_color": "背景颜色:",
   "plugin.image_stitcher.label.direction": "拼接方向:",

@@ -575,7 +575,7 @@ class ImageStitcher(ToolPlugin):
     def browse_output(self):
         path = get_save_file_name(
             None, t("plugin.image_stitcher.dialog.save_image"), "stitched.jpg",
-            "JPEG (*.jpg);;PNG (*.png);;WebP (*.webp)"
+            t("plugin.image_stitcher.filter.save_image")
         )
         if path:
             self.output_path.setText(path)
