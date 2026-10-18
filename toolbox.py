@@ -227,7 +227,7 @@ class SidebarButton(QPushButton):
                 color: {theme['text_secondary']};
                 border: none;
                 border-radius: 8px;
-                padding: 0 16px;
+                padding: 0 10px;
                 text-align: left;
                 font-size: {FONT_SIZE_16};
                 font-weight: {FONT_WEIGHT_600};
@@ -253,14 +253,14 @@ class SidebarButton(QPushButton):
         if self.width() <= 0:
             display = self._text
         else:
-            reserved = metrics.horizontalAdvance(f"  {self._icon_text}  ")
-            available = max(0, self.width() - 32 - reserved)
+            reserved = metrics.horizontalAdvance(f" {self._icon_text}  ")
+            available = max(0, self.width() - 20 - reserved)
             display = metrics.elidedText(
                 self._text, Qt.TextElideMode.ElideRight, available
             )
         if display != self._elided_text:
             self._elided_text = display
-            self.setText(f"  {self._icon_text}  {display}")
+            self.setText(f" {self._icon_text}  {display}")
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -1050,6 +1050,9 @@ class ToolboxWindow(QMainWindow):
         sidebar_layout.setSpacing(SPACING_SMALL)
 
         logo_layout = QHBoxLayout()
+        # 图标中心与下方导航图标列对齐，文字与导航项文字左边缘对齐
+        logo_layout.setContentsMargins(10, 0, 0, 0)
+        logo_layout.setSpacing(5)
         self.logo_icon = QLabel()
         # 加载 favicon.ico 作为 logo
         favicon_path = self._get_favicon_path()
