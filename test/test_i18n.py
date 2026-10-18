@@ -138,7 +138,7 @@ def test_binder_updates_label(mgr, qapp):
     bind(doomed, "setText", "only.zh")
     assert doomed.text() == "仅中文"
 
-    del doomed  # 触发 destroyed → 自动解绑，重放时不再访问该控件
+    del doomed  # 弱引用失效；重放时惰性清理，不再访问该控件
     set_language("zh_CN")
     assert label.text() == "你好 X"
 
@@ -160,6 +160,19 @@ def test_bind_combo_keeps_selection(mgr, qapp):
     assert combo.itemText(0) == "Hello {name}"
     assert combo.itemText(2) == "仅中文"  # en 缺失 → 回退 zh_CN
     assert combo.currentData() == "only"  # 选中项 data 保持不变
+
+
+def test_bind_combo_replay_does_not_emit_signals(mgr, qapp):
+    """重放下拉项时屏蔽信号：防止 currentIndexChanged 处理器再次切语言造成递归"""
+    combo = QComboBox()
+    bind_combo(combo, [("a.b", "keep"), ("p.c", "plural")])
+    emitted = []
+    combo.currentIndexChanged.connect(emitted.append)
+
+    set_language("en")  # 触发 _replay_bindings → clear+重填
+
+    assert emitted == []  # 重放期间不应发出 currentIndexChanged
+    assert combo.count() == 2
 
 
 def test_t_without_qt(tmp_path, monkeypatch):

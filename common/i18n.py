@@ -134,21 +134,24 @@ class LanguageManager(QObject):
     # ---------- 控件绑定器 ----------
 
     def bind(self, widget, method, key, **params):
-        """绑定控件方法到词条：立即执行一次，语言变化时自动重放"""
+        """绑定控件方法到词条：立即执行一次，语言变化时自动重放
+
+        只存弱引用；失效条目由 _replay_bindings 在重放时清理。
+        不连接 destroyed 信号：窗口销毁期间的 Python 回调在某些
+        时序下会导致进程崩溃。
+        """
         ref = weakref.ref(widget)
         self._bindings.append((ref, method, key, params))
-        widget.destroyed.connect(lambda _widget=None, r=ref: self._remove_binding(r))
         self._apply(widget, method, key, params)
 
     def bind_combo(self, combo, items):
         """绑定下拉框：items=[(key, data)]；重放时用 findData 保持选中项"""
         ref = weakref.ref(combo)
         self._bindings.append((ref, None, items, None))
-        combo.destroyed.connect(lambda _widget=None, r=ref: self._remove_binding(r))
         self._apply_combo(combo, items)
 
     def _remove_binding(self, ref):
-        """控件销毁时解绑，避免悬空弱引用堆积"""
+        """移除失效绑定（重放时清理由 GC 回收的控件）"""
         self._bindings = [b for b in self._bindings if b[0] is not ref]
 
     def _replay_bindings(self):
@@ -172,15 +175,23 @@ class LanguageManager(QObject):
         getattr(widget, method)(self.translate(key, **params))
 
     def _apply_combo(self, combo, items):
-        """重建下拉项，用 findData 尽量保持当前 data 选中项"""
+        """重建下拉项，用 findData 尽量保持当前 data 选中项
+
+        重放期间屏蔽信号：清空/重填会触发 currentIndexChanged，若调用方
+        在该信号里再次 set_language 会造成无限递归。
+        """
         current_data = combo.currentData()
-        combo.clear()
-        for key, data in items:
-            combo.addItem(self.translate(key), data)
-        if current_data is not None:
-            index = combo.findData(current_data)
-            if index >= 0:
-                combo.setCurrentIndex(index)
+        combo.blockSignals(True)
+        try:
+            combo.clear()
+            for key, data in items:
+                combo.addItem(self.translate(key), data)
+            if current_data is not None:
+                index = combo.findData(current_data)
+                if index >= 0:
+                    combo.setCurrentIndex(index)
+        finally:
+            combo.blockSignals(False)
 
 
 # ==================== 模块级单例与便捷函数（业务代码只用这些） ====================
