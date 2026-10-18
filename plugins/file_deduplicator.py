@@ -481,6 +481,25 @@ class FileDeduplicatorWidget(QWidget):
 
         # 删除规则卡片
         self.deletion_card = Card(title=t("plugin.file_deduplicator.card.deletion_rules"))
+
+        # 删除到回收站（优先展示；send2trash 可用时默认勾选，不可用时禁用）
+        trash_layout = QHBoxLayout()
+        self.use_trash_label = SelectableLabel(
+            t("plugin.file_deduplicator.label.use_trash")
+        )
+        trash_layout.addWidget(self.use_trash_label)
+        self.use_trash_checkbox = QCheckBox()
+        self.use_trash_checkbox.setChecked(SEND2TRASH_AVAILABLE)
+        if not SEND2TRASH_AVAILABLE:
+            self.use_trash_checkbox.setEnabled(False)
+            self.use_trash_label.setText(
+                t("plugin.file_deduplicator.label.use_trash")
+                + t("plugin.file_deduplicator.msg.trash_unavailable")
+            )
+        trash_layout.addWidget(self.use_trash_checkbox)
+        trash_layout.addStretch()
+        self.deletion_card.content_layout.addLayout(trash_layout)
+
         rule_row_layout = QHBoxLayout()
 
         # 左半：删除规则下拉框
@@ -543,24 +562,6 @@ class FileDeduplicatorWidget(QWidget):
 
         # 连接父节点勾选变化信号
         self.results_tree.itemChanged.connect(self._on_parent_checked)
-
-        # 删除到回收站（默认关闭；send2trash 不可用时禁用）
-        trash_layout = QHBoxLayout()
-        self.use_trash_label = SelectableLabel(
-            t("plugin.file_deduplicator.label.use_trash")
-        )
-        trash_layout.addWidget(self.use_trash_label)
-        self.use_trash_checkbox = QCheckBox()
-        self.use_trash_checkbox.setChecked(False)
-        if not SEND2TRASH_AVAILABLE:
-            self.use_trash_checkbox.setEnabled(False)
-            self.use_trash_label.setText(
-                t("plugin.file_deduplicator.label.use_trash")
-                + t("plugin.file_deduplicator.msg.trash_unavailable")
-            )
-        trash_layout.addWidget(self.use_trash_checkbox)
-        trash_layout.addStretch()
-        self.deletion_card.content_layout.addLayout(trash_layout)
 
         # 删除操作面板
         self.delete_panel = ActionPanel(

@@ -418,7 +418,5 @@
   "plugin.file_deduplicator.msg.delete_missing_skipped": "\nSkipped {count} file(s) that no longer exist",
   "plugin.file_deduplicator.msg.file_changed_skipped": "File contents changed, skipped",
   "plugin.file_deduplicator.msg.confirm_trash_note": "\n(Recycle Bin enabled — deleted files can be restored from the system Recycle Bin)",
-  "plugin.empty_folder_cleaner.label.use_trash": "Move to Recycle Bin (file dedup only)",
-  "plugin.empty_folder_cleaner.msg.trash_unavailable": "Empty folders are always removed directly; Recycle Bin is not supported",
   "app.plugin_load_failed": "The following plugins failed to load and are unavailable:\n{details}"
 }
