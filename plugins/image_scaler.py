@@ -35,7 +35,6 @@ from common.i18n import t, bind_combo
 
 class ScalingWorker(BaseWorker):
     progress_updated = pyqtSignal(int, int)
-    image_processed = pyqtSignal(str, str)
     # 继承 BaseWorker 的 result 信号
 
     def __init__(self, input_files: List[str], output_dir: str, scale_type: str,
@@ -114,7 +113,6 @@ class ScalingWorker(BaseWorker):
                         scaled_img.close()  # 释放内存
 
                     success_count += 1
-                    self.image_processed.emit(input_file, output_file)
 
                 except Exception as e:
                     print(f"Error processing {input_file}: {str(e)}")
@@ -326,8 +324,7 @@ class ImageScalerWidget(QWidget):
         self.on_scale_type_changed()
 
         # 应用初始主题
-        if Theme is not None:
-            self.apply_theme(Theme.DARK)
+        self.apply_theme(Theme.DARK)
 
     def on_scale_type_changed(self):
         scale_type = self.scale_type_combo.currentData()
@@ -397,7 +394,6 @@ class ImageScalerWidget(QWidget):
 
         self.worker.progress_updated.connect(self.on_progress_updated)
         self.worker.result.connect(self.on_scaling_finished)
-        self.worker.image_processed.connect(self.on_image_processed)
 
         self.action_panel.start_task(
             len(files), status=t("plugin.image_scaler.msg.processing")
@@ -411,9 +407,6 @@ class ImageScalerWidget(QWidget):
         self.action_panel.update_status(
             t("plugin.image_scaler.msg.progress", count=current, total=total)
         )
-
-    def on_image_processed(self, input_file, output_file):
-        pass
 
     def on_scaling_finished(self, success, message):
         self.action_panel.finish_task(message)

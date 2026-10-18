@@ -154,18 +154,35 @@ class FormatConvertWorker(BaseWorker):
         if pil_fmt in ("JPEG", "BMP"):
             # P 模式先转 RGBA 以保留可能的透明信息，再统一去透明
             if img.mode == "P":
-                img = img.convert("RGBA")
+                rgba = img.convert("RGBA")
+                img.close()
+                img = rgba
             if img.mode in ("RGBA", "LA"):
                 bg = Image.new("RGB", img.size, (255, 255, 255))
                 bg.paste(img, mask=img.split()[-1])
+                img.close()
                 img = bg
             elif img.mode != "RGB":
-                img = img.convert("RGB")
+                rgb = img.convert("RGB")
+                img.close()
+                img = rgb
             return img
         if pil_fmt == "GIF":
-            # GIF 仅支持 P/L/RGB 模式
+            # GIF 仅支持 P/L/RGB 模式：RGBA 先压到 RGB 白底，再中位切分量化
             if img.mode not in ("P", "L", "RGB"):
-                img = img.convert("P")
+                if img.mode in ("RGBA", "LA"):
+                    bg = Image.new("RGB", img.size, (255, 255, 255))
+                    bg.paste(img, mask=img.split()[-1])
+                    img.close()
+                    img = bg
+                else:
+                    rgb = img.convert("RGB")
+                    img.close()
+                    img = rgb
+            if img.mode == "RGB":
+                quantized = img.quantize(colors=256, method=Image.Quantize.MEDIANCUT)
+                img.close()
+                img = quantized
             return img
         # PNG/WebP/TIFF 支持透明，直接保留
         return img
@@ -302,8 +319,7 @@ class FormatConverter(ToolPlugin):
         layout.addWidget(self.action_panel)
 
         # 应用初始主题
-        if Theme is not None:
-            self.update_theme(Theme.DARK)
+        self.update_theme(Theme.DARK)
         return widget
 
     def browse_output(self):

@@ -5,6 +5,7 @@
 """
 import os
 import sys
+import time
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
@@ -197,11 +198,10 @@ class PDFWorker(BaseWorker):
                     icc = img.info.get('icc_profile')
 
                     # 保存为临时 JPEG（使用时间戳+随机数避免文件名冲突）
-                    import time
                     temp_dir = os.path.dirname(self.output) or '.'
                     if not os.path.exists(temp_dir):
                         os.makedirs(temp_dir, exist_ok=True)
-                    tmp_jpg = os.path.join(temp_dir, f".temp_{int(time.time() * 1000)}_{id(img)}.jpg")
+                    tmp_jpg = os.path.join(temp_dir, f".temp_{os.getpid()}_{time.time_ns()}_{id(img)}.jpg")
                     save_options = {
                         'format': 'JPEG',
                         'quality': jpeg_quality,
@@ -221,7 +221,7 @@ class PDFWorker(BaseWorker):
                 # 2c. 本批生成临时 PDF
                 temp_pdf = os.path.join(
                     os.path.dirname(self.output) or '.',
-                    f".temp_{batch_start}.pdf"
+                    f".temp_{os.getpid()}_{time.time_ns()}_{batch_start}.pdf"
                 )
                 temp_files.add(temp_pdf)
 
@@ -246,9 +246,7 @@ class PDFWorker(BaseWorker):
                             f.write(img2pdf.convert(batch_jpeg_files))
                     except Exception as e:
                         print(f"Error creating PDF with img2pdf: {e}")
-                        # 清理本批 JPEG
-                        for jpg_file in batch_jpeg_files:
-                            temp_files.discard(jpg_file)
+                        # 保留本批 JPEG 在 temp_files 中，由 finally 统一清理
                         continue
                 else:
                     pil_imgs = []
@@ -488,8 +486,7 @@ class ImageToPDF(ToolPlugin):
         layout.addWidget(self.action_panel)
 
         # 应用初始主题
-        if Theme is not None:
-            self.update_theme(Theme.DARK)
+        self.update_theme(Theme.DARK)
         return widget
 
     def browse_output(self):

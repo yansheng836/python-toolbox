@@ -264,7 +264,8 @@ if sys.platform == 'darwin':
         strip=True,
         upx=True,
         upx_exclude=[
-            'python*.dll',
+            'python*.dylib',
+            'libpython*.dylib',
             'Qt6Core.dylib',
             'Qt6Gui.dylib',
             'Qt6Widgets.dylib',

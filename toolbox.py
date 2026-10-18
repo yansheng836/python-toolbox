@@ -346,7 +346,6 @@ class ToolPlugin:
             theme: 主题字典，默认使用 Theme.DARK
         """
         if theme is None:
-            from toolbox import Theme
             theme = Theme.DARK
         title_text = title or f"{self.icon} {self.name}"
         desc_text = desc or self.description
@@ -443,9 +442,8 @@ class DragDropHandler:
 class WelcomePage(QWidget):
     """欢迎页面 - 支持卡片自动轮播"""
 
-    def __init__(self, plugins=None, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.plugins = plugins or {}
         self.favicon_path = get_favicon_path()
         self.separators = []
         self.title = None
@@ -1145,7 +1143,6 @@ class SettingsPlugin(ToolPlugin):
         layout.addWidget(general_card)
         layout.addWidget(nav_card)
         layout.addWidget(about_card)
-        layout.addStretch()
 
         return widget
 
@@ -1171,8 +1168,6 @@ class SettingsPlugin(ToolPlugin):
 
         if hasattr(self.parent, 'theme_changed'):
             self.parent.theme_changed.emit(theme_name)
-
-        print(f"主题已切换为: {theme_name}")
 
     def save_theme_setting(self, theme_name):
         """主题持久化到 INI [general] theme（旧 QSettings 注册表已弃用）"""
@@ -1524,7 +1519,7 @@ class ToolboxWindow(QMainWindow):
         self.content = QStackedWidget()
         # 样式由 apply_theme 统一设置，避免启动时先渲染硬编码深色造成闪烁
 
-        self.welcome_page = WelcomePage(self.plugins)
+        self.welcome_page = WelcomePage()
         welcome_scroll = QScrollArea()
         welcome_scroll.setWidgetResizable(True)
         welcome_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -1666,21 +1661,20 @@ class ToolboxWindow(QMainWindow):
         # 被用户隐藏的导航项不可切入（防止程序化调用绕过可见性）
         if plugin_id in self._hidden_plugins:
             return
+        plugin = self.plugins.get(plugin_id)
+        if plugin is None or not hasattr(plugin, 'scroll_area'):
+            return
+        index = self.content.indexOf(plugin.scroll_area)
+        if index < 0:
+            return
+        # 确认可切换后再同步按钮选中态，避免页面未切换却已取消首页选中
         for i in range(self.nav_layout.count()):
             widget = self.nav_layout.itemAt(i).widget()
             if isinstance(widget, SidebarButton):
                 widget.setChecked(widget.plugin_id() == plugin_id)
-
-        # 取消首页按钮选中
         self.home_btn.setChecked(False)
-
-        if plugin_id in self.plugins:
-            plugin = self.plugins[plugin_id]
-            if hasattr(plugin, 'scroll_area'):
-                index = self.content.indexOf(plugin.scroll_area)
-                if index >= 0:
-                    self.content.setCurrentIndex(index)
-                    self.current_plugin = plugin_id
+        self.content.setCurrentIndex(index)
+        self.current_plugin = plugin_id
 
     def _toggle_sidebar(self):
         """切换侧边栏展开/折叠"""

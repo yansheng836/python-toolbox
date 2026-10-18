@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import QApplication
 from common.app_settings import AppSettings, setup_app_identity
 from common import i18n
 from common.i18n import install_qt_translator
-from common.message_utils import show_info
+from common.message_utils import show_info, show_warning
 from toolbox import ToolboxWindow
 
 
@@ -32,7 +32,10 @@ def resolve_startup_language(settings):
     try:
         settings.save()
     except OSError as e:
-        print(f"警告：无法写入配置文件，本次语言设置将不会持久化：{e}")
+        # 此时 QApplication 已创建，可用弹窗替代 print 保证用户可见
+        show_warning(
+            None, i18n.t("app.dialog.warning_title"),
+            i18n.t("common.error.config_write", error=e))
     return code, True
 
 

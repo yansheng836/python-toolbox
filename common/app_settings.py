@@ -189,6 +189,7 @@ class AppSettings:
             print(f"配置文件不存在，使用默认值初始化：{path}")
 
         self._fill_defaults()
+        self._check_version()
         if rewrite_needed:
             try:
                 self.save()
@@ -196,6 +197,18 @@ class AppSettings:
                 # 配置目录不可写时降级为仅内存配置，不阻塞启动
                 print(f"警告：无法写入配置文件，本次设置将不会持久化：{e}")
         return True
+
+    def _check_version(self):
+        """配置文件版本高于当前程序时提示可能不兼容（仅警告，不阻断启动）"""
+        try:
+            file_version = int(self._parser.get("meta", "config_version", fallback="0"))
+        except ValueError:
+            file_version = 0
+        if file_version > CONFIG_VERSION:
+            print(
+                f"警告：配置文件版本 ({file_version}) 高于当前程序版本 "
+                f"({CONFIG_VERSION})，部分设置可能无法识别"
+            )
 
     def _fill_defaults(self):
         """为解析结果中缺失的节/键填充默认值（不覆盖已有值）"""

@@ -8,12 +8,13 @@ import sys
 
 from common.utils import FITZ_AVAILABLE
 from common.i18n import t
+from common.dialog_utils import get_save_file_name
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFileDialog,
+    QWidget, QVBoxLayout, QHBoxLayout,
     QLineEdit
 )
 from common.message_utils import show_info, show_error, show_warning
@@ -151,8 +152,7 @@ class PDFMergerWidget(QWidget):
         layout.addWidget(self.action_panel)
 
         # 应用初始主题
-        if Theme is not None:
-            self.apply_theme(Theme.DARK)
+        self.apply_theme(Theme.DARK)
 
     def browse_output(self):
         """选择输出文件路径"""
@@ -165,7 +165,7 @@ class PDFMergerWidget(QWidget):
         else:
             default_path = default_name
 
-        path, _ = QFileDialog.getSaveFileName(
+        path = get_save_file_name(
             self,
             t("plugin.pdf_merger.dialog.save_pdf"),
             default_path,

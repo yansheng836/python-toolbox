@@ -102,7 +102,13 @@ class CompressionWorker(BaseWorker):
                     fmt = 'WEBP'
                     output_ext = orig_ext
                 else:
-                    fmt = img.format if img.format else 'JPEG'
+                    # load_oriented_image 返回新对象，format 恒为 None；
+                    # 按源扩展名推断，未知扩展名回退 JPEG
+                    src_ext = orig_ext.lower()
+                    if src_ext in ('bmp', 'tif', 'tiff', 'gif'):
+                        fmt = 'BMP' if src_ext == 'bmp' else src_ext.upper()
+                    else:
+                        fmt = 'JPEG'
                     output_ext = fmt.lower()
             else:
                 fmt = format_map[self.format_code]
@@ -124,10 +130,11 @@ class CompressionWorker(BaseWorker):
                     img.close()  # 关闭之前的图像
                     img = background
                 elif img.mode == 'P':
-                    img = img.convert('RGBA')
-                    background = Image.new('RGB', img.size, (255, 255, 255))
-                    background.paste(img, mask=img.split()[-1])
+                    rgba = img.convert('RGBA')
                     img.close()
+                    background = Image.new('RGB', rgba.size, (255, 255, 255))
+                    background.paste(rgba, mask=rgba.split()[-1])
+                    rgba.close()
                     img = background
                 elif img.mode != 'RGB':
                     new_img = img.convert('RGB')
@@ -288,8 +295,7 @@ class ImageCompressor(ToolPlugin):
         layout.addWidget(self.action_panel)
 
         # 应用初始主题
-        if Theme is not None:
-            self.update_theme(Theme.DARK)
+        self.update_theme(Theme.DARK)
         return widget
 
     def retranslate_ui(self):

@@ -5,6 +5,8 @@
 """
 
 import os
+import sys
+import time
 import uuid
 from collections import namedtuple
 
@@ -104,13 +106,19 @@ def get_file_size(file_path):
         return t("common.cell.unknown")
 
 
+def get_birth_time(file_path):
+    """文件创建时间的 epoch 秒；macOS 的 getctime 是元数据变更时间，改用 st_birthtime"""
+    if sys.platform == "darwin":
+        return os.stat(file_path).st_birthtime
+    return os.path.getctime(file_path)
+
+
 def get_create_time(file_path):
     """获取文件创建时间文本"""
     try:
-        import time
-        stamp = os.path.getctime(file_path)
+        stamp = get_birth_time(file_path)
         return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(stamp))
-    except OSError as e:
+    except (OSError, AttributeError) as e:
         print(f"get_create_time error: {e}")
         return t("common.cell.unknown")
 

@@ -574,8 +574,7 @@ class FileDeduplicatorWidget(QWidget):
         layout.addWidget(self.deletion_card)
 
         # 应用初始主题
-        if Theme is not None:
-            self.apply_theme(Theme.DARK)
+        self.apply_theme(Theme.DARK)
 
     def apply_theme(self, theme):
         """应用主题到所有组件"""
@@ -1037,13 +1036,13 @@ class FileDeduplicatorWidget(QWidget):
                 t("plugin.file_deduplicator.button.collapse")
             )
 
-    def format_size(self, bytes):
+    def format_size(self, size):
         """格式化文件大小"""
         for unit in ['B', 'KB', 'MB', 'GB']:
-            if bytes < 1024:
-                return f"{bytes:.2f} {unit}"
-            bytes /= 1024
-        return f"{bytes:.2f} TB"
+            if size < 1024:
+                return f"{size:.2f} {unit}"
+            size /= 1024
+        return f"{size:.2f} TB"
 
     def _has_copy_keyword(self, filename):
         """检查文件名是否包含副本/备份关键字，返回 (是否包含, 优先级)"""

@@ -78,9 +78,17 @@ def main():
     print_step(2, "验证打包依赖")
     if not run_command("python verify_packaging.py", "验证依赖"):
         print("\n错误: 依赖验证失败，请检查缺失的模块")
-        response = input("\n是否继续打包? (y/N): ")
-        if response.lower() != 'y':
-            print("打包已取消")
+        # CI / 无终端环境 input() 会抛 EOFError；默认中止，
+        # 显式设置 ALLOW_MISSING_DEPS=1（或交互终端选 y）才继续
+        if os.environ.get("ALLOW_MISSING_DEPS") == "1":
+            print("ALLOW_MISSING_DEPS=1，忽略依赖验证失败继续打包")
+        elif sys.stdin.isatty():
+            response = input("\n是否继续打包? (y/N): ")
+            if response.lower() != 'y':
+                print("打包已取消")
+                return 1
+        else:
+            print("非交互环境且未设置 ALLOW_MISSING_DEPS=1，打包已取消")
             return 1
 
     # 步骤 3: 清理旧文件（仅清理 build，保留 dist 中的历史版本）

@@ -11,12 +11,13 @@ from common.utils import (
     FITZ_AVAILABLE, PIL_AVAILABLE, check_dir_writable, check_file_writable,
 )
 from common.i18n import t
+from common.dialog_utils import get_existing_directory
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFileDialog,
+    QWidget, QVBoxLayout, QHBoxLayout,
     QComboBox, QSpinBox, QSlider, QRadioButton, QButtonGroup, QFormLayout, QLineEdit
 )
 from PyQt6.QtCore import Qt
@@ -280,8 +281,7 @@ class PDFSplitterWidget(QWidget):
         layout.addWidget(self.action_panel)
 
         # 应用初始主题
-        if Theme is not None:
-            self.apply_theme(Theme.DARK)
+        self.apply_theme(Theme.DARK)
 
     def apply_theme(self, theme):
         """应用主题到所有组件"""
@@ -320,7 +320,7 @@ class PDFSplitterWidget(QWidget):
             os.path.dirname(self.file_panel.get_files()[0])
             if self.file_panel.get_files() else ""
         )
-        dir_path = QFileDialog.getExistingDirectory(
+        dir_path = get_existing_directory(
             self,
             t("plugin.pdf_splitter.dialog.choose_output_dir"),
             default_dir
@@ -387,7 +387,8 @@ class PDFSplitterWidget(QWidget):
             doc.close()
             if output_format == "pdf":
                 total = (total + pages_per_split - 1) // pages_per_split
-        except Exception:
+        except Exception as e:
+            print(f"页数估算失败，进度按 100 计：{e}")
             total = 100
 
         # 启动任务

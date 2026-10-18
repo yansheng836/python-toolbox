@@ -9,7 +9,7 @@ import traceback
 from pathlib import Path
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QWidget, QVBoxLayout, QHBoxLayout,
     QComboBox, QSpinBox, QGridLayout, QLineEdit
 )
 
@@ -92,32 +92,6 @@ class ImageStitchWorker(BaseWorker):
             batches.append(current_batch)
 
         return batches
-
-    def _apply_max_size_align(self, batch_info, direction):
-        """
-        对批次内图片按 max_size 对齐方式计算缩放后的尺寸。
-        横向拼接时统一高度，纵向拼接时统一宽度。
-        """
-        if direction == "vertical":
-            max_width = max(w for _, w, _ in batch_info)
-            result = []
-            for f, w, h in batch_info:
-                if w != max_width:
-                    ratio = max_width / w
-                    result.append((f, max_width, int(h * ratio)))
-                else:
-                    result.append((f, w, h))
-            return result
-        else:
-            max_height = max(h for _, _, h in batch_info)
-            result = []
-            for f, w, h in batch_info:
-                if h != max_height:
-                    ratio = max_height / h
-                    result.append((f, int(w * ratio), max_height))
-                else:
-                    result.append((f, w, h))
-            return result
 
     def _load_composited_image(self, file_path, expected_w, expected_h):
         """读取图片，应用 EXIF 方向、按需缩放并转换为 RGBA"""
@@ -335,6 +309,14 @@ class ImageStitchWorker(BaseWorker):
                 # 输出格式不支持透明时转 RGB
                 out_path = self._make_output_path(bi)
                 ext = os.path.splitext(out_path)[1].lower()
+                # Pillow 硬限制 65500：在 RGB 转换前检查，避免白做转换
+                if canvas.width > 65500 or canvas.height > 65500:
+                    self.result.emit(False, t(
+                        "plugin.image_stitcher.error.pillow_limit",
+                        width=canvas.width,
+                        height=canvas.height,
+                    ))
+                    return
                 to_save = canvas
                 if ext in (".jpg", ".jpeg", ".bmp"):
                     bg = Image.new("RGB", canvas.size, self.bg_color)
@@ -351,14 +333,6 @@ class ImageStitchWorker(BaseWorker):
                 elif ext == ".tiff":
                     save_kwargs['compression'] = "tiff_deflate"
 
-                # 最后防线：Pillow 硬限制 65500
-                if to_save.width > 65500 or to_save.height > 65500:
-                    self.result.emit(False, t(
-                        "plugin.image_stitcher.error.pillow_limit",
-                        width=to_save.width,
-                        height=to_save.height,
-                    ))
-                    return
                 to_save.save(out_path, **save_kwargs)
                 saved_paths.append(out_path)
 
@@ -528,7 +502,7 @@ class ImageStitcher(ToolPlugin):
         self.bg_b.setRange(0, 255)
         self.bg_b.setValue(255)
         for label, spin in (("R", self.bg_r), ("G", self.bg_g), ("B", self.bg_b)):
-            bg_row.addWidget(QLabel(label))
+            bg_row.addWidget(SelectableLabel(label))
             bg_row.addWidget(spin)
         bg_row.addStretch()
         grid.addLayout(bg_row, 1, 0, 1, 2)

@@ -57,6 +57,7 @@ class LanguageManager(QObject):
         self._dicts = {}  # {code: dict} 词典缓存，避免重复读盘
         self._current = DEFAULT_LANGUAGE
         self._bindings = []  # [(weakref.ref(widget), method, key, params)]
+        self._format_warned = set()  # 已打印过格式化告警的 key，避免刷屏
 
     # ---------- 目录解析 ----------
 
@@ -130,7 +131,15 @@ class LanguageManager(QObject):
                 print(f"i18n warning: malformed entry for {key!r}: {entry!r}")
                 return key
 
-        return entry.format_map(_SafeFormatDict(params))
+        try:
+            return entry.format_map(_SafeFormatDict(params))
+        except (ValueError, KeyError, IndexError) as e:
+            # 译文含未配对的花括号时 format_map 会抛异常；回退原串保证 UI 不崩溃
+            # 按 key 去重，避免 t() 在重绘循环中反复刷屏
+            if key not in self._format_warned:
+                self._format_warned.add(key)
+                print(f"i18n warning: cannot format {key!r}: {e}")
+            return entry
 
     @staticmethod
     def _plural_form(entry, params):
@@ -151,12 +160,14 @@ class LanguageManager(QObject):
         时序下会导致进程崩溃。
         """
         ref = weakref.ref(widget)
+        self._bindings = [b for b in self._bindings if b[0]() is not None]
         self._bindings.append((ref, method, key, params))
         self._apply(widget, method, key, params)
 
     def bind_combo(self, combo, items):
         """绑定下拉框：items=[(key, data)]；重放时用 findData 保持选中项"""
         ref = weakref.ref(combo)
+        self._bindings = [b for b in self._bindings if b[0]() is not None]
         self._bindings.append((ref, None, items, None))
         self._apply_combo(combo, items)
 

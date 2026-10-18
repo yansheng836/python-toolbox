@@ -27,6 +27,7 @@
   "common.cell.read_failed": "Read Failed",
   "common.cell.unknown": "Unknown",
   "common.dialog.select_files": "Select Files",
+  "common.error.config_write": "Warning: failed to write config file; this language choice will not persist: {error}",
   "common.error.dir_access": "Cannot access output directory: {error}",
   "common.error.dir_locked": "The output directory is in use or not writable:\n{dir}\n\nCheck the directory permissions, or close any program that may be using it.",
   "common.error.file_access": "Cannot access target file: {error}",

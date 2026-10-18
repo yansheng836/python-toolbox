@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent
 
 from common.i18n import t, bind
-from common.utils import Column
+from common.utils import Column, get_birth_time
 
 
 class FileListPanel(QWidget):
@@ -351,7 +351,7 @@ class FileListPanel(QWidget):
         """按文件创建时间排序（从早到晚）"""
         if len(self.files) < 2:
             return
-        self.files.sort(key=lambda f: os.path.getctime(f))
+        self.files.sort(key=get_birth_time)
         self.update_list()
         self.files_changed.emit()
 
