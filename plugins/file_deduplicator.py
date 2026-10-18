@@ -25,6 +25,14 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QBrush
 from PyQt6.QtWidgets import QSizePolicy
 
+try:
+    from send2trash import send2trash
+    SEND2TRASH_AVAILABLE = True
+except ImportError as exc:
+    print(f"send2trash 未安装，回收站功能不可用: {exc}")
+    SEND2TRASH_AVAILABLE = False
+    send2trash = None
+
 
 def _is_junction(entry) -> bool:
     """判断目录项是否为 Windows junction（旧版本 Python 不支持时返回 False）"""
@@ -106,6 +114,7 @@ class FileDeduplicationWorker(BaseWorker):
     progress = pyqtSignal(int, int)  # 已扫描文件数, 总文件数
     # 继承 BaseWorker 的 status 和 result 信号
     duplicates_found = pyqtSignal(dict)  # {hash: [file_paths]}
+    sizes_found = pyqtSignal(dict)  # {file_path: 扫描时大小}，用于删除前 TOCTOU 复核
     error = pyqtSignal(str)
 
     def __init__(self, folder_path):
@@ -165,8 +174,12 @@ class FileDeduplicationWorker(BaseWorker):
                     quick_hash = self.compute_quick_hash(file_path)
                     if quick_hash:
                         quick_hash_to_files[quick_hash].append(file_path)
-                except Exception as e:
+                except OSError as e:
                     print(f"compute_quick_hash error: {e}")
+                    self.error.emit(
+                        t("plugin.file_deduplicator.error.read_failed",
+                          path=file_path, error=str(e))
+                    )
                 scanned += 1
                 self.progress.emit(scanned, candidate_count)
 
@@ -194,7 +207,7 @@ class FileDeduplicationWorker(BaseWorker):
                     file_hash = self.compute_file_hash(file_path)
                     if file_hash:
                         hash_to_files[file_hash].append(file_path)
-                except Exception as e:
+                except OSError as e:
                     print(f"compute_file_hash error: {e}")
                     self.error.emit(
                         t("plugin.file_deduplicator.error.read_failed",
@@ -205,6 +218,14 @@ class FileDeduplicationWorker(BaseWorker):
 
             # 过滤出重复文件（Hash对应多个文件）
             duplicates = {h: files for h, files in hash_to_files.items() if len(files) > 1}
+            # 保留第一遍扫描时的大小，删除前用于 TOCTOU 复核（文件可能被替换）
+            size_map = dict(all_files)
+            self.sizes_found.emit({
+                fp: size_map[fp]
+                for files in duplicates.values()
+                for fp in files
+                if fp in size_map
+            })
             self.duplicates_found.emit(duplicates)
             self.result.emit(
                 True,
@@ -218,34 +239,35 @@ class FileDeduplicationWorker(BaseWorker):
             )
 
     def compute_file_hash(self, file_path, chunk_size=65536):
-        """计算文件的完整SHA-256哈希值"""
+        """计算文件的完整SHA-256哈希值
+
+        读取失败时抛出 OSError，由调用方统一上报，避免不可读文件被无声排除。
+        取消时返回 None。
+        """
         hash_sha256 = hashlib.sha256()
-        try:
-            with open(file_path, 'rb') as f:
-                while chunk := f.read(chunk_size):
-                    if self.cancel_requested:
-                        return None
-                    hash_sha256.update(chunk)
-            return hash_sha256.hexdigest()
-        except Exception:
-            return None
+        with open(file_path, 'rb') as f:
+            while chunk := f.read(chunk_size):
+                if self.cancel_requested:
+                    return None
+                hash_sha256.update(chunk)
+        return hash_sha256.hexdigest()
 
     def compute_quick_hash(self, file_path, head_size=65536):
-        """快速Hash：读取首尾各head_size字节 + 文件大小，用于初筛"""
-        try:
-            file_size = os.path.getsize(file_path)
-            hash_obj = hashlib.sha256()
-            hash_obj.update(str(file_size).encode())
-            with open(file_path, 'rb') as f:
-                head = f.read(head_size)
-                hash_obj.update(head)
-                if file_size > head_size:
-                    f.seek(-head_size, 2)
-                    tail = f.read(head_size)
-                    hash_obj.update(tail)
-            return hash_obj.hexdigest()
-        except Exception:
-            return None
+        """快速Hash：读取首尾各head_size字节 + 文件大小，用于初筛
+
+        读取失败时抛出 OSError，由调用方统一上报。
+        """
+        file_size = os.path.getsize(file_path)
+        hash_obj = hashlib.sha256()
+        hash_obj.update(str(file_size).encode())
+        with open(file_path, 'rb') as f:
+            head = f.read(head_size)
+            hash_obj.update(head)
+            if file_size > head_size:
+                f.seek(-head_size, 2)
+                tail = f.read(head_size)
+                hash_obj.update(tail)
+        return hash_obj.hexdigest()
 
     def cancel(self):
         self.cancel_requested = True
@@ -259,16 +281,47 @@ class FileDeletionWorker(BaseWorker):
     """
     progress = pyqtSignal(int, int)  # 已处理数, 总数
 
-    def __init__(self, file_paths, root_path):
+    def __init__(self, file_paths, root_path, expected_sizes=None, use_trash=False):
         super().__init__()
         self.file_paths = list(file_paths)
         self.root_path = root_path
+        self.expected_sizes = dict(expected_sizes or {})
+        self.use_trash = bool(use_trash and SEND2TRASH_AVAILABLE)
         self.cancel_requested = False
+
+    def _delete_one(self, file_path):
+        """删除单个文件，返回 (结果, 说明)
+
+        结果为 "deleted" / "missing" / "changed" / "failed"。
+        """
+        expected = self.expected_sizes.get(file_path)
+        if expected is not None:
+            try:
+                actual = os.path.getsize(file_path)
+            except FileNotFoundError:
+                return "missing", ""
+            except OSError as exc:
+                return "failed", str(exc)
+            if actual != expected:
+                # 扫描与删除间隔内内容被替换，跳过以免误删
+                return "changed", t("plugin.file_deduplicator.msg.file_changed_skipped")
+        if not os.path.exists(file_path):
+            return "missing", ""
+        try:
+            if self.use_trash:
+                send2trash(file_path)
+            else:
+                os.remove(file_path)
+            return "deleted", ""
+        except OSError as exc:
+            print(f"delete error: {exc}")
+            return "failed", str(exc)
 
     def run(self):
         try:
             total = len(self.file_paths)
             deleted = 0
+            missing = 0
             failed = 0
             failed_files = []
             for index, file_path in enumerate(self.file_paths, start=1):
@@ -290,23 +343,26 @@ class FileDeletionWorker(BaseWorker):
                     failed += 1
                     failed_files.append(f"{file_path}: {t('plugin.file_deduplicator.msg.is_link_skipped')}")
                 else:
-                    try:
-                        if os.path.exists(file_path):
-                            os.remove(file_path)
-                            deleted += 1
-                        else:
-                            # 文件已不存在，视为目标已达成
-                            deleted += 1
-                    except OSError as exc:
-                        print(f"delete error: {exc}")
+                    outcome, detail = self._delete_one(file_path)
+                    if outcome == "deleted":
+                        deleted += 1
+                    elif outcome == "missing":
+                        # 文件已不存在：与"实际删除"区分统计，避免口径误导
+                        missing += 1
+                    else:
                         failed += 1
-                        failed_files.append(f"{file_path}: {str(exc)}")
+                        failed_files.append(f"{file_path}: {detail}")
                 self.progress.emit(index, total)
 
             message = t(
                 "plugin.file_deduplicator.msg.delete_done",
                 count=deleted, failed_count=failed
             )
+            if missing:
+                message += t(
+                    "plugin.file_deduplicator.msg.delete_missing_skipped",
+                    count=missing
+                )
             if failed_files:
                 message += t("plugin.file_deduplicator.msg.failures_header")
                 message += "\n".join(failed_files[:5])
@@ -339,6 +395,7 @@ class FileDeduplicatorWidget(QWidget):
         self.selected_folder = ""
         self.worker = None
         self.duplicates = {}  # {hash: [file_paths]}
+        self.scan_sizes = {}  # {file_path: 扫描时大小}，删除前 TOCTOU 复核
         self.setup_ui()
 
     def setup_ui(self):
@@ -387,6 +444,15 @@ class FileDeduplicatorWidget(QWidget):
         self.scan_panel.clicked.connect(self.start_scan)
         self.scan_panel.btn.setEnabled(False)
         self.folder_card.content_layout.addWidget(self.scan_panel)
+
+        # 扫描取消按钮（扫描期间显示）
+        self.cancel_scan_btn = AnimatedButton(
+            t("plugin.file_deduplicator.button.cancel_scan")
+        )
+        self.cancel_scan_btn.setMaximumWidth(120)
+        self.cancel_scan_btn.clicked.connect(self.cancel_scan)
+        self.cancel_scan_btn.setVisible(False)
+        self.folder_card.content_layout.addWidget(self.cancel_scan_btn)
 
         layout.addWidget(self.folder_card)
 
@@ -477,6 +543,24 @@ class FileDeduplicatorWidget(QWidget):
 
         # 连接父节点勾选变化信号
         self.results_tree.itemChanged.connect(self._on_parent_checked)
+
+        # 删除到回收站（默认关闭；send2trash 不可用时禁用）
+        trash_layout = QHBoxLayout()
+        self.use_trash_label = SelectableLabel(
+            t("plugin.file_deduplicator.label.use_trash")
+        )
+        trash_layout.addWidget(self.use_trash_label)
+        self.use_trash_checkbox = QCheckBox()
+        self.use_trash_checkbox.setChecked(False)
+        if not SEND2TRASH_AVAILABLE:
+            self.use_trash_checkbox.setEnabled(False)
+            self.use_trash_label.setText(
+                t("plugin.file_deduplicator.label.use_trash")
+                + t("plugin.file_deduplicator.msg.trash_unavailable")
+            )
+        trash_layout.addWidget(self.use_trash_checkbox)
+        trash_layout.addStretch()
+        self.deletion_card.content_layout.addLayout(trash_layout)
 
         # 删除操作面板
         self.delete_panel = ActionPanel(
@@ -585,6 +669,12 @@ class FileDeduplicatorWidget(QWidget):
         if hasattr(self, 'auto_rescan_label'):
             self.auto_rescan_label.setStyleSheet(f"color: {theme['text']};")
 
+        # 回收站选项标签与取消扫描按钮
+        if hasattr(self, 'use_trash_label'):
+            self.use_trash_label.setStyleSheet(f"color: {theme['text']};")
+        if hasattr(self, 'cancel_scan_btn'):
+            self.cancel_scan_btn.update_style(theme)
+
         # 删除操作面板——使用主题错误色更新渐变
         if hasattr(self, 'delete_panel'):
             self.delete_panel.gradient_colors = (theme['error'], theme.get('error_gradient_end', theme['error']))
@@ -672,14 +762,31 @@ class FileDeduplicatorWidget(QWidget):
         self.stats_label.setText(t("plugin.file_deduplicator.msg.stats_scanning"))
         self.delete_panel.btn.setEnabled(False)
         self.duplicates = {}
+        self.scan_sizes = {}
+        self.cancel_scan_btn.setEnabled(True)
+        self.cancel_scan_btn.setVisible(True)
 
         self.worker = FileDeduplicationWorker(self.selected_folder)
         self.worker.progress.connect(self.update_progress)
         self.worker.status.connect(self.update_status)
+        self.worker.sizes_found.connect(self.store_scan_sizes)
         self.worker.duplicates_found.connect(self.show_duplicates)
         self.worker.result.connect(self.scan_finished)
         self.worker.error.connect(self.show_error)
         self.worker.start()
+
+    def store_scan_sizes(self, sizes):
+        """记录扫描时的文件大小，供删除前 TOCTOU 复核"""
+        self.scan_sizes = dict(sizes)
+
+    def cancel_scan(self):
+        """请求取消正在运行的扫描"""
+        if self.worker and self.worker.isRunning() and hasattr(self.worker, "cancel"):
+            self.worker.cancel()
+            self.cancel_scan_btn.setEnabled(False)
+            self.scan_panel.update_status(
+                t("plugin.file_deduplicator.msg.cancelling")
+            )
 
     def update_progress(self, scanned, total):
         """更新进度条"""
@@ -841,18 +948,27 @@ class FileDeduplicatorWidget(QWidget):
             self.results_tree.expandAll()
             self.toggle_expand_btn.setText(t("plugin.file_deduplicator.button.collapse"))
 
+    @staticmethod
+    def _safe_stat_time(path, getter):
+        """读取文件时间，失败时回退为 0，避免 OSError 从排序槽函数逃逸"""
+        try:
+            return getter(path)
+        except OSError as exc:
+            print(f"无法读取时间信息 {path}: {exc}")
+            return 0.0
+
     def _get_sorted_files(self, file_list, rule):
         """按指定规则排序文件列表，返回排序后的列表"""
         if rule == 0:
             return sorted(file_list, key=lambda x: (
-                os.path.getctime(x),
-                os.path.getmtime(x),
+                self._safe_stat_time(x, os.path.getctime),
+                self._safe_stat_time(x, os.path.getmtime),
                 1 if self._has_copy_keyword(os.path.basename(x)) else 0
             ))
         elif rule == 1:
             return sorted(file_list, key=lambda x: (
-                -os.path.getctime(x),
-                -os.path.getmtime(x),
+                -self._safe_stat_time(x, os.path.getctime),
+                -self._safe_stat_time(x, os.path.getmtime),
                 1 if self._has_copy_keyword(os.path.basename(x)) else 0
             ))
         elif rule == 2:
@@ -862,14 +978,14 @@ class FileDeduplicatorWidget(QWidget):
         elif rule == 4:
             return sorted(file_list, key=lambda x: (
                 1 if self._has_copy_keyword(os.path.basename(x)) else 0,
-                os.path.getctime(x),
-                os.path.getmtime(x),
+                self._safe_stat_time(x, os.path.getctime),
+                self._safe_stat_time(x, os.path.getmtime),
             ))
         elif rule == 5:
             return sorted(file_list, key=lambda x: (
                 1 if self._has_copy_keyword(os.path.basename(x)) else 0,
-                -os.path.getctime(x),
-                -os.path.getmtime(x),
+                -self._safe_stat_time(x, os.path.getctime),
+                -self._safe_stat_time(x, os.path.getmtime),
             ))
         return file_list
 
@@ -958,6 +1074,7 @@ class FileDeduplicatorWidget(QWidget):
         self.scan_panel.finish_task(message)
         self.scan_panel.btn.setEnabled(True)
         self._set_inputs_enabled(True)
+        self.cancel_scan_btn.setVisible(False)
         if success:
             if not self.duplicates:
                 show_info(
@@ -1030,6 +1147,8 @@ class FileDeduplicatorWidget(QWidget):
                 count=len(files_to_delete) - 10
             )
         confirm_msg += t("plugin.file_deduplicator.msg.confirm_irreversible")
+        if self.use_trash_checkbox.isChecked():
+            confirm_msg += t("plugin.file_deduplicator.msg.confirm_trash_note")
 
         reply = show_question(
             self, t("plugin.file_deduplicator.dialog.confirm_delete"), confirm_msg
@@ -1051,7 +1170,12 @@ class FileDeduplicatorWidget(QWidget):
             self.delete_panel.btn.setEnabled(False)
             self.scan_panel.btn.setEnabled(False)
             self._set_inputs_enabled(False)
-            self.worker = FileDeletionWorker(files_to_delete, self.selected_folder)
+            self.worker = FileDeletionWorker(
+                files_to_delete,
+                self.selected_folder,
+                expected_sizes=self.scan_sizes,
+                use_trash=self.use_trash_checkbox.isChecked(),
+            )
             self.worker.progress.connect(self.update_delete_progress)
             self.worker.status.connect(self.update_status)
             self.worker.result.connect(self.delete_finished)
@@ -1122,6 +1246,9 @@ class FileDeduplicator(ToolPlugin):
         )
         widget.browse_btn.setText(t("plugin.file_deduplicator.button.browse"))
         widget.scan_panel.btn.setText(t("plugin.file_deduplicator.button.scan"))
+        widget.cancel_scan_btn.setText(
+            t("plugin.file_deduplicator.button.cancel_scan")
+        )
         widget.scan_panel.status_label.setText(
             t("plugin.file_deduplicator.msg.select_folder_hint")
         )
@@ -1144,6 +1271,10 @@ class FileDeduplicator(ToolPlugin):
         widget.auto_rescan_label.setText(
             t("plugin.file_deduplicator.label.auto_rescan")
         )
+        trash_label = t("plugin.file_deduplicator.label.use_trash")
+        if not SEND2TRASH_AVAILABLE:
+            trash_label += t("plugin.file_deduplicator.msg.trash_unavailable")
+        widget.use_trash_label.setText(trash_label)
         widget.select_all_btn.setText(
             t("plugin.file_deduplicator.button.select_all")
         )

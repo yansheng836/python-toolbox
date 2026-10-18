@@ -111,20 +111,6 @@ PLUGIN_MODULES = [
     },
 ]
 
-# 兼容旧代码：FEATURE_MODULES 从 PLUGIN_MODULES 派生，排除设置插件（不显示在首页）
-FEATURE_MODULES = [
-    (p["icon"], p["name"], p["description"])
-    for p in PLUGIN_MODULES if p["order"] < 999
-]
-
-# 欢迎页面配置
-WELCOME_CONFIG = {
-    "title": "工具箱",
-    "subtitle": "离线、高效、美观的桌面工具集合",
-    "hint": "👈 从左侧菜单选择工具开始使用",
-    "feature_title": "功能特色",
-}
-
 # 全局标题样式配置
 # UI间距配置
 SPACING_SMALL = 8  # 小间距，用于标签和控件之间
@@ -159,11 +145,4 @@ FONT_WEIGHT_800 = "800"
 TITLE_STYLES = {
     "font_size": FONT_SIZE_24,
     "font_weight": FONT_WEIGHT_700
-}
-
-# 主题配置（可以在运行时修改）
-THEME_CONFIG = {
-    "default_theme": "dark",  # 默认主题
-    "primary_color": "#6366f1",
-    "primary_hover": "#4f46e5",
 }

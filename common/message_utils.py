@@ -7,15 +7,35 @@
 from PyQt6.QtWidgets import QMessageBox
 
 from toolbox import Theme
+from common.utils import get_current_theme
+
+
+def _resolve_theme(theme=None, widget=None):
+    """解析应使用的主题
+
+    优先级：显式传入 > 已注册的当前主题 > 父控件链上的 current_theme > 项目默认（DARK）。
+    避免调用方未传 theme 时强制回退亮色，导致深色主题下弹窗风格割裂。
+    """
+    if theme is not None:
+        return theme
+    registered = get_current_theme()
+    if registered is not None:
+        return registered
+    obj = widget
+    while obj is not None:
+        current = getattr(obj, "current_theme", None)
+        if isinstance(current, dict):
+            return current
+        obj = obj.parentWidget() if hasattr(obj, "parentWidget") else None
+    return Theme.DARK
 
 
 def _apply_style(msg_box, theme=None):
     """
     为消息框应用统一样式
-    设置白色背景和深色文字，按钮用主题色
+    设置主题背景与文字颜色，按钮用主题色
     """
-    if theme is None:
-        theme = Theme.LIGHT
+    theme = _resolve_theme(theme, msg_box.parentWidget())
     msg_box.setStyleSheet(f"""
         QMessageBox {{
             background-color: {theme['bg']};

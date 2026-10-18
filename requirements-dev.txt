@@ -1,0 +1,9 @@
+# 开发 / 测试依赖（运行依赖见 requirements.txt）
+-r requirements.txt
+
+# 测试
+pytest>=8.0.0
+pytest-qt>=4.4.0
+
+# 静态检查
+ruff>=0.6.0

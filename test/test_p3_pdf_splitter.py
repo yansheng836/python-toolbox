@@ -27,7 +27,7 @@ EN_DICT = {
     "plugin.pdf_splitter.label.output_format": "Output format:",
     "plugin.pdf_splitter.label.pages_per_split": "Pages per file:",
     "plugin.pdf_splitter.label.image_format": "Image format:",
-    "plugin.pdf_splitter.label.quality": "Image quality:",
+    "plugin.pdf_splitter.label.quality": "Clarity:",
     "plugin.pdf_splitter.label.output_dir": "Output directory:",
     "plugin.pdf_splitter.spin.suffix": " pages/file",
     "plugin.pdf_splitter.placeholder.output_dir": "Default source directory",
@@ -133,7 +133,7 @@ def test_texts_use_dictionary_zh(splitter):
     assert widget.pages_label.text() == "拆分页数:"
     assert widget.pages_spin.suffix() == " 页/文件"
     assert widget.image_format_label.text() == "图片格式:"
-    assert widget.quality_row_label.text() == "图片质量:"
+    assert widget.quality_row_label.text() == "清晰度:"
     assert widget.output_label.text() == "输出目录:"
     assert widget.output_path.placeholderText() == "默认原文件目录"
     assert widget.browse_btn.text() == "浏览"
@@ -161,7 +161,7 @@ def test_retranslate_switches_to_english(splitter, en_dict):
     assert widget.pages_label.text() == "Pages per file:"
     assert widget.pages_spin.suffix() == " pages/file"
     assert widget.image_format_label.text() == "Image format:"
-    assert widget.quality_row_label.text() == "Image quality:"
+    assert widget.quality_row_label.text() == "Clarity:"
     assert widget.output_label.text() == "Output directory:"
     assert widget.output_path.placeholderText() == "Default source directory"
     assert widget.browse_btn.text() == "Browse"

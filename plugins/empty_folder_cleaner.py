@@ -12,8 +12,8 @@ from typing import Optional
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QFileDialog, QHBoxLayout, QHeaderView, QSizePolicy, QTreeWidget,
-    QTreeWidgetItem, QVBoxLayout, QWidget,
+    QCheckBox, QFileDialog, QHBoxLayout, QHeaderView, QSizePolicy,
+    QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
 from toolbox import (
@@ -447,6 +447,23 @@ class EmptyFolderCleanerWidget(QWidget):
         self.delete_card = Card(
             title=t("plugin.empty_folder_cleaner.card.delete")
         )
+
+        # 回收站选项：空文件夹始终用 os.rmdir 直接删除，此处仅作说明性选项
+        trash_layout = QHBoxLayout()
+        self.use_trash_label = SelectableLabel(
+            t("plugin.empty_folder_cleaner.label.use_trash")
+        )
+        trash_layout.addWidget(self.use_trash_label)
+        self.use_trash_checkbox = QCheckBox()
+        self.use_trash_checkbox.setChecked(False)
+        self.use_trash_checkbox.setEnabled(False)
+        self.use_trash_checkbox.setToolTip(
+            t("plugin.empty_folder_cleaner.msg.trash_unavailable")
+        )
+        trash_layout.addWidget(self.use_trash_checkbox)
+        trash_layout.addStretch()
+        self.delete_card.content_layout.addLayout(trash_layout)
+
         self.delete_panel = ActionPanel(
             button_text=t("plugin.empty_folder_cleaner.button.delete_selected"),
             use_gradient=True,
@@ -518,6 +535,8 @@ class EmptyFolderCleanerWidget(QWidget):
             self.stats_label.setStyleSheet(
                 f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};"
             )
+        if hasattr(self, "use_trash_label"):
+            self.use_trash_label.setStyleSheet(f"color: {theme['text']};")
         if hasattr(self, "delete_panel"):
             error_colors = (
                 theme["error"], theme.get("error_gradient_end", theme["error"])
@@ -834,6 +853,12 @@ class EmptyFolderCleaner(ToolPlugin):
         )
         widget.delete_panel.status_label.setText(
             t("plugin.empty_folder_cleaner.msg.status_idle_delete")
+        )
+        widget.use_trash_label.setText(
+            t("plugin.empty_folder_cleaner.label.use_trash")
+        )
+        widget.use_trash_checkbox.setToolTip(
+            t("plugin.empty_folder_cleaner.msg.trash_unavailable")
         )
 
     def update_theme(self, theme):

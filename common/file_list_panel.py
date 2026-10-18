@@ -78,6 +78,8 @@ class FileListPanel(QWidget):
         self.table_min_height = table_min_height
         # 从 file_filter 解析允许的文件扩展名，用于拖拽过滤
         self._allowed_extensions = self._parse_filter_extensions(self.file_filter)
+        # 单元格文本缓存：key 为 (文件路径, mtime, 列 id)，避免重复解码未变化的文件
+        self._cell_cache = {}
         self._setup_ui()
 
     def _setup_ui(self):
@@ -193,6 +195,8 @@ class FileListPanel(QWidget):
             item = self.table.horizontalHeaderItem(i)
             if item is not None and translated != key:
                 item.setText(translated)
+        # 语言切换后重新解析过滤器，保证拖拽扩展名判定与当前文案一致
+        self._allowed_extensions = self._parse_filter_extensions(self.file_filter)
         self.update_list()
 
     def _apply_column_widths(self, header):
@@ -352,35 +356,67 @@ class FileListPanel(QWidget):
         self.files_changed.emit()
 
     def update_list(self):
-        """根据 self.files 和 columns 配置更新表格"""
+        """根据 self.files 和 columns 配置更新表格
+
+        单元格文本按 (路径, mtime, 列 id) 缓存，未变化的文件不再重复解码，
+        避免每次增删都触发全表重算（尤其图片尺寸读取）。
+        """
         self.table.setUpdatesEnabled(False)
         self.table.setRowCount(0)
         self.table.setRowCount(len(self.files))
+        new_cache = {}
         for row, file_path in enumerate(self.files):
+            try:
+                mtime = os.path.getmtime(file_path)
+            except OSError as e:
+                print(f"Error stat file {file_path}: {e}")
+                mtime = None
             for col_idx, col in enumerate(self.columns):
-                try:
-                    text = str(col.func(file_path))
-                except Exception as e:
-                    print(f"Error in file_list_panel: {e}")
-                    text = t("common.cell.error")
+                cache_key = (file_path, mtime, col.id)
+                if cache_key in self._cell_cache:
+                    text = self._cell_cache[cache_key]
+                else:
+                    try:
+                        text = str(col.func(file_path))
+                    except Exception as e:
+                        print(f"Error in file_list_panel: {e}")
+                        text = t("common.cell.error")
+                new_cache[cache_key] = text
                 item = QTableWidgetItem(text)
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.table.setItem(row, col_idx, item)
+        self._cell_cache = new_cache
         self.table.setUpdatesEnabled(True)
         # 切换水印可见性
         self.table_container.setCurrentIndex(0 if not self.files else 1)
 
     def _parse_filter_extensions(self, file_filter):
-        """从 file_filter 解析允许的文件扩展名列表"""
-        # file_filter 格式如 "图片文件 (*.jpg *.jpeg *.png)"
-        match = re.search(r'\((.*?)\)', file_filter)
-        if not match:
-            return []
+        """从 file_filter 解析允许的文件扩展名列表
+
+        遍历所有 ``;;`` 分段与每个分段中的括号组，收集全部 *.ext 扩展名，
+        避免只取第一个括号组导致对话框允许、拖拽拒绝的不一致。
+        忽略 ``*.*`` / ``*`` 通配。
+        """
         extensions = []
-        for part in match.group(1).split():
-            if part.startswith('*.'):
-                extensions.append(os.path.splitext(part)[1].lower())
+        seen = set()
+        for segment in file_filter.split(';;'):
+            for match in re.finditer(r'\(([^()]*)\)', segment):
+                for part in match.group(1).split():
+                    if not part.startswith('*.'):
+                        continue
+                    ext = os.path.splitext(part)[1].lower()
+                    if ext and ext != '.*' and ext not in seen:
+                        seen.add(ext)
+                        extensions.append(ext)
         return extensions
+
+    def set_file_filter(self, file_filter):
+        """更新文件选择过滤器并重新解析拖拽扩展名
+
+        语言切换后插件可调用此方法同步新的过滤器文案，扩展名判定随之更新。
+        """
+        self.file_filter = file_filter
+        self._allowed_extensions = self._parse_filter_extensions(file_filter)
 
     def _is_allowed_file(self, file_path):
         """检查文件扩展名是否允许"""

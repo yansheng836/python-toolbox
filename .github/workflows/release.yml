@@ -47,7 +47,6 @@ jobs:
           python -m py_compile config.py
           python -m py_compile toolbox.py
           python -m py_compile main.py
-          python -m py_compile settings_page.py
           python -m py_compile build.py
           echo "OK: Core modules syntax check passed"
 
@@ -154,7 +153,6 @@ jobs:
           python -m py_compile config.py
           python -m py_compile toolbox.py
           python -m py_compile main.py
-          python -m py_compile settings_page.py
           python -m py_compile build_macos.py
           echo "OK: Core modules syntax check passed"
 

@@ -26,7 +26,8 @@ jobs:
         shell: bash
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-dev.txt
+          python -m pip freeze > dependency-lock.txt
 
       - name: Syntax check - core modules
         shell: bash
@@ -35,7 +36,6 @@ jobs:
           python -m py_compile config.py
           python -m py_compile toolbox.py
           python -m py_compile main.py
-          python -m py_compile settings_page.py
           python -m py_compile build.py
           echo "OK: Core modules syntax check passed"
 
@@ -66,6 +66,18 @@ jobs:
           done
           echo "OK: Test files syntax check passed"
 
+      - name: Run tests
+        shell: bash
+        run: |
+          python -m pytest test/ -x -q --ignore=test/test_adaptive_ui.py --ignore=test/test_icon.py --ignore=test/test_icon_scaling.py
+        env:
+          QT_QPA_PLATFORM: "offscreen"
+
+      - name: Lint
+        shell: bash
+        run: |
+          python -m ruff check --select E9,F63,F7,F82 plugins/ common/ toolbox.py main.py config.py
+
       - name: Verify main.py import
         shell: bash
         run: |
@@ -87,6 +99,7 @@ jobs:
           path: |
             dist/*.exe
             dist/*.docx
+            dependency-lock.txt
           retention-days: 30
           if-no-files-found: error
 
@@ -114,7 +127,6 @@ jobs:
           python -m py_compile config.py
           python -m py_compile toolbox.py
           python -m py_compile main.py
-          python -m py_compile settings_page.py
           python -m py_compile build.py
           echo "OK: Core modules syntax check passed"
 

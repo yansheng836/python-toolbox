@@ -74,18 +74,18 @@ class ScalingWorker(BaseWorker):
                     exif_bytes = img.info.get('exif')
                     try:
                         if self.scale_type == "percent":
-                            new_width = int(img.width * self.scale_value / 100)
-                            new_height = int(img.height * self.scale_value / 100)
+                            new_width = max(1, int(img.width * self.scale_value / 100))
+                            new_height = max(1, int(img.height * self.scale_value / 100))
                         elif self.scale_type == "width":
                             new_width = self.width
                             if self.maintain_aspect:
-                                new_height = int(img.height * new_width / img.width)
+                                new_height = max(1, int(img.height * new_width / img.width))
                             else:
                                 new_height = self.height
                         elif self.scale_type == "height":
                             new_height = self.height
                             if self.maintain_aspect:
-                                new_width = int(img.width * new_height / img.height)
+                                new_width = max(1, int(img.width * new_height / img.height))
                             else:
                                 new_width = self.width
                         else:

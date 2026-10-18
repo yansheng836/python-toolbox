@@ -6,12 +6,32 @@
 
 from PyQt6.QtWidgets import QFileDialog
 from toolbox import Theme
+from common.utils import get_current_theme
 
 
-def _get_dialog_style(theme=None):
+def _resolve_theme(theme=None, widget=None):
+    """解析应使用的主题
+
+    优先级：显式传入 > 已注册的当前主题 > 父控件链上的 current_theme > 项目默认（DARK）。
+    这样调用方未传 theme 时不会强制回退到亮色，避免与深色主题割裂。
+    """
+    if theme is not None:
+        return theme
+    registered = get_current_theme()
+    if registered is not None:
+        return registered
+    obj = widget
+    while obj is not None:
+        current = getattr(obj, "current_theme", None)
+        if isinstance(current, dict):
+            return current
+        obj = obj.parentWidget() if hasattr(obj, "parentWidget") else None
+    return Theme.DARK
+
+
+def _get_dialog_style(theme=None, widget=None):
     """返回文件对话框的统一样式"""
-    if theme is None:
-        theme = Theme.LIGHT
+    theme = _resolve_theme(theme, widget)
     return f"""
         QFileDialog {{
             background-color: {theme['bg_secondary']};
@@ -59,7 +79,7 @@ def get_save_file_name(parent, title, directory="", filter_str="", options=None,
         file_dialog.setDirectory(directory)
     if options:
         file_dialog.setOptions(options)
-    file_dialog.setStyleSheet(_get_dialog_style(theme))
+    file_dialog.setStyleSheet(_get_dialog_style(theme, file_dialog))
     if file_dialog.exec():
         selected_files = file_dialog.selectedFiles()
         if selected_files:
@@ -80,7 +100,7 @@ def get_existing_directory(parent, title, directory="", options=None, theme=None
         file_dialog.setDirectory(directory)
     if options:
         file_dialog.setOptions(options)
-    file_dialog.setStyleSheet(_get_dialog_style(theme))
+    file_dialog.setStyleSheet(_get_dialog_style(theme, file_dialog))
     if file_dialog.exec():
         selected_files = file_dialog.selectedFiles()
         if selected_files:
@@ -102,7 +122,7 @@ def get_open_file_names(parent, title, directory="", filter_str="", options=None
         file_dialog.setDirectory(directory)
     if options:
         file_dialog.setOptions(options)
-    file_dialog.setStyleSheet(_get_dialog_style(theme))
+    file_dialog.setStyleSheet(_get_dialog_style(theme, file_dialog))
     if file_dialog.exec():
         return file_dialog.selectedFiles()
     return []

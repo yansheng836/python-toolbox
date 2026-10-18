@@ -88,6 +88,9 @@ a = Analysis(
         'plugins.image_format_converter',
         'plugins.image_stitcher',
 
+        # 可选：删除到回收站（M12）
+        'send2trash',
+
         # PIL/Pillow 核心模块
         'PIL',
         'PIL.Image',

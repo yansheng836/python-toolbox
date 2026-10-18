@@ -5,9 +5,27 @@
 """
 
 import os
+import uuid
 from collections import namedtuple
 
 from common.i18n import t
+
+# ==================== 当前主题状态 ====================
+# 供文件对话框 / 消息框在调用方未显式传 theme 时使用。
+# toolbox.apply_theme 可调用 set_current_theme 注册；未注册时组件回退到
+# 按父控件链（ToolboxWindow.current_theme）或项目默认主题推断。
+_current_theme = None
+
+
+def set_current_theme(theme):
+    """注册当前应用主题，供公共对话框组件在未显式传 theme 时使用"""
+    global _current_theme
+    _current_theme = theme
+
+
+def get_current_theme():
+    """返回已注册的当前主题；未注册时返回 None"""
+    return _current_theme
 
 # ==================== 模块可用性检查 ====================
 try:
@@ -40,19 +58,32 @@ def load_oriented_image(file_path):
     with Image.open(file_path) as src_img:
         src_img.load()
         oriented_img = ImageOps.exif_transpose(src_img)
-        try:
-            return oriented_img.copy()
-        finally:
-            oriented_img.close()
+        if oriented_img is not src_img:
+            # exif_transpose 已生成新图，本身独立于 with 上下文，无需再 copy（省一份峰值内存）
+            return oriented_img
+        # 无方向变换时 exif_transpose 返回原对象本身，必须复制一份再离开 with
+        return src_img.copy()
+
+
+# EXIF Orientation tag（值 5-8 表示宽高互换）
+_EXIF_ORIENTATION_TAG = 274
 
 
 def get_image_size(file_path):
-    """获取图片尺寸文本（应用 EXIF 方向）"""
+    """获取图片尺寸文本（应用 EXIF 方向；仅读文件头，不解码像素）"""
     if not PIL_AVAILABLE:
         return "N/A"
     try:
-        with load_oriented_image(file_path) as img:
-            return f"{img.width} x {img.height}"
+        with Image.open(file_path) as img:
+            width, height = img.size
+            try:
+                orientation = img.getexif().get(_EXIF_ORIENTATION_TAG, 1)
+            except Exception as e:
+                print(f"get_image_size exif error: {e}")
+                orientation = 1
+        if orientation in (5, 6, 7, 8):
+            width, height = height, width
+        return f"{width} x {height}"
     except Exception as e:
         print(f"get_image_size error: {e}")
         return t("common.cell.read_failed")
@@ -100,10 +131,9 @@ def get_pdf_pages(file_path):
     if not FITZ_AVAILABLE:
         return "N/A"
     try:
-        doc = fitz.open(file_path)
-        pages = len(doc)
-        doc.close()
-        return str(pages)
+        # 上下文管理器确保异常路径也能释放文档句柄
+        with fitz.open(file_path) as doc:
+            return str(len(doc))
     except Exception as e:
         print(f"get_pdf_pages error: {e}")
         return "N/A"
@@ -145,21 +175,30 @@ def is_reserved_filename(filename):
 def check_dir_writable(dir_path):
     """检查目录是否可写
 
-    尝试在目录中创建临时文件来验证可写性。
+    尝试在目录中创建临时文件来验证可写性。探针文件名含进程 ID 与随机串，
+    避免多进程并发探测时互相误删。
     返回 (is_writable: bool, error_message: str)
     """
+    test_file = None
     try:
         if not os.path.exists(dir_path):
             os.makedirs(dir_path, exist_ok=True)
-        test_file = os.path.join(dir_path, ".write_test.tmp")
+        test_file = os.path.join(
+            dir_path, f".write_test_{os.getpid()}_{uuid.uuid4().hex}.tmp"
+        )
         with open(test_file, 'w') as f:
             f.write("test")
-        os.remove(test_file)
         return True, ""
     except PermissionError:
         return False, t("common.error.dir_locked", dir=dir_path)
     except Exception as e:
         return False, t("common.error.dir_access", error=str(e))
+    finally:
+        if test_file and os.path.exists(test_file):
+            try:
+                os.remove(test_file)
+            except OSError as e:
+                print(f"Error removing write-test file {test_file}: {e}")
 
 
 def check_file_writable(file_path):

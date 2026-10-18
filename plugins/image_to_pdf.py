@@ -74,6 +74,16 @@ class PDFWorker(BaseWorker):
             result.info.pop('icc_profile', None)
         return result
 
+    @staticmethod
+    def _read_display_size(file_path):
+        """只读图片头部返回应用 EXIF 方向后的 (宽, 高)，不解码像素。"""
+        with Image.open(file_path) as img:
+            width, height = img.size
+            orientation = img.getexif().get(0x0112, 1)
+        if orientation in (5, 6, 7, 8):
+            width, height = height, width
+        return width, height
+
     @classmethod
     def _fit_to_page(cls, image, page_size):
         """按比例将图片置于固定尺寸的白色页面中央。"""
@@ -136,12 +146,9 @@ class PDFWorker(BaseWorker):
                 self.status.emit(t("plugin.image_to_pdf.msg.scanning"))
                 for f in self.files:
                     try:
-                        img = self._load_oriented_image(f)
-                        try:
-                            if max_width is None or img.width > max_width:
-                                max_width = img.width
-                        finally:
-                            img.close()
+                        width, _ = self._read_display_size(f)
+                        if max_width is None or width > max_width:
+                            max_width = width
                     except Exception as e:
                         print(f"Error in image_to_pdf: {e}")
                         skipped += 1

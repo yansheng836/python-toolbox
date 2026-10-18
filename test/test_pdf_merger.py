@@ -6,10 +6,6 @@ PDF合并插件测试
 import sys
 import os
 
-# 设置标准输出为 UTF-8 编码
-import io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

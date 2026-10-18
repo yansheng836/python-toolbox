@@ -43,6 +43,8 @@ class ActionPanel(Card):
         if button_text is None:
             button_text = t("common.action_panel.button.default")
         self._setup_content(button_text, status_text)
+        # 初始样式统一走 update_theme，避免构造态与换肤后不一致
+        self.update_theme(Theme.DARK)
 
     def _setup_content(self, button_text, status_text):
         """在 Card 的 content_layout 中添加按钮、进度条、状态标签"""
@@ -66,7 +68,7 @@ class ActionPanel(Card):
                 QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 {self.gradient_hover_colors[0]},
                     stop:1 {self.gradient_hover_colors[1]}); }}
-                QPushButton:disabled {{ background: {Theme.DARK['surface']}; color: white; }}
+                QPushButton:disabled {{ background: {Theme.DARK['surface']}; color: {Theme.DARK['text_secondary']}; }}
             """)
 
         self.btn.clicked.connect(self.clicked.emit)

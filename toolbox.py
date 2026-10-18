@@ -39,7 +39,16 @@ from PyQt6.QtGui import (
 from common import i18n
 from common import nav_config
 from common.i18n import t, bind_combo, install_qt_translator
-from common.utils import get_combo_style
+from common.utils import get_combo_style, set_current_theme
+
+
+def get_favicon_path():
+    """获取 favicon.ico 路径，兼容开发模式与 PyInstaller 打包模式"""
+    if getattr(sys, 'frozen', False):
+        base_path = Path(sys._MEIPASS)
+    else:
+        base_path = Path(__file__).parent
+    return str(base_path / "favicon.ico")
 
 
 # ==================== 主题配置 ====================
@@ -67,7 +76,9 @@ class Theme:
         'action_gradient_end': '#059669',
         'action_gradient_hover_start': '#34d399',
         'action_gradient_hover_end': '#10b981',
-        'shadow': 'rgba(0, 0, 0, 0.3)'
+        'shadow': '#4D000000',
+        'sidebar_hover_bg': 'rgba(99, 102, 241, 0.1)',
+        'sidebar_checked_bg': 'rgba(99, 102, 241, 0.2)'
     }
 
     LIGHT = {
@@ -92,7 +103,9 @@ class Theme:
         'action_gradient_end': '#059669',
         'action_gradient_hover_start': '#34d399',
         'action_gradient_hover_end': '#10b981',
-        'shadow': 'rgba(0, 0, 0, 0.1)'
+        'shadow': '#1A000000',
+        'sidebar_hover_bg': 'rgba(99, 102, 241, 0.1)',
+        'sidebar_checked_bg': 'rgba(99, 102, 241, 0.2)'
     }
 
     @staticmethod
@@ -142,21 +155,6 @@ class AnimatedButton(QPushButton):
         """
         self.setStyleSheet(self.base_style)
 
-    def enterEvent(self, event):
-        # 渐变样式由 :hover 伪状态处理，不在此处替换颜色
-        if "qlineargradient" not in self.styleSheet():
-            self.setStyleSheet(self.base_style.replace(
-                f"background-color: {Theme.DARK['primary']};",
-                f"background-color: {Theme.DARK['primary_hover']};"
-            ))
-        super().enterEvent(event)
-
-    def leaveEvent(self, event):
-        # 渐变样式由 :hover 伪状态处理，不在此处替换颜色
-        if "qlineargradient" not in self.styleSheet():
-            self.setStyleSheet(self.base_style)
-        super().leaveEvent(event)
-
 
 class SelectableLabel(QLabel):
     """支持鼠标选择和复制文本的标签组件"""
@@ -203,9 +201,15 @@ class Card(QFrame):
 
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(20)
-        shadow.setColor(QColor(0, 0, 0, 60))
+        shadow.setColor(QColor(Theme.DARK['shadow']))
         shadow.setOffset(0, 4)
         self.setGraphicsEffect(shadow)
+
+    def update_shadow(self, theme):
+        """按主题更新卡片阴影颜色"""
+        effect = self.graphicsEffect()
+        if isinstance(effect, QGraphicsDropShadowEffect):
+            effect.setColor(QColor(theme['shadow']))
 
 
 class SidebarButton(QPushButton):
@@ -238,11 +242,11 @@ class SidebarButton(QPushButton):
                 font-weight: {FONT_WEIGHT_600};
             }}
             QPushButton:hover {{
-                background-color: rgba(99, 102, 241, 0.1);
+                background-color: {theme['sidebar_hover_bg']};
                 color: {theme['text']};
             }}
             QPushButton:checked {{
-                background-color: rgba(99, 102, 241, 0.2);
+                background-color: {theme['sidebar_checked_bg']};
                 color: {theme['primary']};
                 font-weight: {FONT_WEIGHT_600};
             }}
@@ -442,7 +446,7 @@ class WelcomePage(QWidget):
     def __init__(self, plugins=None, parent=None):
         super().__init__(parent)
         self.plugins = plugins or {}
-        self.favicon_path = self._get_favicon_path()
+        self.favicon_path = get_favicon_path()
         self.separators = []
         self.title = None
         self.subtitle = None
@@ -597,14 +601,17 @@ class WelcomePage(QWidget):
                 desc = t(f"plugin.{pid}.description")
                 desc_label.setText(desc[:40] + "..." if len(desc) > 40 else desc)
 
-    @staticmethod
-    def _get_favicon_path():
-        """获取 favicon.ico 的路径，支持开发模式和打包模式"""
-        if getattr(sys, 'frozen', False):
-            base_path = Path(sys._MEIPASS)
-        else:
-            base_path = Path(__file__).parent
-        return str(base_path / "favicon.ico")
+    def showEvent(self, event):
+        """页面可见时恢复轮播，避免不可见时定时器空转"""
+        super().showEvent(event)
+        if self.scroll_timer is not None:
+            self.scroll_timer.start(self.scroll_interval)
+
+    def hideEvent(self, event):
+        """页面隐藏时停止轮播定时器"""
+        if self.scroll_timer is not None:
+            self.scroll_timer.stop()
+        super().hideEvent(event)
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
@@ -826,6 +833,7 @@ class SettingsPlugin(ToolPlugin):
     CONTROL_HEIGHT = 40
 
     def update_theme(self, theme):
+        self._theme = theme
         if hasattr(self, 'title_label'):
             self.title_label.setStyleSheet(
                 f"font-size: {TITLE_STYLES['font_size']}; font-weight: {TITLE_STYLES['font_weight']}; color: {theme['text']};")
@@ -870,6 +878,30 @@ class SettingsPlugin(ToolPlugin):
         if hasattr(self, 'nav_show_all_btn'):
             self._apply_nav_button_style(theme)
 
+        # 链接 HTML 内嵌颜色，换肤时需重建
+        self._refresh_link_texts()
+
+    def _link_html(self, url, text):
+        """生成带主题链接色的 HTML 片段"""
+        return (
+            f"<a href='{url}' style='color: {self._theme['primary']}; "
+            f"text-decoration: none;'>{text}</a>"
+        )
+
+    def _refresh_link_texts(self):
+        """按当前主题/语言重建关于页链接文本"""
+        theme = getattr(self, '_theme', Theme.DARK)
+        self._theme = theme
+        if hasattr(self, '_update_label'):
+            self._update_label.setText(
+                self._link_html(APP_UPDATE_URL, t('settings.link.check_update')))
+        if hasattr(self, '_issue_label'):
+            self._issue_label.setText(
+                self._link_html(APP_ISSUE_URL, t('settings.link.feedback')))
+        if hasattr(self, 'website_label'):
+            self.website_label.setText(
+                self._link_html(APP_WEBSITE_URL, t('app.website_link_text')))
+
     def _apply_reset_style(self, theme):
         """恢复默认设置标题/提示文字/按钮随主题更新（红色描边，强调不可逆操作）"""
         self.reset_label.setStyleSheet(
@@ -898,6 +930,8 @@ class SettingsPlugin(ToolPlugin):
         layout.setContentsMargins(40, 40, 40, 40)
         layout.setSpacing(24)
 
+        self._theme = Theme.DARK
+
         # INI 配置引用（ToolboxWindow 已在 P2-A 接线中保证存在）
         self._settings_ref = getattr(self.parent, "app_settings", None)
 
@@ -909,7 +943,7 @@ class SettingsPlugin(ToolPlugin):
 
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("background-color: #334155;")
+        line.setStyleSheet(f"background-color: {Theme.DARK['surface']};")
         line.setMaximumHeight(1)
         layout.addWidget(line)
 
@@ -925,8 +959,8 @@ class SettingsPlugin(ToolPlugin):
         light_theme_btn = QPushButton(t("settings.button.light_theme"))
         light_theme_btn.setFixedHeight(self.CONTROL_HEIGHT)
         light_theme_btn.setMinimumWidth(self.CONTROL_WIDTH)
-        light_theme_btn.setStyleSheet("""
-            QPushButton {
+        light_theme_btn.setStyleSheet(f"""
+            QPushButton {{
                 background-color: #f1f5f9;
                 color: #0f172a;
                 border: none;
@@ -934,20 +968,20 @@ class SettingsPlugin(ToolPlugin):
                 padding: 10px 16px;
                 font-size: {FONT_SIZE_16};
                 font-weight: {FONT_WEIGHT_600};
-            }
-            QPushButton:hover { background-color: #e2e8f0; }
-            QPushButton:checked {
+            }}
+            QPushButton:hover {{ background-color: #e2e8f0; }}
+            QPushButton:checked {{
                 background-color: #fbbf24;
                 color: #0f172a;
                 font-weight: {FONT_WEIGHT_700};
-            }
+            }}
         """)
 
         dark_theme_btn = QPushButton(t("settings.button.dark_theme"))
         dark_theme_btn.setFixedHeight(self.CONTROL_HEIGHT)
         dark_theme_btn.setMinimumWidth(self.CONTROL_WIDTH)
-        dark_theme_btn.setStyleSheet("""
-            QPushButton {
+        dark_theme_btn.setStyleSheet(f"""
+            QPushButton {{
                 background-color: #1e293b;
                 color: #f1f5f9;
                 border: 1px solid #334155;
@@ -955,14 +989,14 @@ class SettingsPlugin(ToolPlugin):
                 padding: 10px 16px;
                 font-size: {FONT_SIZE_16};
                 font-weight: {FONT_WEIGHT_600};
-            }
-            QPushButton:hover { background-color: #334155; }
-            QPushButton:checked {
+            }}
+            QPushButton:hover {{ background-color: #334155; }}
+            QPushButton:checked {{
                 background-color: #6366f1;
                 color: white;
                 font-weight: {FONT_WEIGHT_700};
                 border: none;
-            }
+            }}
         """)
 
         self.light_theme_btn = light_theme_btn
@@ -1073,8 +1107,7 @@ class SettingsPlugin(ToolPlugin):
 
         # 检查更新
         update_label = SelectableLabel(
-            f"<a href='{APP_UPDATE_URL}' style='color: #6366f1; text-decoration: none;'>"
-            f"{t('settings.link.check_update')}</a>")
+            self._link_html(APP_UPDATE_URL, t('settings.link.check_update')))
         update_label.setOpenExternalLinks(True)
         update_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         update_label.setStyleSheet(f"font-size: {FONT_SIZE_14}; padding: 2px;")
@@ -1083,8 +1116,7 @@ class SettingsPlugin(ToolPlugin):
 
         # 问题反馈
         issue_label = SelectableLabel(
-            f"<a href='{APP_ISSUE_URL}' style='color: #6366f1; text-decoration: none;'>"
-            f"{t('settings.link.feedback')}</a>")
+            self._link_html(APP_ISSUE_URL, t('settings.link.feedback')))
         issue_label.setOpenExternalLinks(True)
         issue_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         issue_label.setStyleSheet(f"font-size: {FONT_SIZE_14}; padding: 2px;")
@@ -1092,7 +1124,7 @@ class SettingsPlugin(ToolPlugin):
         about_card.content_layout.addWidget(issue_label)
 
         self.website_label = SelectableLabel(
-            f"<a href='{APP_WEBSITE_URL}' style='color: #6366f1; text-decoration: none;'>{t('app.website_link_text')}</a>")
+            self._link_html(APP_WEBSITE_URL, t("app.website_link_text")))
         self.website_label.setOpenExternalLinks(True)
         self.website_label.setStyleSheet(f"""
             font-size: {FONT_SIZE_16};
@@ -1103,7 +1135,8 @@ class SettingsPlugin(ToolPlugin):
         about_card.content_layout.addWidget(self.website_label)
 
         self.copyright_label = SelectableLabel(t("app.copyright"))
-        self.copyright_label.setStyleSheet(f"color: #64748b; font-size: {FONT_SIZE_12};")
+        self.copyright_label.setStyleSheet(
+            f"color: {Theme.DARK['text_secondary']}; font-size: {FONT_SIZE_12};")
         self.copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         about_card.content_layout.addWidget(self.copyright_label)
 
@@ -1348,14 +1381,7 @@ class SettingsPlugin(ToolPlugin):
         self._populate_nav_list()
         self._about_card.title_label.setText(t("settings.card.about"))
         self.version_label.setText(t("settings.label.version", version=APP_VERSION))
-        self._update_label.setText(
-            f"<a href='{APP_UPDATE_URL}' style='color: #6366f1; text-decoration: none;'>"
-            f"{t('settings.link.check_update')}</a>")
-        self._issue_label.setText(
-            f"<a href='{APP_ISSUE_URL}' style='color: #6366f1; text-decoration: none;'>"
-            f"{t('settings.link.feedback')}</a>")
-        self.website_label.setText(
-            f"<a href='{APP_WEBSITE_URL}' style='color: #6366f1; text-decoration: none;'>{t('app.website_link_text')}</a>")
+        self._refresh_link_texts()
         self.copyright_label.setText(t("app.copyright"))
 
 class ToolboxWindow(QMainWindow):
@@ -1390,6 +1416,7 @@ class ToolboxWindow(QMainWindow):
 
         self.plugins: Dict[str, ToolPlugin] = {}
         self.nav_buttons: Dict[str, SidebarButton] = {}  # 插件 id -> 导航按钮
+        self._plugin_load_errors = []  # 插件加载失败清单，启动后统一提示
         self._hidden_plugins = set()  # 被用户隐藏的插件 id，供切换时防护
         self.current_plugin = None
         self.sidebar_expanded = True
@@ -1432,7 +1459,7 @@ class ToolboxWindow(QMainWindow):
         logo_layout.setSpacing(5)
         self.logo_icon = QLabel()
         # 加载 favicon.ico 作为 logo
-        favicon_path = self._get_favicon_path()
+        favicon_path = get_favicon_path()
         if favicon_path and os.path.exists(favicon_path):
             pixmap = QPixmap(favicon_path)
             if not pixmap.isNull():
@@ -1495,11 +1522,7 @@ class ToolboxWindow(QMainWindow):
         main_layout.addWidget(self.sidebar_toggle_btn)
 
         self.content = QStackedWidget()
-        self.content.setStyleSheet("""
-            QStackedWidget {
-                background-color: #0f172a;
-            }
-        """)
+        # 样式由 apply_theme 统一设置，避免启动时先渲染硬编码深色造成闪烁
 
         self.welcome_page = WelcomePage(self.plugins)
         welcome_scroll = QScrollArea()
@@ -1507,30 +1530,12 @@ class ToolboxWindow(QMainWindow):
         welcome_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         welcome_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         welcome_scroll.setWidget(self.welcome_page)
-        # 设置视口背景色为透明，避免白色背景
-        welcome_scroll.viewport().setStyleSheet("background-color: transparent;")
-        welcome_scroll.setStyleSheet("""
-            QScrollArea { border: none; background-color: transparent; }
-            QScrollBar:vertical {
-                background: #1e293b; width: 8px; margin: 0;
-            }
-            QScrollBar::handle:vertical {
-                background: #475569; min-height: 20px; border-radius: 4px;
-            }
-            QScrollBar::handle:vertical:hover { background: #64748b; }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
-        """)
+        # 视口背景与滚动条样式由 apply_theme 统一设置
         self.welcome_scroll = welcome_scroll
         self.content.addWidget(welcome_scroll)
 
         main_layout.addWidget(self.content, 1)
-
-        self.setStyleSheet("""
-            QMainWindow { background-color: #0f172a; }
-            QScrollArea { border: none; background-color: transparent; }
-            QLabel { color: #f1f5f9; }
-            QDialog { background-color: #0f172a; }
-        """)
+        # 主窗口样式由 apply_theme 统一设置
 
     def register_plugin(self, plugin_class):
         try:
@@ -1549,23 +1554,13 @@ class ToolboxWindow(QMainWindow):
             scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
             scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
             scroll_area.setWidget(widget)
-            # 设置视口背景色为透明，避免白色背景
-            scroll_area.viewport().setStyleSheet("background-color: transparent;")
-            scroll_area.setStyleSheet("""
-                QScrollArea { border: none; background-color: transparent; }
-                QScrollBar:vertical {
-                    background: #1e293b; width: 8px; margin: 0;
-                }
-                QScrollBar::handle:vertical {
-                    background: #475569; min-height: 20px; border-radius: 4px;
-                }
-                QScrollBar::handle:vertical:hover { background: #64748b; }
-                QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
-            """)
+            # 视口背景与滚动条样式由 apply_theme 统一设置
             plugin.scroll_area = scroll_area
             self.content.addWidget(scroll_area)
         except Exception as e:
-            print(f"注册插件失败 {getattr(plugin_class, 'id', '?')}: {e}")
+            name = getattr(plugin_class, 'id', None) or getattr(plugin_class, 'name', 'unknown')
+            print(f"注册插件失败 {name}: {e}")
+            self._plugin_load_errors.append(f"{name}: {e}")
 
     def load_plugins(self):
         """从PLUGIN_MODULES配置加载插件，按order排序后注册"""
@@ -1586,7 +1581,9 @@ class ToolboxWindow(QMainWindow):
                     plugin_class.description = plugin_config["description"]
                 plugin_classes.append(plugin_class)
             except Exception as e:
-                print(f"加载插件失败 {plugin_config.get('name', 'unknown')}: {e}")
+                name = plugin_config.get('name', 'unknown')
+                print(f"加载插件失败 {name}: {e}")
+                self._plugin_load_errors.append(f"{name}: {e}")
 
         # 按 order 排序（数值越小排在越前面）
         plugin_classes.sort(key=lambda x: getattr(x, 'order', 999))
@@ -1597,6 +1594,21 @@ class ToolboxWindow(QMainWindow):
 
         # 注册完成后按用户配置重排/隐藏导航项与首页卡片
         self.rebuild_navigation()
+
+        # 加载失败清单在窗口显示后统一提示（windowed 模式无 stdout）
+        if self._plugin_load_errors:
+            QTimer.singleShot(0, self._show_plugin_load_errors)
+
+    def _show_plugin_load_errors(self):
+        """向用户提示插件加载失败清单"""
+        from common.message_utils import show_error
+        details = "\n".join(self._plugin_load_errors)
+        show_error(
+            self,
+            t("app.dialog.error_title"),
+            t("app.plugin_load_failed", details=details),
+            theme=self._current_theme,
+        )
 
     def rebuild_navigation(self):
         """按用户配置重排侧边栏导航项，并同步首页功能卡片
@@ -1762,19 +1774,9 @@ class ToolboxWindow(QMainWindow):
             w.setGraphicsEffect(None)
         self._sidebar_animating = False
 
-    def _get_favicon_path(self):
-        """获取 favicon.ico 的路径，支持开发模式和打包模式"""
-        if getattr(sys, 'frozen', False):
-            # 打包模式：使用 PyInstaller 的 _MEIPASS 路径
-            base_path = Path(sys._MEIPASS)
-        else:
-            # 开发模式：使用当前文件所在目录
-            base_path = Path(__file__).parent
-        return str(base_path / "favicon.ico")
-
     def _set_window_icon(self):
         """设置窗口图标，支持开发模式和打包模式"""
-        icon_path = self._get_favicon_path()
+        icon_path = get_favicon_path()
         if os.path.exists(icon_path):
             icon = QIcon(icon_path)
             self.setWindowIcon(icon)
@@ -1887,6 +1889,8 @@ class ToolboxWindow(QMainWindow):
 
     def apply_theme(self, theme):
         self._current_theme = theme
+        # 注册当前主题，供 common 对话框/消息框在未显式传 theme 时取用（M17）
+        set_current_theme(theme)
         self.setStyleSheet(f"""
             QMainWindow {{ background-color: {theme['bg']}; }}
             QMenuBar {{ background-color: {theme['bg_secondary']}; color: {theme['text']}; }}
@@ -1899,6 +1903,7 @@ class ToolboxWindow(QMainWindow):
             }}
             QMenu::item {{ padding: 6px 20px; }}
             QMenu::item:selected {{ background-color: {theme['primary']}; color: white; }}
+            QDialog {{ background-color: {theme['bg']}; }}
             QScrollArea {{ border: none; background-color: {theme['bg']}; }}
             QFrame#card {{
                 background-color: {theme['bg_secondary']};
@@ -1906,12 +1911,6 @@ class ToolboxWindow(QMainWindow):
                 border-radius: 12px;
             }}
             QLabel {{ color: {theme['text']}; }}
-            *[style*="color: #f1f5f9"] {{ color: {theme['text']} !important; }}
-            *[style*="color: white"] {{ color: {theme['text']} !important; }}
-            *[style*="color: #94a3b8"] {{ color: {theme['text_secondary']} !important; }}
-            *[style*="color: #64748b"] {{ color: {theme['text_secondary']} !important; }}
-            *[style*="background-color: #0f172a"] {{ background-color: {theme['bg']} !important; }}
-            *[style*="background-color: #1e293b"] {{ background-color: {theme['bg_secondary']} !important; }}
             QTextEdit {{
                 background-color: {theme['bg']};
                 border: 2px solid {theme['surface']};
@@ -1993,6 +1992,10 @@ class ToolboxWindow(QMainWindow):
         for nav_btn in self.findChildren(SidebarButton):
             nav_btn.apply_theme(theme)
 
+        # 卡片阴影随主题更新
+        for card in self.findChildren(Card):
+            card.update_shadow(theme)
+
         self.content.setStyleSheet(f"""
             QStackedWidget {{ background-color: {theme['bg']}; }}
         """)
@@ -2039,13 +2042,12 @@ class ToolboxWindow(QMainWindow):
             self.tray = QSystemTrayIcon(self)
             self.tray.setToolTip(t("tray.tooltip"))
 
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            icon_path = os.path.join(current_dir, "favicon.ico")
+            icon_path = get_favicon_path()
             if os.path.exists(icon_path):
                 self.tray.setIcon(QIcon(icon_path))
             else:
                 pixmap = QPixmap(32, 32)
-                pixmap.fill(QColor("#6366f1"))
+                pixmap.fill(QColor(Theme.DARK['primary']))
                 self.tray.setIcon(QIcon(pixmap))
 
             menu = QMenu()

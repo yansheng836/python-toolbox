@@ -14,17 +14,21 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 def test_imports():
     """测试所有关键模块是否可以导入"""
+    from config import PLUGIN_MODULES
+
     modules_to_test = [
         # 核心模块
         ('toolbox', '主应用模块'),
         ('config', '配置模块'),
+    ]
 
-        # 插件模块
-        ('plugins.image_scaler', '图片批量缩放插件'),
-        ('plugins.pdf_merger', 'PDF合并插件'),
-        ('plugins.file_deduplicator', '文件去重插件'),
-        ('plugins.empty_folder_cleaner', '空文件夹清理插件'),
+    # 插件模块从 config.PLUGIN_MODULES 动态生成，避免清单与 spec/hiddenimports 漂移
+    for plugin in PLUGIN_MODULES:
+        module_name = plugin.get("module")
+        if module_name and module_name != "toolbox":
+            modules_to_test.append((module_name, plugin.get("name", module_name)))
 
+    modules_to_test += [
         # 依赖库
         ('PIL', 'Pillow 图像处理库'),
         ('PIL.Image', 'PIL.Image'),

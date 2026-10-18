@@ -40,9 +40,10 @@ class TestWindow(QWidget):
 
         self.setLayout(layout)
 
-app = QApplication(sys.argv)
-window = TestWindow()
-window.show()
-# 2 秒后自动退出，避免窗口阻塞进程
-QTimer.singleShot(2000, app.quit)
-sys.exit(app.exec())
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = TestWindow()
+    window.show()
+    # 2 秒后自动退出，避免窗口阻塞进程
+    QTimer.singleShot(2000, app.quit)
+    sys.exit(app.exec())

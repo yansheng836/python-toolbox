@@ -351,7 +351,7 @@
   "plugin.pdf_splitter.label.output_dir": "输出目录:",
   "plugin.pdf_splitter.label.output_format": "输出格式:",
   "plugin.pdf_splitter.label.pages_per_split": "拆分页数:",
-  "plugin.pdf_splitter.label.quality": "图片质量:",
+  "plugin.pdf_splitter.label.quality": "清晰度:",
   "plugin.pdf_splitter.msg.convert_done": "转换完成，共生成 {count} 张图片",
   "plugin.pdf_splitter.msg.converting_page": "正在转换: 第 {index}/{total} 页",
   "plugin.pdf_splitter.msg.split_done": "拆分完成，共生成 {count} 个PDF文件",
@@ -409,5 +409,16 @@
   "plugin.pdf_merger.error.encrypted": "文件已加密，无法合并：\n{path}\n请先解除 PDF 密码保护后重试。",
   "plugin.pdf_splitter.error.encrypted": "文件已加密，无法拆分：\n{path}\n请先解除 PDF 密码保护后重试。",
   "plugin.image_scaler.msg.failures_header": "\n\n失败文件:\n",
-  "plugin.image_scaler.msg.more_failures": "\n... 还有 {count} 个失败文件"
+  "plugin.image_scaler.msg.more_failures": "\n... 还有 {count} 个失败文件",
+  "plugin.pdf_splitter.msg.skipped_locked": "\n{count} 个输出文件被占用，已跳过。",
+  "plugin.file_deduplicator.button.cancel_scan": "取消扫描",
+  "plugin.file_deduplicator.label.use_trash": "删除到回收站",
+  "plugin.file_deduplicator.msg.trash_unavailable": "（send2trash 未安装，无法使用）",
+  "plugin.file_deduplicator.msg.cancelling": "正在取消扫描…",
+  "plugin.file_deduplicator.msg.delete_missing_skipped": "\n跳过 {count} 个已不存在的文件",
+  "plugin.file_deduplicator.msg.file_changed_skipped": "文件内容已变化，已跳过",
+  "plugin.file_deduplicator.msg.confirm_trash_note": "\n（已启用回收站，删除后可在系统回收站中恢复）",
+  "plugin.empty_folder_cleaner.label.use_trash": "删除到回收站（仅文件去重支持）",
+  "plugin.empty_folder_cleaner.msg.trash_unavailable": "空文件夹始终直接删除，不支持回收站",
+  "app.plugin_load_failed": "以下插件加载失败，相关功能不可用：\n{details}"
 }

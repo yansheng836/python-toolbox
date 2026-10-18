@@ -5,8 +5,11 @@ PDF拆分工具插件
 """
 import os
 import sys
+from io import BytesIO
 
-from common.utils import FITZ_AVAILABLE, PIL_AVAILABLE
+from common.utils import (
+    FITZ_AVAILABLE, PIL_AVAILABLE, check_dir_writable, check_file_writable,
+)
 from common.i18n import t
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -26,6 +29,8 @@ from common.base_worker import BaseWorker
 
 if FITZ_AVAILABLE:
     import pymupdf as fitz
+if PIL_AVAILABLE:
+    from PIL import Image
 
 
 class PDFSplitWorker(BaseWorker):
@@ -44,7 +49,6 @@ class PDFSplitWorker(BaseWorker):
     def run(self):
         try:
             # ========= 预检查：输出目录是否可写 =========
-            from common.utils import check_dir_writable
             if self.output_path:
                 writable, err_msg = check_dir_writable(self.output_path)
                 if not writable:
@@ -56,6 +60,11 @@ class PDFSplitWorker(BaseWorker):
                     False, t("plugin.pdf_splitter.error.pymupdf_not_installed"))
                 return
 
+            if self.output_format != "pdf" and not PIL_AVAILABLE:
+                self.result.emit(
+                    False, t("plugin.pdf_splitter.error.install_pillow"))
+                return
+
             doc = fitz.open(self.input_file)
             if doc.is_encrypted and doc.needs_pass:
                 doc.close()
@@ -65,6 +74,7 @@ class PDFSplitWorker(BaseWorker):
                 return
             total_pages = len(doc)
 
+            skipped = 0
             if self.output_format == "pdf":
                 # 按页数拆分PDF
                 base_name = os.path.splitext(os.path.basename(self.input_file))[0]
@@ -74,10 +84,15 @@ class PDFSplitWorker(BaseWorker):
                         "plugin.pdf_splitter.msg.splitting_pages",
                         start=i + 1,
                         end=min(i + self.pages_per_split, total_pages)))
-                    new_doc = fitz.open()
                     end = min(i + self.pages_per_split, total_pages)
-                    new_doc.insert_pdf(doc, from_page=i, to_page=end-1)
                     output_file = os.path.join(self.output_path, f"{base_name}_part{count+1}.pdf")
+                    writable, err = check_file_writable(output_file)
+                    if not writable:
+                        print(f"Skip locked output: {output_file}: {err}")
+                        skipped += 1
+                        continue
+                    new_doc = fitz.open()
+                    new_doc.insert_pdf(doc, from_page=i, to_page=end-1)
                     new_doc.save(output_file)
                     new_doc.close()
                     count += 1
@@ -96,17 +111,44 @@ class PDFSplitWorker(BaseWorker):
                     mat = fitz.Matrix(self.quality / 100, self.quality / 100)
                     pix = page.get_pixmap(matrix=mat)
                     output_file = os.path.join(self.output_path, f"{base_name}_page{i+1}.{self.image_format.lower()}")
-                    pix.save(output_file)
+                    writable, err = check_file_writable(output_file)
+                    if not writable:
+                        print(f"Skip locked output: {output_file}: {err}")
+                        skipped += 1
+                        pix = None
+                        continue
+                    # 统一经 PIL 保存：PyMuPDF 的 Pixmap.save 对 WebP 支持不稳定
+                    self._save_pixmap(pix, output_file)
                     pix = None
                     count += 1
                     self.progress.emit(count)
                 msg = t("plugin.pdf_splitter.msg.convert_done", count=count)
 
             doc.close()
+            if skipped:
+                msg += t("plugin.pdf_splitter.msg.skipped_locked", count=skipped)
             self.result.emit(True, msg)
         except Exception as e:
             self.result.emit(False, t(
                 "plugin.pdf_splitter.error.split_failed", error=str(e)))
+
+    def _save_pixmap(self, pix, output_file):
+        """将 PyMuPDF Pixmap 经 PIL 保存为目标格式，JPG/WebP 使用固定质量"""
+        image = Image.open(BytesIO(pix.tobytes("png")))
+        try:
+            fmt = self.image_format.upper()
+            if fmt in ("JPG", "JPEG"):
+                rgb = image.convert("RGB")
+                try:
+                    rgb.save(output_file, "JPEG", quality=90)
+                finally:
+                    rgb.close()
+            elif fmt == "WEBP":
+                image.save(output_file, "WEBP", quality=90)
+            else:
+                image.save(output_file, "PNG")
+        finally:
+            image.close()
 
 class PDFSplitterWidget(QWidget):
     """PDF拆分工具主界面"""

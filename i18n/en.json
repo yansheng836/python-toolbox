@@ -351,7 +351,7 @@
   "plugin.pdf_splitter.label.output_dir": "Output directory:",
   "plugin.pdf_splitter.label.output_format": "Output format:",
   "plugin.pdf_splitter.label.pages_per_split": "Pages per split:",
-  "plugin.pdf_splitter.label.quality": "Image quality:",
+  "plugin.pdf_splitter.label.quality": "Clarity:",
   "plugin.pdf_splitter.msg.convert_done": "Conversion complete: {count} image(s) generated",
   "plugin.pdf_splitter.msg.converting_page": "Converting: page {index}/{total}",
   "plugin.pdf_splitter.msg.split_done": "Split complete: {count} PDF file(s) generated",
@@ -409,5 +409,16 @@
   "plugin.pdf_merger.error.encrypted": "The file is password-protected and cannot be merged:\n{path}\nPlease remove the PDF password protection and try again.",
   "plugin.pdf_splitter.error.encrypted": "The file is password-protected and cannot be split:\n{path}\nPlease remove the PDF password protection and try again.",
   "plugin.image_scaler.msg.failures_header": "\n\nFailed files:\n",
-  "plugin.image_scaler.msg.more_failures": "\n... and {count} more failed files"
+  "plugin.image_scaler.msg.more_failures": "\n... and {count} more failed files",
+  "plugin.pdf_splitter.msg.skipped_locked": "\n{count} output file(s) were locked and skipped.",
+  "plugin.file_deduplicator.button.cancel_scan": "Cancel Scan",
+  "plugin.file_deduplicator.label.use_trash": "Move to Recycle Bin",
+  "plugin.file_deduplicator.msg.trash_unavailable": " (send2trash not installed)",
+  "plugin.file_deduplicator.msg.cancelling": "Cancelling scan…",
+  "plugin.file_deduplicator.msg.delete_missing_skipped": "\nSkipped {count} file(s) that no longer exist",
+  "plugin.file_deduplicator.msg.file_changed_skipped": "File contents changed, skipped",
+  "plugin.file_deduplicator.msg.confirm_trash_note": "\n(Recycle Bin enabled — deleted files can be restored from the system Recycle Bin)",
+  "plugin.empty_folder_cleaner.label.use_trash": "Move to Recycle Bin (file dedup only)",
+  "plugin.empty_folder_cleaner.msg.trash_unavailable": "Empty folders are always removed directly; Recycle Bin is not supported",
+  "app.plugin_load_failed": "The following plugins failed to load and are unavailable:\n{details}"
 }

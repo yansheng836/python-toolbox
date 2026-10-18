@@ -178,10 +178,7 @@ git push origin main --tags
 | `APP_WEBSITE_URL`, `APP_WEBSITE_LINK_TEXT` | Website link in settings |
 | `APP_UPDATE_URL`, `APP_ISSUE_URL` | Update check and issue report URLs |
 | `PLUGIN_MODULES` | Plugin list with name, icon, description, order, module, class |
-| `FEATURE_MODULES` | Feature cards on welcome page (derived from `PLUGIN_MODULES`) |
 | `UI_CONFIG` | Window size, sidebar width, corner radius |
-| `THEME_CONFIG` | Default theme and color settings |
-| `WELCOME_CONFIG` | Welcome page text content |
 | `SPACING_SMALL`, `SPACING_MEDIUM` | Spacing constants for UI |
 | `FONT_SIZE_*` (`12`–`24`) | Font size constants |
 | `FONT_WEIGHT_*` (`600`–`800`) | Font weight constants |
