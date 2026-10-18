@@ -31,8 +31,10 @@ from PyQt6.QtCore import (
     Qt, QSize, QPropertyAnimation, QParallelAnimationGroup, QEasingCurve, QSettings, QTimer, QEvent
 )
 from PyQt6.QtGui import (
-    QIcon, QPixmap, QColor, QFont, QAction, QPainter, QPainterPath, QPen
+    QIcon, QPixmap, QColor, QAction, QPainter, QPainterPath, QPen
 )
+
+from common.i18n import t
 
 
 # ==================== 主题配置 ====================
@@ -846,10 +848,15 @@ class SettingsPlugin(ToolPlugin):
         settings.setValue("theme", theme_name)
 
 class ToolboxWindow(QMainWindow):
-    def __init__(self, app=None):
+    def __init__(self, app=None, settings=None):
         super().__init__()
         self._app = app
-        self.setWindowTitle(UI_CONFIG.get("window_title", f"{APP_NAME} v{APP_VERSION}"))
+        # INI 配置（main.py 创建后传入；独立构造时兜底自建，保持向后兼容）
+        if settings is None:
+            from common.app_settings import AppSettings
+            settings = AppSettings()
+        self.app_settings = settings
+        self.setWindowTitle(t("app.window_title", version=APP_VERSION))
 
         # 设置窗口图标
         self._set_window_icon()
@@ -868,7 +875,6 @@ class ToolboxWindow(QMainWindow):
             # 明确不限制最大尺寸，确保可以调整大小
             self.setMaximumSize(16777215, 16777215)  # QWIDGETSIZE_MAX
 
-        self.settings = QSettings("Toolbox", "App")
         self.load_geometry()
 
         self.plugins: Dict[str, ToolPlugin] = {}
@@ -1314,10 +1320,10 @@ class ToolboxWindow(QMainWindow):
         return super().eventFilter(obj, event)
 
     def init_theme(self):
-        theme_name = "dark"
-        theme = Theme.DARK
+        """启动时从 INI 读取已保存主题应用；绝不写回（反覆盖旧 init_theme bug）"""
+        theme_name = self.app_settings.get("general", "theme", "dark")
+        theme = Theme.LIGHT if theme_name == "light" else Theme.DARK
         self.apply_theme(theme)
-        self.settings.setValue("theme", theme_name)
 
     def apply_theme(self, theme):
         self._current_theme = theme
@@ -1509,46 +1515,27 @@ class ToolboxWindow(QMainWindow):
         event.accept()
 
     def save_geometry(self):
-        self.settings.setValue("geometry", self.saveGeometry())
-        self.settings.setValue("windowState", self.saveState())
+        self.app_settings.set(
+            "window", "geometry",
+            bytes(self.saveGeometry().toBase64()).decode("ascii"),
+        )
+        self.app_settings.set(
+            "window", "state",
+            bytes(self.saveState().toBase64()).decode("ascii"),
+        )
+        self.app_settings.save()
 
     def load_geometry(self):
-        geometry = self.settings.value("geometry")
+        from common.app_settings import bytes_to_qbytearray
+        geometry = self.app_settings.get("window", "geometry", "")
         if geometry:
-            self.restoreGeometry(geometry)
-        else:
+            self.restoreGeometry(bytes_to_qbytearray(geometry))
+        state = self.app_settings.get("window", "state", "")
+        if state:
+            self.restoreState(bytes_to_qbytearray(state))
+        if not geometry:
             self.resize(1200, 800)
             self.move(
                 QApplication.primaryScreen().geometry().center() -
                 self.rect().center()
             )
-
-
-def main():
-    app = QApplication(sys.argv)
-    app.setApplicationName("工具箱")
-    app.setApplicationVersion(APP_VERSION)
-    app.setOrganizationName("Toolbox")
-    app.setOrganizationDomain("toolbox.com")
-
-    font = QFont("Microsoft YaHei UI", 10)
-    app.setFont(font)
-
-    # 设置应用程序图标（支持开发模式和打包模式）
-    if getattr(sys, 'frozen', False):
-        base_path = Path(sys._MEIPASS)
-    else:
-        base_path = Path(__file__).parent
-
-    icon_path = base_path / "favicon.ico"
-    if icon_path.exists():
-        app.setWindowIcon(QIcon(str(icon_path)))
-
-    window = ToolboxWindow(app)
-    window.show()
-
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()
