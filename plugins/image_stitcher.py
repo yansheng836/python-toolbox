@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QComboBox, QSpinBox, QGridLayout, QLineEdit
 )
 
+from common.i18n import t, bind_combo
 from common.message_utils import show_warning
 from common.dialog_utils import get_save_file_name
 from common.action_panel import ActionPanel
@@ -129,10 +130,21 @@ class ImageStitchWorker(BaseWorker):
         finally:
             loaded.close()
 
+    def _emit_processing_status(self, file_path, global_idx, total_images, batch_index, num_batches):
+        """发出当前处理进度状态（横向/纵向共用）"""
+        self.status.emit(t(
+            "plugin.image_stitcher.msg.processing",
+            name=os.path.basename(file_path),
+            index=global_idx,
+            total=total_images,
+            batch=batch_index + 1,
+            batch_total=num_batches,
+        ))
+
     def run(self):
         try:
             # ========= 第一遍：扫描尺寸 =========
-            self.status.emit("正在扫描图片尺寸...")
+            self.status.emit(t("plugin.image_stitcher.msg.scanning_sizes"))
             file_info = []  # (path, width, height)
             skipped = 0
             for f in self.files:
@@ -145,11 +157,14 @@ class ImageStitchWorker(BaseWorker):
                 except Exception as e:
                     print(f"Error in image_stitcher: {e}")
                     skipped += 1
-                    self.status.emit(f"跳过损坏图片: {os.path.basename(f)}")
+                    self.status.emit(t(
+                        "plugin.image_stitcher.msg.skip_broken",
+                        name=os.path.basename(f),
+                    ))
                     continue
 
             if not file_info:
-                self.finished.emit(False, "没有成功读取任何图片，请检查图片文件是否损坏。")
+                self.finished.emit(False, t("plugin.image_stitcher.error.no_readable_images"))
                 return
 
             # ========= 分批：max_size 先全局缩放，再分批；其他模式直接分批 =========
@@ -163,16 +178,21 @@ class ImageStitchWorker(BaseWorker):
                             ratio = max_w / w
                             nh = int(h * ratio)
                             if nh > MAX_DIMENSION:
-                                self.finished.emit(False,
-                                    f"智能缩放后图片高度（{nh}）超过 {MAX_DIMENSION}，"
-                                    f"请先缩小图片尺寸或使用其他对齐方式。")
+                                self.finished.emit(False, t(
+                                    "plugin.image_stitcher.error.scaled_too_large_height",
+                                    height=nh,
+                                    limit=MAX_DIMENSION,
+                                ))
                                 return
                             scaled.append((f, max_w, nh))
                         else:
                             if h > MAX_DIMENSION:
-                                self.finished.emit(False,
-                                    f"图片 {os.path.basename(f)} 的高度（{h}）"
-                                    f"超过 {MAX_DIMENSION}，请先缩小该图片。")
+                                self.finished.emit(False, t(
+                                    "plugin.image_stitcher.error.image_too_large_height",
+                                    name=os.path.basename(f),
+                                    height=h,
+                                    limit=MAX_DIMENSION,
+                                ))
                                 return
                             scaled.append((f, w, h))
                 else:
@@ -183,16 +203,21 @@ class ImageStitchWorker(BaseWorker):
                             ratio = max_h / h
                             nw = int(w * ratio)
                             if nw > MAX_DIMENSION:
-                                self.finished.emit(False,
-                                    f"智能缩放后图片宽度（{nw}）超过 {MAX_DIMENSION}，"
-                                    f"请先缩小图片尺寸或使用其他对齐方式。")
+                                self.finished.emit(False, t(
+                                    "plugin.image_stitcher.error.scaled_too_large_width",
+                                    width=nw,
+                                    limit=MAX_DIMENSION,
+                                ))
                                 return
                             scaled.append((f, nw, max_h))
                         else:
                             if w > MAX_DIMENSION:
-                                self.finished.emit(False,
-                                    f"图片 {os.path.basename(f)} 的宽度（{w}）"
-                                    f"超过 {MAX_DIMENSION}，请先缩小该图片。")
+                                self.finished.emit(False, t(
+                                    "plugin.image_stitcher.error.image_too_large_width",
+                                    name=os.path.basename(f),
+                                    width=w,
+                                    limit=MAX_DIMENSION,
+                                ))
                                 return
                             scaled.append((f, w, h))
                 batches = self._split_into_batches(scaled, self.direction)
@@ -201,10 +226,14 @@ class ImageStitchWorker(BaseWorker):
                 for f, w, h in file_info:
                     img_dim = w if self.direction == "horizontal" else h
                     if img_dim > MAX_DIMENSION:
-                        dim_name = "宽度" if self.direction == "horizontal" else "高度"
-                        self.finished.emit(False,
-                            f"图片 {os.path.basename(f)} 的{dim_name}（{img_dim}）"
-                            f"超过 {MAX_DIMENSION}，请先缩小该图片。")
+                        params = {"name": os.path.basename(f), "limit": MAX_DIMENSION}
+                        if self.direction == "horizontal":
+                            key = "plugin.image_stitcher.error.image_too_large_width"
+                            params["width"] = img_dim
+                        else:
+                            key = "plugin.image_stitcher.error.image_too_large_height"
+                            params["height"] = img_dim
+                        self.finished.emit(False, t(key, **params))
                         return
                 batches = self._split_into_batches(file_info, self.direction)
 
@@ -217,14 +246,16 @@ class ImageStitchWorker(BaseWorker):
                     with open(out_path, 'ab') as f:
                         pass
                 except PermissionError:
-                    self.finished.emit(
-                        False,
-                        f"目标文件被占用，无法写入：\n{out_path}\n\n"
-                        f"请先关闭该文件，然后重试。"
-                    )
+                    self.finished.emit(False, t(
+                        "plugin.image_stitcher.error.output_locked",
+                        path=out_path,
+                    ))
                     return
                 except Exception as e:
-                    self.finished.emit(False, f"无法访问目标文件：{str(e)}")
+                    self.finished.emit(False, t(
+                        "plugin.image_stitcher.error.output_access_failed",
+                        error=str(e),
+                    ))
                     return
 
             # ========= 逐批次拼接 =========
@@ -245,11 +276,13 @@ class ImageStitchWorker(BaseWorker):
 
                 # 最终检查：画布尺寸不得超过 Pillow 限制
                 if batch_w > MAX_DIMENSION or batch_h > MAX_DIMENSION:
-                    self.finished.emit(
-                        False,
-                        f"批次 {bi+1} 画布尺寸（{batch_w}x{batch_h}）"
-                        f"超过 {MAX_DIMENSION}，请减少图片数量或缩小图片尺寸。"
-                    )
+                    self.finished.emit(False, t(
+                        "plugin.image_stitcher.error.canvas_too_large",
+                        index=bi + 1,
+                        width=batch_w,
+                        height=batch_h,
+                        limit=MAX_DIMENSION,
+                    ))
                     return
 
                 canvas = Image.new("RGBA", (batch_w, batch_h), self.bg_color + (255,))
@@ -258,9 +291,8 @@ class ImageStitchWorker(BaseWorker):
                     x = 0
                     for i, (f, expected_w, expected_h) in enumerate(batch_info):
                         global_idx = sum(len(b) for b in batches[:bi]) + i + 1
-                        self.status.emit(
-                            f"正在处理: {os.path.basename(f)} "
-                            f"({global_idx}/{total_images})，批次 {bi+1}/{num_batches}"
+                        self._emit_processing_status(
+                            f, global_idx, total_images, bi, num_batches
                         )
                         composited = self._load_composited_image(f, expected_w, expected_h)
                         try:
@@ -279,9 +311,8 @@ class ImageStitchWorker(BaseWorker):
                     y = 0
                     for i, (f, expected_w, expected_h) in enumerate(batch_info):
                         global_idx = sum(len(b) for b in batches[:bi]) + i + 1
-                        self.status.emit(
-                            f"正在处理: {os.path.basename(f)} "
-                            f"({global_idx}/{total_images})，批次 {bi+1}/{num_batches}"
+                        self._emit_processing_status(
+                            f, global_idx, total_images, bi, num_batches
                         )
                         composited = self._load_composited_image(f, expected_w, expected_h)
                         try:
@@ -318,27 +349,31 @@ class ImageStitchWorker(BaseWorker):
 
                 # 最后防线：Pillow 硬限制 65500
                 if to_save.width > 65500 or to_save.height > 65500:
-                    self.finished.emit(
-                        False,
-                        f"图片尺寸（{to_save.width}x{to_save.height}）"
-                        f"超过 Pillow 限制（65500），无法保存。"
-                    )
+                    self.finished.emit(False, t(
+                        "plugin.image_stitcher.error.pillow_limit",
+                        width=to_save.width,
+                        height=to_save.height,
+                    ))
                     return
                 to_save.save(out_path, **save_kwargs)
                 saved_paths.append(out_path)
 
             # ========= 完成 =========
             if num_batches == 1:
-                msg = f"拼接完成，已保存到:\n{saved_paths[0]}"
+                msg = t("plugin.image_stitcher.msg.stitch_done_single", path=saved_paths[0])
             else:
-                msg = f"拼接完成，已分为 {num_batches} 个文件保存:\n" + "\n".join(saved_paths)
+                msg = t(
+                    "plugin.image_stitcher.msg.stitch_done_multi",
+                    count=num_batches,
+                    paths="\n".join(saved_paths),
+                )
             if skipped > 0:
-                msg += f"\n（已跳过 {skipped} 张损坏图片）"
+                msg += t("plugin.image_stitcher.msg.skipped_note", count=skipped)
             self.finished.emit(True, msg)
         except Exception as e:
             error_detail = f"{str(e)}\n\n详细错误:\n{traceback.format_exc()}"
             print(error_detail)
-            self.finished.emit(False, f"拼接失败: {str(e)}")
+            self.finished.emit(False, t("plugin.image_stitcher.error.stitch_failed", error=str(e)))
 
 
 class ImageStitcher(ToolPlugin):
@@ -388,6 +423,39 @@ class ImageStitcher(ToolPlugin):
         except RuntimeError:
             pass  # C++ object already deleted
 
+    @staticmethod
+    def _build_columns():
+        """按当前语言重建列定义（IMAGE_COLUMNS 是共享常量，其标签不随语言切换）"""
+        columns = [
+            Column(col.id, t(f"column.{col.id}"), col.func)
+            for col in IMAGE_COLUMNS
+        ]
+        columns.append(Column("created", t("column.created"), get_create_time))
+        return columns
+
+    def _retranslate_columns(self):
+        """重建文件列表表头文本（表头标签在表格创建时固定）"""
+        columns = self._build_columns()
+        self.file_panel.columns = columns
+        self.file_panel.table.setHorizontalHeaderLabels([col.label for col in columns])
+
+    def retranslate_ui(self):
+        """语言切换后重放全部用户可见文本"""
+        self.title_label.setText(f"{self.icon} {t('plugin.image_stitcher.name')}")
+        self.desc_label.setText(t("plugin.image_stitcher.description"))
+        self.file_card.title_label.setText(t("plugin.image_stitcher.card.select_images"))
+        self.settings_card.title_label.setText(t("plugin.image_stitcher.card.settings"))
+        self.direction_label.setText(t("plugin.image_stitcher.label.direction"))
+        self.align_label.setText(t("plugin.image_stitcher.label.align"))
+        self.bg_color_label.setText(t("plugin.image_stitcher.label.bg_color"))
+        self.output_file_label.setText(t("plugin.image_stitcher.label.output_file"))
+        self.output_path.setPlaceholderText(t("plugin.image_stitcher.placeholder.output_path"))
+        self.browse_btn.setText(t("plugin.image_stitcher.button.browse"))
+        self.action_panel.btn.setText(t("plugin.image_stitcher.button.start"))
+        self.file_panel.file_filter = t("plugin.image_stitcher.filter.images")
+        self._retranslate_columns()
+        # 组合框由 bind_combo 自动重放，无需处理
+
     def create_ui(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
@@ -396,35 +464,44 @@ class ImageStitcher(ToolPlugin):
         self.theme = Theme.DARK
 
         # 标题 + 描述
-        self._setup_header(layout, theme=self.theme)
+        self._setup_header(
+            layout,
+            title=f"{self.icon} {t('plugin.image_stitcher.name')}",
+            desc=t("plugin.image_stitcher.description"),
+            theme=self.theme,
+        )
 
         # 文件列表（含创建时间列）
-        file_card = Card(title="选择图片（列表顺序即拼接顺序）")
+        self.file_card = Card(title=t("plugin.image_stitcher.card.select_images"))
         self.file_panel = FileListPanel(
-            columns=IMAGE_COLUMNS + [Column("created", "创建时间", get_create_time)],
-            file_filter="图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff *.tif *.gif)",
+            columns=self._build_columns(),
+            file_filter=t("plugin.image_stitcher.filter.images"),
             button_class=AnimatedButton,
             show_buttons=["add", "remove", "clear", "up", "down", "sort_name", "sort_time"]
         )
-        file_card.content_layout.addWidget(self.file_panel)
-        layout.addWidget(file_card)
+        self.file_card.content_layout.addWidget(self.file_panel)
+        layout.addWidget(self.file_card)
 
         # 拼接设置
-        settings_card = Card(title="拼接设置")
+        self.settings_card = Card(title=t("plugin.image_stitcher.card.settings"))
         grid = QGridLayout()
         grid.setHorizontalSpacing(8)
         grid.setVerticalSpacing(10)
-        settings_card.content_layout.addLayout(grid)
+        self.settings_card.content_layout.addLayout(grid)
 
         # 第0行：拼接方向占左半边，对齐方式占右半边
         dir_widget = QWidget()
         dir_layout = QHBoxLayout(dir_widget)
         dir_layout.setContentsMargins(0, 0, 0, 0)
         dir_layout.setSpacing(SPACING_SMALL)
-        dir_layout.addWidget(SelectableLabel("拼接方向:"))
+        self.direction_label = SelectableLabel(t("plugin.image_stitcher.label.direction"))
+        dir_layout.addWidget(self.direction_label)
         self.dir_combo = QComboBox()
-        self.dir_combo.addItems(["横向（左→右）", "纵向（上→下）"])
-        self.dir_combo.setCurrentIndex(1)
+        bind_combo(self.dir_combo, [
+            ("plugin.image_stitcher.combo.horizontal", "horizontal"),
+            ("plugin.image_stitcher.combo.vertical", "vertical"),
+        ])
+        self.dir_combo.setCurrentIndex(self.dir_combo.findData("vertical"))
         dir_layout.addWidget(self.dir_combo, 1)
         grid.addWidget(dir_widget, 0, 0)
 
@@ -432,10 +509,16 @@ class ImageStitcher(ToolPlugin):
         align_layout = QHBoxLayout(align_widget)
         align_layout.setContentsMargins(0, 0, 0, 0)
         align_layout.setSpacing(SPACING_SMALL)
-        align_layout.addWidget(SelectableLabel("对齐方式:"))
+        self.align_label = SelectableLabel(t("plugin.image_stitcher.label.align"))
+        align_layout.addWidget(self.align_label)
         self.align_combo = QComboBox()
-        self.align_combo.addItems(["顶部/左侧对齐", "居中对齐", "底部/右侧对齐", "智能缩放"])
-        self.align_combo.setCurrentIndex(3)
+        bind_combo(self.align_combo, [
+            ("plugin.image_stitcher.combo.start", "start"),
+            ("plugin.image_stitcher.combo.center", "center"),
+            ("plugin.image_stitcher.combo.end", "end"),
+            ("plugin.image_stitcher.combo.max_size", "max_size"),
+        ])
+        self.align_combo.setCurrentIndex(self.align_combo.findData("max_size"))
         align_layout.addWidget(self.align_combo, 1)
         grid.addWidget(align_widget, 0, 1)
 
@@ -445,7 +528,8 @@ class ImageStitcher(ToolPlugin):
         # 第1行：背景颜色
         bg_row = QHBoxLayout()
         bg_row.setSpacing(SPACING_SMALL)
-        bg_row.addWidget(SelectableLabel("背景颜色:"))
+        self.bg_color_label = SelectableLabel(t("plugin.image_stitcher.label.bg_color"))
+        bg_row.addWidget(self.bg_color_label)
         self.bg_r = QSpinBox()
         self.bg_r.setRange(0, 255)
         self.bg_r.setValue(255)
@@ -464,23 +548,24 @@ class ImageStitcher(ToolPlugin):
         # 第2行：输出文件
         out_row = QHBoxLayout()
         out_row.setSpacing(SPACING_SMALL)
-        out_row.addWidget(SelectableLabel("输出文件:"))
+        self.output_file_label = SelectableLabel(t("plugin.image_stitcher.label.output_file"))
+        out_row.addWidget(self.output_file_label)
         self.output_path = QLineEdit()
-        self.output_path.setPlaceholderText("选择保存路径...")
+        self.output_path.setPlaceholderText(t("plugin.image_stitcher.placeholder.output_path"))
         out_row.addWidget(self.output_path)
-        browse_btn = AnimatedButton("浏览")
-        browse_btn.setMaximumWidth(80)
-        browse_btn.clicked.connect(self.browse_output)
-        out_row.addWidget(browse_btn)
+        self.browse_btn = AnimatedButton(t("plugin.image_stitcher.button.browse"))
+        self.browse_btn.setMaximumWidth(80)
+        self.browse_btn.clicked.connect(self.browse_output)
+        out_row.addWidget(self.browse_btn)
         grid.addLayout(out_row, 2, 0, 1, 2)
-        layout.addWidget(settings_card)
+        layout.addWidget(self.settings_card)
 
         # 应用初始主题
         self.update_theme(Theme.DARK)
 
         # 操作面板（按钮 + 进度条 + 状态标签）
         self.action_panel = ActionPanel(
-            button_text="开始拼接"
+            button_text=t("plugin.image_stitcher.button.start")
         )
         self.action_panel.clicked.connect(self.start_stitch)
         layout.addWidget(self.action_panel)
@@ -489,7 +574,7 @@ class ImageStitcher(ToolPlugin):
 
     def browse_output(self):
         path = get_save_file_name(
-            None, "保存拼接图片", "stitched.jpg",
+            None, t("plugin.image_stitcher.dialog.save_image"), "stitched.jpg",
             "JPEG (*.jpg);;PNG (*.png);;WebP (*.webp)"
         )
         if path:
@@ -498,18 +583,25 @@ class ImageStitcher(ToolPlugin):
     def start_stitch(self):
         files = self.file_panel.get_files()
         if len(files) < 2:
-            show_warning(None, "警告", "请至少添加 2 张图片！")
+            show_warning(
+                None,
+                t("plugin.image_stitcher.dialog.warning_title"),
+                t("plugin.image_stitcher.warning.min_images"),
+            )
             return
         if not self.output_path.text():
-            show_warning(None, "警告", "请选择输出文件路径！")
+            show_warning(
+                None,
+                t("plugin.image_stitcher.dialog.warning_title"),
+                t("plugin.image_stitcher.warning.no_output_path"),
+            )
             return
 
-        direction = "horizontal" if self.dir_combo.currentIndex() == 0 else "vertical"
-        align_map = {0: "start", 1: "center", 2: "end", 3: "max_size"}
-        align = align_map[self.align_combo.currentIndex()]
+        direction = self.dir_combo.currentData()
+        align = self.align_combo.currentData()
         bg = (self.bg_r.value(), self.bg_g.value(), self.bg_b.value())
 
-        self.action_panel.start_task(100, status="正在拼接...")
+        self.action_panel.start_task(100, status=t("plugin.image_stitcher.msg.stitching"))
         self.worker = ImageStitchWorker(
             files, self.output_path.text(), direction, align, bg
         )
