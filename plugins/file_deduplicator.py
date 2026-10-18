@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
 from common.message_utils import show_info, show_error, show_warning, show_question
 from common.action_panel import ActionPanel
-from common.utils import get_create_time, get_modify_time, WINDOWS_RESERVED_NAMES, get_combo_style
+from common.utils import get_create_time, get_modify_time, WINDOWS_RESERVED_NAMES, get_combo_style, build_failure_detail
 from common.base_worker import BaseWorker
 from common.directory_drop_line_edit import DirectoryDropLineEdit
 from common.i18n import t, bind_combo
@@ -364,13 +364,7 @@ class FileDeletionWorker(BaseWorker):
                     count=missing
                 )
             if failed_files:
-                message += t("plugin.file_deduplicator.msg.failures_header")
-                message += "\n".join(failed_files[:5])
-                if len(failed_files) > 5:
-                    message += t(
-                        "plugin.file_deduplicator.msg.more_failures",
-                        count=len(failed_files) - 5
-                    )
+                message += build_failure_detail(failed_files)
             self.result.emit(True, message)
         except Exception as e:
             print(f"Error in FileDeletionWorker: {e}")
@@ -1242,7 +1236,8 @@ class FileDeduplicator(ToolPlugin):
             t("plugin.file_deduplicator.placeholder.folder")
         )
         widget.browse_btn.setText(t("plugin.file_deduplicator.button.browse"))
-        widget.scan_panel.btn.setText(t("plugin.file_deduplicator.button.scan"))
+        widget.scan_panel.set_button_text(t("plugin.file_deduplicator.button.scan"))
+        widget.scan_panel.set_cancel_text(t("common.action_panel.button.cancel"))
         widget.cancel_scan_btn.setText(
             t("plugin.file_deduplicator.button.cancel_scan")
         )
@@ -1281,9 +1276,10 @@ class FileDeduplicator(ToolPlugin):
         widget.sort_by_rule_btn.setText(
             t("plugin.file_deduplicator.button.sort_by_rule")
         )
-        widget.delete_panel.btn.setText(
+        widget.delete_panel.set_button_text(
             t("plugin.file_deduplicator.button.delete_duplicates")
         )
+        widget.delete_panel.set_cancel_text(t("common.action_panel.button.cancel"))
         # 组合框由 bind_combo 自动重放
 
         # 结果树中的分组标签与保留/删除前缀：有数据时按当前语言重建，

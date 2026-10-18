@@ -12,7 +12,7 @@ from typing import Optional
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QCheckBox, QFileDialog, QHBoxLayout, QHeaderView, QSizePolicy,
+    QFileDialog, QHBoxLayout, QHeaderView, QSizePolicy,
     QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -806,9 +806,10 @@ class EmptyFolderCleaner(ToolPlugin):
         widget.browse_btn.setText(
             t("plugin.empty_folder_cleaner.button.browse")
         )
-        widget.scan_panel.btn.setText(
+        widget.scan_panel.set_button_text(
             t("plugin.empty_folder_cleaner.button.start_scan")
         )
+        widget.scan_panel.set_cancel_text(t("common.action_panel.button.cancel"))
         widget.scan_panel.status_label.setText(
             t("plugin.empty_folder_cleaner.msg.status_idle_scan")
         )
@@ -830,9 +831,10 @@ class EmptyFolderCleaner(ToolPlugin):
         widget.delete_card.title_label.setText(
             t("plugin.empty_folder_cleaner.card.delete")
         )
-        widget.delete_panel.btn.setText(
+        widget.delete_panel.set_button_text(
             t("plugin.empty_folder_cleaner.button.delete_selected")
         )
+        widget.delete_panel.set_cancel_text(t("common.action_panel.button.cancel"))
         widget.delete_panel.status_label.setText(
             t("plugin.empty_folder_cleaner.msg.status_idle_delete")
         )

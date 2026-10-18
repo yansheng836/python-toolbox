@@ -18,10 +18,12 @@ class ActionPanel(Card):
     操作面板：按钮 + 进度条 + 状态标签，封装在卡片内
 
     信号:
-        clicked: 按钮被点击时发出
+        clicked: 按钮被点击时发出（任务未运行时）
+        cancelled: 按钮在任务运行中被点击时发出（用于触发 Worker.cancel）
     """
 
     clicked = pyqtSignal()
+    cancelled = pyqtSignal()
 
     def __init__(self, parent=None, *,
                  button_text=None,
@@ -29,8 +31,13 @@ class ActionPanel(Card):
                  gradient_colors=None,
                  gradient_hover_colors=None,
                  status_text="",
-                 progress_chunk_color=None):
+                 progress_chunk_color=None,
+                 cancel_text=None):
         super().__init__(parent, title="")  # 不显示卡片标题
+
+        self._button_text = button_text
+        self._cancel_text = cancel_text or t("common.action_panel.button.cancel")
+        self._running = False
 
         self.use_gradient = use_gradient
         self._user_gradient_colors = gradient_colors  # 用户指定的渐变颜色（优先）
@@ -71,7 +78,7 @@ class ActionPanel(Card):
                 QPushButton:disabled {{ background: {Theme.DARK['surface']}; color: {Theme.DARK['text_secondary']}; }}
             """)
 
-        self.btn.clicked.connect(self.clicked.emit)
+        self.btn.clicked.connect(self._on_btn_clicked)
         self.content_layout.addWidget(self.btn)
 
         # 进度条（初始样式，update_theme 会更新为主题适配的样式）
@@ -99,9 +106,30 @@ class ActionPanel(Card):
         self.status_label.setWordWrap(True)
         self.content_layout.addWidget(self.status_label)
 
+    def _on_btn_clicked(self):
+        """按钮点击分发：运行中发 cancelled，否则发 clicked"""
+        if self._running:
+            self.cancelled.emit()
+        else:
+            self.clicked.emit()
+
+    def set_button_text(self, text):
+        """更新开始按钮文案（retranslate 时调用）；运行中保持取消文案不变"""
+        self._button_text = text
+        if not self._running:
+            self.btn.setText(text)
+
+    def set_cancel_text(self, text):
+        """更新取消按钮文案（retranslate 时调用）"""
+        self._cancel_text = text
+        if self._running:
+            self.btn.setText(text)
+
     def start_task(self, maximum=0, status=""):
-        """开始任务：禁用按钮，显示进度条，设置进度最大值，更新状态"""
-        self.btn.setEnabled(False)
+        """开始任务：按钮切换为取消文案并可点，显示进度条，设置进度最大值"""
+        self._running = True
+        self.btn.setText(self._cancel_text)
+        self.btn.setEnabled(True)  # 取消按钮始终可点
         self.progress.setVisible(True)
         self.progress.setMaximum(maximum)
         self.progress.setValue(0)
@@ -116,7 +144,9 @@ class ActionPanel(Card):
         self.status_label.setText(text)
 
     def finish_task(self, status=""):
-        """完成任务：启用按钮，隐藏进度条，更新状态"""
+        """完成任务：按钮恢复为开始文案，隐藏进度条，更新状态"""
+        self._running = False
+        self.btn.setText(self._button_text)
         self.btn.setEnabled(True)
         self.progress.setVisible(False)
         if status:

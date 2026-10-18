@@ -81,6 +81,10 @@ class PDFSplitWorker(BaseWorker):
                 base_name = os.path.splitext(os.path.basename(self.input_file))[0]
                 count = 0
                 for i in range(0, total_pages, self.pages_per_split):
+                    if self.is_cancelled():
+                        doc.close()
+                        self.result.emit(False, t("common.msg.task_cancelled"))
+                        return
                     self.status.emit(t(
                         "plugin.pdf_splitter.msg.splitting_pages",
                         start=i + 1,
@@ -104,6 +108,10 @@ class PDFSplitWorker(BaseWorker):
                 base_name = os.path.splitext(os.path.basename(self.input_file))[0]
                 count = 0
                 for i in range(total_pages):
+                    if self.is_cancelled():
+                        doc.close()
+                        self.result.emit(False, t("common.msg.task_cancelled"))
+                        return
                     self.status.emit(t(
                         "plugin.pdf_splitter.msg.converting_page",
                         index=i + 1,
@@ -406,6 +414,7 @@ class PDFSplitterWidget(QWidget):
         self.worker.progress.connect(self.action_panel.update_progress)
         self.worker.status.connect(self.action_panel.update_status)
         self.worker.result.connect(self.split_finished)
+        self.action_panel.cancelled.connect(self.worker.cancel)
         self.worker.start()
 
     def split_finished(self, success, message):
@@ -441,8 +450,9 @@ class PDFSplitterWidget(QWidget):
         self.output_path.setPlaceholderText(
             t("plugin.pdf_splitter.placeholder.output_dir"))
         self.browse_btn.setText(t("plugin.pdf_splitter.button.browse"))
-        self.action_panel.btn.setText(
+        self.action_panel.set_button_text(
             t("plugin.pdf_splitter.button.start_split"))
+        self.action_panel.set_cancel_text(t("common.action_panel.button.cancel"))
         if not FITZ_AVAILABLE:
             self.action_panel.status_label.setText(t(
                 "plugin.pdf_splitter.error.pymupdf_missing_status"))

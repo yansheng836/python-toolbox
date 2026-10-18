@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
 from common.i18n import t, bind_combo
 from common.dialog_utils import get_existing_directory
 from common.action_panel import ActionPanel
-from common.utils import PIL_AVAILABLE, load_oriented_image
+from common.utils import PIL_AVAILABLE, load_oriented_image, build_failure_detail
 from common.base_worker import BaseWorker
 from PyQt6.QtCore import Qt
 
@@ -55,6 +55,9 @@ class CompressionWorker(BaseWorker):
             failed = 0
             failed_files = []
             for i, file_path in enumerate(self.files):
+                if self.is_cancelled():
+                    self.result.emit(False, t("common.msg.task_cancelled"))
+                    return
                 try:
                     self._compress_one(file_path)
                     processed += 1
@@ -164,11 +167,7 @@ class CompressionWorker(BaseWorker):
             return
         msg = t("plugin.image_compressor.msg.compress_summary",
                 success=success_count, failed=failed)
-        msg += t("plugin.file_deduplicator.msg.failures_header")
-        msg += "\n".join(failed_files[:5])
-        if len(failed_files) > 5:
-            msg += t("plugin.file_deduplicator.msg.more_failures",
-                     count=len(failed_files) - 5)
+        msg += build_failure_detail(failed_files)
         self.result.emit(False, msg)
 
 
@@ -313,7 +312,8 @@ class ImageCompressor(ToolPlugin):
         self.output_path.setPlaceholderText(
             t("plugin.image_compressor.placeholder.output_dir"))
         self.browse_btn.setText(t("plugin.image_compressor.button.browse"))
-        self.action_panel.btn.setText(t("plugin.image_compressor.button.start"))
+        self.action_panel.set_button_text(t("plugin.image_compressor.button.start"))
+        self.action_panel.set_cancel_text(t("common.action_panel.button.cancel"))
         # 格式下拉框由 bind_combo 自动重放；质量百分比（"75%"）与语言无关
 
     def browse_output(self):
@@ -349,6 +349,7 @@ class ImageCompressor(ToolPlugin):
         self.worker.progress.connect(self.action_panel.update_progress)
         self.worker.status.connect(self.action_panel.update_status)
         self.worker.result.connect(self.compression_finished)
+        self.action_panel.cancelled.connect(self.worker.cancel)
         self.worker.start()
 
     def compression_finished(self, success, message):

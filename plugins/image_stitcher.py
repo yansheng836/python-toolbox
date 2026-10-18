@@ -268,6 +268,9 @@ class ImageStitchWorker(BaseWorker):
                 if self.direction == "horizontal":
                     x = 0
                     for i, (f, expected_w, expected_h) in enumerate(batch_info):
+                        if self.is_cancelled():
+                            self.result.emit(False, t("common.msg.task_cancelled"))
+                            return
                         global_idx = sum(len(b) for b in batches[:bi]) + i + 1
                         self._emit_processing_status(
                             f, global_idx, total_images, bi, num_batches
@@ -288,6 +291,9 @@ class ImageStitchWorker(BaseWorker):
                 else:
                     y = 0
                     for i, (f, expected_w, expected_h) in enumerate(batch_info):
+                        if self.is_cancelled():
+                            self.result.emit(False, t("common.msg.task_cancelled"))
+                            return
                         global_idx = sum(len(b) for b in batches[:bi]) + i + 1
                         self._emit_processing_status(
                             f, global_idx, total_images, bi, num_batches
@@ -413,7 +419,8 @@ class ImageStitcher(ToolPlugin):
         self.output_file_label.setText(t("plugin.image_stitcher.label.output_file"))
         self.output_path.setPlaceholderText(t("plugin.image_stitcher.placeholder.output_path"))
         self.browse_btn.setText(t("plugin.image_stitcher.button.browse"))
-        self.action_panel.btn.setText(t("plugin.image_stitcher.button.start"))
+        self.action_panel.set_button_text(t("plugin.image_stitcher.button.start"))
+        self.action_panel.set_cancel_text(t("common.action_panel.button.cancel"))
         self.file_panel.file_filter = t("plugin.image_stitcher.filter.images")
         self.file_panel.retranslate_ui()
         # 组合框由 bind_combo 自动重放，无需处理
@@ -570,6 +577,7 @@ class ImageStitcher(ToolPlugin):
         self.worker.status.connect(self.action_panel.update_status)
         self.worker.progress.connect(self.action_panel.update_progress)
         self.worker.result.connect(self.stitch_finished)
+        self.action_panel.cancelled.connect(self.worker.cancel)
         self.worker.start()
 
     def stitch_finished(self, success, message):

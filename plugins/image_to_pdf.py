@@ -172,6 +172,9 @@ class PDFWorker(BaseWorker):
                 # 2a. 读取并处理本批图片
                 batch_imgs = []
                 for f in batch_files:
+                    if self.is_cancelled():
+                        self.result.emit(False, t("common.msg.task_cancelled"))
+                        return
                     try:
                         img = self._prepare_image(f, max_width)
                         batch_imgs.append(img)
@@ -392,7 +395,8 @@ class ImageToPDF(ToolPlugin):
         self.output_file_label.setText(t("plugin.image_to_pdf.label.output_file"))
         self.output_path.setPlaceholderText(t("plugin.image_to_pdf.placeholder.output_file"))
         self.browse_btn.setText(t("plugin.image_to_pdf.button.browse"))
-        self.action_panel.btn.setText(t("plugin.image_to_pdf.button.start"))
+        self.action_panel.set_button_text(t("plugin.image_to_pdf.button.start"))
+        self.action_panel.set_cancel_text(t("common.action_panel.button.cancel"))
         self.file_panel.file_filter = t("plugin.image_to_pdf.filter.images")
         self.file_panel.retranslate_ui()
         # 组合框由 bind_combo 自动重放，无需处理
@@ -545,6 +549,7 @@ class ImageToPDF(ToolPlugin):
         self.worker.progress.connect(self.action_panel.update_progress)
         self.worker.status.connect(self.action_panel.update_status)
         self.worker.result.connect(self.conversion_finished)
+        self.action_panel.cancelled.connect(self.worker.cancel)
         self.worker.start()
 
     def conversion_finished(self, success, message):

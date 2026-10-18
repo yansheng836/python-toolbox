@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-from common.utils import PIL_AVAILABLE, load_oriented_image
+from common.utils import PIL_AVAILABLE, load_oriented_image, build_failure_detail
 if PIL_AVAILABLE:
     from PIL import Image
 
@@ -68,6 +68,9 @@ class ScalingWorker(BaseWorker):
             failed_files = []
 
             for i, input_file in enumerate(self.input_files):
+                if self.is_cancelled():
+                    self.result.emit(False, t("common.msg.task_cancelled"))
+                    return
                 try:
                     img = load_oriented_image(input_file)
                     exif_bytes = img.info.get('exif')
@@ -125,13 +128,7 @@ class ScalingWorker(BaseWorker):
                 "plugin.image_scaler.msg.success", count=success_count, total=total
             )
             if failed_files:
-                result_msg += t("plugin.image_scaler.msg.failures_header")
-                result_msg += "\n".join(failed_files[:5])
-                if len(failed_files) > 5:
-                    result_msg += t(
-                        "plugin.image_scaler.msg.more_failures",
-                        count=len(failed_files) - 5,
-                    )
+                result_msg += build_failure_detail(failed_files)
             self.result.emit(True, result_msg)
 
         except Exception as e:
@@ -399,6 +396,7 @@ class ImageScalerWidget(QWidget):
             len(files), status=t("plugin.image_scaler.msg.processing")
         )
 
+        self.action_panel.cancelled.connect(self.worker.cancel)
         self.worker.start()
 
     def on_progress_updated(self, progress, current):
@@ -479,7 +477,8 @@ class ImageScaler(ToolPlugin):
             t("plugin.image_scaler.placeholder.output_dir")
         )
         widget.browse_btn.setText(t("plugin.image_scaler.button.browse"))
-        widget.action_panel.btn.setText(t("plugin.image_scaler.button.start"))
+        widget.action_panel.set_button_text(t("plugin.image_scaler.button.start"))
+        widget.action_panel.set_cancel_text(t("common.action_panel.button.cancel"))
         # 文件选择过滤器在每次打开对话框时读取，需同步更新
         widget.file_panel.file_filter = t("plugin.image_scaler.filter.images")
         widget.file_panel.retranslate_ui()

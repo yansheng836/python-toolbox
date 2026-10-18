@@ -55,6 +55,10 @@ class PDFMergeWorker(BaseWorker):
             merged = fitz.open()
 
             for i, file_path in enumerate(self.files):
+                if self.is_cancelled():
+                    merged.close()
+                    self.result.emit(False, t("common.msg.task_cancelled"))
+                    return
                 self.status.emit(t(
                     "plugin.pdf_merger.msg.processing",
                     name=os.path.basename(file_path)))
@@ -210,6 +214,7 @@ class PDFMergerWidget(QWidget):
         self.worker.progress.connect(self.action_panel.update_progress)
         self.worker.status.connect(self.action_panel.update_status)
         self.worker.result.connect(self.merge_finished)
+        self.action_panel.cancelled.connect(self.worker.cancel)
         self.worker.start()
 
     def merge_finished(self, success, message):
@@ -235,8 +240,9 @@ class PDFMergerWidget(QWidget):
         self.output_path.setPlaceholderText(
             t("plugin.pdf_merger.placeholder.output_path"))
         self.browse_btn.setText(t("plugin.pdf_merger.button.browse"))
-        self.action_panel.btn.setText(
+        self.action_panel.set_button_text(
             t("plugin.pdf_merger.button.start_merge"))
+        self.action_panel.set_cancel_text(t("common.action_panel.button.cancel"))
         if not FITZ_AVAILABLE:
             self.action_panel.status_label.setText(t(
                 "plugin.pdf_merger.error.pymupdf_missing_status"))

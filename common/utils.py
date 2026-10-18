@@ -234,6 +234,21 @@ def check_file_writable(file_path):
         return False, t("common.error.file_access", error=str(e))
 
 
+def build_failure_detail(failed_files, max_shown=5):
+    """拼装失败文件明细：前 max_shown 条 + 「还有 N 个」截断
+
+    供 per-file 捕获 + 批量汇总的 Worker 复用（H8 模式）。调用方负责
+    前置的成功/失败统计与总词条，本函数只产出明细片段。
+    """
+    if not failed_files:
+        return ""
+    detail = t("common.msg.failures_header")
+    detail += "\n".join(failed_files[:max_shown])
+    if len(failed_files) > max_shown:
+        detail += t("common.msg.more_failures", count=len(failed_files) - max_shown)
+    return detail
+
+
 # ==================== 主题样式生成器 ====================
 # 这些函数生成 PyQt6 控件的主题化 stylesheet 字符串
 # 注意：theme 参数应为 Theme.DARK 或 Theme.LIGHT 字典

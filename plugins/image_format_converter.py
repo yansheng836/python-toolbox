@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
 from common.i18n import t
 from common.dialog_utils import get_existing_directory
 from common.action_panel import ActionPanel
-from common.utils import PIL_AVAILABLE, load_oriented_image
+from common.utils import PIL_AVAILABLE, load_oriented_image, build_failure_detail
 from common.base_worker import BaseWorker
 
 if PIL_AVAILABLE:
@@ -67,6 +67,9 @@ class FormatConvertWorker(BaseWorker):
             failed = 0
             failed_files = []
             for i, file_path in enumerate(self.files):
+                if self.is_cancelled():
+                    self.result.emit(False, t("common.msg.task_cancelled"))
+                    return
                 try:
                     self._convert_one(file_path, pil_fmt, ext)
                     processed += 1
@@ -142,11 +145,7 @@ class FormatConvertWorker(BaseWorker):
             return
         msg = t("plugin.image_format_converter.msg.convert_summary",
                 success=success_count, failed=failed)
-        msg += t("plugin.file_deduplicator.msg.failures_header")
-        msg += "\n".join(failed_files[:5])
-        if len(failed_files) > 5:
-            msg += t("plugin.file_deduplicator.msg.more_failures",
-                     count=len(failed_files) - 5)
+        msg += build_failure_detail(failed_files)
         self.result.emit(False, msg)
 
     def _prepare_image(self, img, pil_fmt):
@@ -247,8 +246,9 @@ class FormatConverter(ToolPlugin):
             t("plugin.image_format_converter.placeholder.output_dir"))
         self.browse_btn.setText(
             t("plugin.image_format_converter.button.browse"))
-        self.action_panel.btn.setText(
+        self.action_panel.set_button_text(
             t("plugin.image_format_converter.button.start"))
+        self.action_panel.set_cancel_text(t("common.action_panel.button.cancel"))
         # FileListPanel 内部按钮/水印属于共享组件，此处只同步本插件传入的过滤器
         self.file_panel.file_filter = t(
             "plugin.image_format_converter.filter.images")
@@ -345,6 +345,7 @@ class FormatConverter(ToolPlugin):
         self.worker.progress.connect(self.action_panel.update_progress)
         self.worker.status.connect(self.action_panel.update_status)
         self.worker.result.connect(self.convert_finished)
+        self.action_panel.cancelled.connect(self.worker.cancel)
         self.worker.start()
 
     def convert_finished(self, success, message):
