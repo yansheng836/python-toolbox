@@ -229,7 +229,7 @@ PLUGIN_MODULES = [
 
 ## 配置系统
 
-应用配置集中在 `config.py` 文件中：
+源码中的静态配置集中在 `config.py` 文件中：
 
 | 配置项 | 说明 |
 |--------|------|
@@ -242,6 +242,21 @@ PLUGIN_MODULES = [
 | `WELCOME_CONFIG` | 欢迎页面文本内容 |
 
 修改 `config.py` 即可自定义应用外观和信息，无需修改主程序代码。
+
+### 运行时配置（config.ini）
+
+应用运行时还会读写 `config.ini` 保存用户设置：
+
+| 项目 | 说明 |
+|------|------|
+| 默认位置 | Windows：`%LOCALAPPDATA%\Toolbox\config.ini`；macOS：`~/Library/Application Support/Toolbox/config.ini` |
+| 便携模式 | 程序（源码运行时为项目根目录）下存在可写的 `portable.flag` 时，配置存放在同目录的 `config.ini` |
+| 保存内容 | `[general]` 界面语言与主题、`[window]` 窗口几何与状态、`[meta]` 配置版本 |
+| 首次启动 | 文件不存在时自动生成并写入默认值；界面语言按系统语言初始化（中文 → `zh_CN`，其余 → `en`），首次自动设置后会弹窗提示，之后以用户在设置页的选择为准 |
+| 旧版迁移 | 从旧版 `QSettings` 注册表导入主题与窗口几何/状态，仅在 INI 尚无对应值时导入，且不删除注册表数据 |
+| 写入安全 | 保存前备份为 `config.ini.bak`，通过临时文件 + 原子替换写入；文件缺失或损坏时回退默认值并打印错误；配置目录不可写时设置仅在本次运行生效 |
+
+该文件由 `common/app_settings.py` 中的 `AppSettings` 统一管理，通常无需手动编辑。
 
 ---
 
