@@ -423,22 +423,6 @@ class ImageStitcher(ToolPlugin):
         except RuntimeError:
             pass  # C++ object already deleted
 
-    @staticmethod
-    def _build_columns():
-        """按当前语言重建列定义（IMAGE_COLUMNS 是共享常量，其标签不随语言切换）"""
-        columns = [
-            Column(col.id, t(f"column.{col.id}"), col.func)
-            for col in IMAGE_COLUMNS
-        ]
-        columns.append(Column("created", t("column.created"), get_create_time))
-        return columns
-
-    def _retranslate_columns(self):
-        """重建文件列表表头文本（表头标签在表格创建时固定）"""
-        columns = self._build_columns()
-        self.file_panel.columns = columns
-        self.file_panel.table.setHorizontalHeaderLabels([col.label for col in columns])
-
     def retranslate_ui(self):
         """语言切换后重放全部用户可见文本"""
         self.title_label.setText(f"{self.icon} {t('plugin.image_stitcher.name')}")
@@ -454,7 +438,6 @@ class ImageStitcher(ToolPlugin):
         self.action_panel.btn.setText(t("plugin.image_stitcher.button.start"))
         self.file_panel.file_filter = t("plugin.image_stitcher.filter.images")
         self.file_panel.retranslate_ui()
-        self._retranslate_columns()
         # 组合框由 bind_combo 自动重放，无需处理
 
     def create_ui(self) -> QWidget:
@@ -475,7 +458,7 @@ class ImageStitcher(ToolPlugin):
         # 文件列表（含创建时间列）
         self.file_card = Card(title=t("plugin.image_stitcher.card.select_images"))
         self.file_panel = FileListPanel(
-            columns=self._build_columns(),
+            columns=IMAGE_COLUMNS + [Column("created", t("column.created"), get_create_time)],
             file_filter=t("plugin.image_stitcher.filter.images"),
             button_class=AnimatedButton,
             show_buttons=["add", "remove", "clear", "up", "down", "sort_name", "sort_time"]

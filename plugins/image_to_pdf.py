@@ -31,7 +31,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, Theme
 
 from common.file_list_panel import FileListPanel
-from common.utils import IMAGE_COLUMNS, Column, get_create_time, get_combo_style, get_lineedit_style
+from common.utils import IMAGE_COLUMNS, Column, get_create_time, check_file_writable, get_combo_style, get_lineedit_style
 
 
 class PDFWorker(BaseWorker):
@@ -110,16 +110,9 @@ class PDFWorker(BaseWorker):
         temp_files = set()  # 使用集合避免重复文件名导致的清理问题
         try:
             # ========= 预检查：目标文件是否被占用 =========
-            # 就地检查以便错误消息走 i18n 词典（common.utils 的同名辅助函数
-            # 仍返回中文硬编码，无法本地化）
-            try:
-                with open(self.output, 'ab'):
-                    pass
-            except PermissionError:
-                self.finished.emit(False, t("common.error.file_locked", path=self.output))
-                return
-            except Exception as e:
-                self.finished.emit(False, t("common.error.file_access", error=str(e)))
+            ok, error = check_file_writable(self.output)
+            if not ok:
+                self.finished.emit(False, error)
                 return
 
             total = len(self.files)
@@ -367,22 +360,6 @@ class ImageToPDF(ToolPlugin):
         except RuntimeError:
             pass  # C++ object already deleted
 
-    @staticmethod
-    def _build_columns():
-        """按当前语言重建列定义（IMAGE_COLUMNS 是共享常量，其标签不随语言切换）"""
-        columns = [
-            Column(col.id, t(f"column.{col.id}"), col.func)
-            for col in IMAGE_COLUMNS
-        ]
-        columns.append(Column("created", t("column.created"), get_create_time))
-        return columns
-
-    def _retranslate_columns(self):
-        """重建文件列表表头文本（表头标签在表格创建时固定）"""
-        columns = self._build_columns()
-        self.file_panel.columns = columns
-        self.file_panel.table.setHorizontalHeaderLabels([col.label for col in columns])
-
     def retranslate_ui(self):
         """语言切换后重放全部用户可见文本"""
         self.title_label.setText(f"{self.icon} {t('plugin.image_to_pdf.name')}")
@@ -398,7 +375,6 @@ class ImageToPDF(ToolPlugin):
         self.action_panel.btn.setText(t("plugin.image_to_pdf.button.start"))
         self.file_panel.file_filter = t("plugin.image_to_pdf.filter.images")
         self.file_panel.retranslate_ui()
-        self._retranslate_columns()
         # 组合框由 bind_combo 自动重放，无需处理
 
     def create_ui(self) -> QWidget:
@@ -419,7 +395,7 @@ class ImageToPDF(ToolPlugin):
         # 图片列表
         self.file_card = Card(title=t("plugin.image_to_pdf.card.list"))
         self.file_panel = FileListPanel(
-            columns=self._build_columns(),
+            columns=IMAGE_COLUMNS + [Column("created", t("column.created"), get_create_time)],
             file_filter=t("plugin.image_to_pdf.filter.images"),
             button_class=AnimatedButton,
             show_buttons=["add", "remove", "clear", "up", "down", "sort_name", "sort_time"]
