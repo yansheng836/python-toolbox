@@ -210,40 +210,69 @@ class SidebarButton(QPushButton):
         super().__init__(parent)
         self._plugin_id = plugin_id
         self._icon_text = icon_text
-        self.setText(f"  {icon_text}  {text}")
+        self._text = text
+        self._elided_text = ""
         self.setMinimumHeight(48)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setCheckable(True)
-        self.setStyleSheet("""
-            QPushButton {
+        self.apply_theme(Theme.DARK)
+        self._apply_text()
+        self.setToolTip(text)
+
+    def apply_theme(self, theme):
+        """按主题重设按钮配色，保证浅色主题下文字对比度"""
+        self.setStyleSheet(f"""
+            QPushButton {{
                 background-color: transparent;
-                color: #94a3b8;
+                color: {theme['text_secondary']};
                 border: none;
                 border-radius: 8px;
                 padding: 0 16px;
                 text-align: left;
                 font-size: {FONT_SIZE_16};
                 font-weight: {FONT_WEIGHT_600};
-            }
-            QPushButton:hover {
+            }}
+            QPushButton:hover {{
                 background-color: rgba(99, 102, 241, 0.1);
-                color: #f1f5f9;
-            }
-            QPushButton:checked {
+                color: {theme['text']};
+            }}
+            QPushButton:checked {{
                 background-color: rgba(99, 102, 241, 0.2);
-                color: #6366f1;
+                color: {theme['primary']};
                 font-weight: {FONT_WEIGHT_600};
-            }
+            }}
         """)
 
     def plugin_id(self):
         """返回该按钮绑定的插件稳定 id"""
         return self._plugin_id
 
+    def _apply_text(self):
+        """按当前宽度省略过长文本，完整名称保留在 tooltip 中"""
+        metrics = self.fontMetrics()
+        if self.width() <= 0:
+            display = self._text
+        else:
+            reserved = metrics.horizontalAdvance(f"  {self._icon_text}  ")
+            available = max(0, self.width() - 32 - reserved)
+            display = metrics.elidedText(
+                self._text, Qt.TextElideMode.ElideRight, available
+            )
+        if display != self._elided_text:
+            self._elided_text = display
+            self.setText(f"  {self._icon_text}  {display}")
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._apply_text()
+
     def set_texts(self, text, icon_text):
         """更新按钮显示文本（保留 icon+文本的双空格布局），供语言切换重放"""
+        self._text = text
         self._icon_text = icon_text
-        self.setText(f"  {icon_text}  {text}")
+        self._elided_text = ""
+        self.setToolTip(text)
+        self._apply_text()
 
 
 # ==================== 核心功能模块 ====================
@@ -1439,6 +1468,16 @@ class ToolboxWindow(QMainWindow):
         self._current_theme = theme
         self.setStyleSheet(f"""
             QMainWindow {{ background-color: {theme['bg']}; }}
+            QMenuBar {{ background-color: {theme['bg_secondary']}; color: {theme['text']}; }}
+            QMenuBar::item {{ background: transparent; color: {theme['text']}; padding: 4px 10px; }}
+            QMenuBar::item:selected {{ background-color: {theme['surface']}; }}
+            QMenu {{
+                background-color: {theme['bg_secondary']};
+                color: {theme['text']};
+                border: 1px solid {theme['surface']};
+            }}
+            QMenu::item {{ padding: 6px 20px; }}
+            QMenu::item:selected {{ background-color: {theme['primary']}; color: white; }}
             QScrollArea {{ border: none; background-color: {theme['bg']}; }}
             QFrame#card {{
                 background-color: {theme['bg_secondary']};
@@ -1528,6 +1567,10 @@ class ToolboxWindow(QMainWindow):
             self.logo_text.setStyleSheet(
                 f"font-size: {FONT_SIZE_20}; font-weight: {FONT_WEIGHT_700}; color: {theme['text']};"
             )
+
+        # 侧边栏导航按钮配色随主题更新（含首页与插件项）
+        for nav_btn in self.findChildren(SidebarButton):
+            nav_btn.apply_theme(theme)
 
         self.content.setStyleSheet(f"""
             QStackedWidget {{ background-color: {theme['bg']}; }}
