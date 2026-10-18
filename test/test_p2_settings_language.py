@@ -16,8 +16,8 @@ from toolbox import ToolboxWindow, Theme
 
 
 TEST_EN = {
-    "settings.label.language": "Language:",
-    "settings.label.appearance": "Appearance:",
+    "settings.label.language": "Language",
+    "settings.label.appearance": "Appearance",
     "settings.card.general": "General",
     "settings.card.about": "About",
     "settings.button.light_theme": "☀️ Light",
@@ -100,14 +100,14 @@ def test_retranslate_updates_static_texts(tmp_path, en_dict_injected):
         combo = sp.language_combo
 
         combo.setCurrentIndex(combo.findData("en"))
-        assert sp.theme_label.text() == "Appearance:"
-        assert sp.language_label.text() == "Language:"
+        assert sp.theme_label.text() == "Appearance"
+        assert sp.language_label.text() == "Language"
         assert sp.light_theme_btn.text() == "☀️ Light"
         assert sp._general_card.title_label.text() == "General"
         assert sp.version_label.text() == f"Version: v{APP_VERSION}"
 
         combo.setCurrentIndex(combo.findData("zh_CN"))
-        assert sp.theme_label.text() == "外观:"
+        assert sp.theme_label.text() == "外观"
         assert sp._general_card.title_label.text() == "通用设置"
     finally:
         win.close()
@@ -125,5 +125,80 @@ def test_theme_still_works(tmp_path):
         assert win._current_theme is Theme.LIGHT
         ini = _read_ini(tmp_path / "config.ini")
         assert ini.get("general", "theme") == "light"
+    finally:
+        win.close()
+
+
+@pytest.mark.usefixtures("qapp")
+def test_reset_defaults_restores_language_and_theme(tmp_path, monkeypatch):
+    """恢复默认设置：确认后语言按系统重设、主题回深色，INI 写回默认值"""
+    from common import message_utils
+
+    monkeypatch.setattr(message_utils, "show_question", lambda *a, **k: True)
+    monkeypatch.setattr(message_utils, "show_info", lambda *a, **k: None)
+    monkeypatch.setattr(i18n, "detect_system_language", lambda: "zh_CN")
+
+    win = _make_window(tmp_path)
+    try:
+        sp = win.plugins["settings"]
+        sp.get_widget()
+        sp.language_combo.setCurrentIndex(sp.language_combo.findData("en"))
+        sp.switch_theme("light")
+        assert i18n.manager.current_language == "en"
+        assert win.current_theme is Theme.LIGHT
+
+        sp.reset_defaults()
+
+        assert i18n.manager.current_language == "zh_CN"
+        assert win.current_theme is Theme.DARK
+        ini = _read_ini(tmp_path / "config.ini")
+        assert ini.get("general", "language") == "zh_CN"
+        assert ini.get("general", "theme") == "dark"
+    finally:
+        win.close()
+
+
+@pytest.mark.usefixtures("qapp")
+def test_reset_defaults_cancelled_keeps_settings(tmp_path, monkeypatch):
+    """取消确认时不清空配置"""
+    from common import message_utils
+
+    monkeypatch.setattr(message_utils, "show_question", lambda *a, **k: False)
+
+    win = _make_window(tmp_path)
+    try:
+        sp = win.plugins["settings"]
+        sp.get_widget()
+        sp.switch_theme("light")
+
+        sp.reset_defaults()
+
+        assert win.current_theme is Theme.LIGHT
+        ini = _read_ini(tmp_path / "config.ini")
+        assert ini.get("general", "theme") == "light"
+    finally:
+        win.close()
+
+
+@pytest.mark.usefixtures("qapp")
+def test_reset_defaults_keeps_detected_language_when_unchanged(tmp_path, monkeypatch):
+    """系统语言与当前一致时，重置后 INI 仍写回检测结果，不残留默认 zh_CN"""
+    from common import message_utils
+
+    monkeypatch.setattr(message_utils, "show_question", lambda *a, **k: True)
+    monkeypatch.setattr(message_utils, "show_info", lambda *a, **k: None)
+    monkeypatch.setattr(i18n, "detect_system_language", lambda: "en")
+
+    win = _make_window(tmp_path)
+    try:
+        sp = win.plugins["settings"]
+        sp.get_widget()
+        sp.language_combo.setCurrentIndex(sp.language_combo.findData("en"))
+
+        sp.reset_defaults()
+
+        assert i18n.manager.current_language == "en"
+        ini = _read_ini(tmp_path / "config.ini")
+        assert ini.get("general", "language") == "en"
     finally:
         win.close()

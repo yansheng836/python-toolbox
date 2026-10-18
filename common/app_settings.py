@@ -256,6 +256,13 @@ class AppSettings:
             raise
         return True
 
+    def reset(self):
+        """清空所有已保存设置并恢复默认值（旧文件备份为 config.ini.bak）"""
+        self._parser = configparser.ConfigParser(interpolation=None)
+        self._explicit_keys = set()
+        self._fill_defaults()
+        self.save()
+
     # ==================== 旧 QSettings 迁移 ====================
 
     def migrate_from_qsettings(self):

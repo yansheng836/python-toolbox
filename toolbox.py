@@ -753,6 +753,10 @@ class WelcomePage(QWidget):
 class SettingsPlugin(ToolPlugin):
     """设置插件 - 包含通用设置和关于信息"""
 
+    # 有边框控件（主题按钮/语言下拉/恢复默认按钮）统一尺寸，保证视觉对齐
+    CONTROL_WIDTH = 170
+    CONTROL_HEIGHT = 40
+
     def update_theme(self, theme):
         if hasattr(self, 'title_label'):
             self.title_label.setStyleSheet(
@@ -785,6 +789,31 @@ class SettingsPlugin(ToolPlugin):
             self.language_combo.setStyleSheet(
                 get_combo_style(theme, FONT_SIZE_14, FONT_WEIGHT_600))
 
+        if hasattr(self, 'reset_btn'):
+            self._apply_reset_style(theme)
+
+    def _apply_reset_style(self, theme):
+        """恢复默认设置标题/提示文字/按钮随主题更新（红色描边，强调不可逆操作）"""
+        self.reset_label.setStyleSheet(
+            f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600}; color: {theme['text']};")
+        self.reset_hint_label.setStyleSheet(
+            f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_12};")
+        self.reset_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: transparent;
+                color: {theme['error']};
+                border: 1px solid {theme['error']};
+                border-radius: 8px;
+                padding: 8px 16px;
+                font-size: {FONT_SIZE_14};
+                font-weight: {FONT_WEIGHT_600};
+            }}
+            QPushButton:hover {{
+                background-color: {theme['error']};
+                color: #ffffff;
+            }}
+        """)
+
     def create_ui(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
@@ -816,14 +845,15 @@ class SettingsPlugin(ToolPlugin):
         theme_btn_layout = QHBoxLayout()
 
         light_theme_btn = QPushButton(t("settings.button.light_theme"))
-        light_theme_btn.setMinimumHeight(44)
+        light_theme_btn.setFixedHeight(self.CONTROL_HEIGHT)
+        light_theme_btn.setMinimumWidth(self.CONTROL_WIDTH)
         light_theme_btn.setStyleSheet("""
             QPushButton {
                 background-color: #f1f5f9;
                 color: #0f172a;
                 border: none;
                 border-radius: 8px;
-                padding: 10px 20px;
+                padding: 10px 16px;
                 font-size: {FONT_SIZE_16};
                 font-weight: {FONT_WEIGHT_600};
             }
@@ -836,14 +866,15 @@ class SettingsPlugin(ToolPlugin):
         """)
 
         dark_theme_btn = QPushButton(t("settings.button.dark_theme"))
-        dark_theme_btn.setMinimumHeight(44)
+        dark_theme_btn.setFixedHeight(self.CONTROL_HEIGHT)
+        dark_theme_btn.setMinimumWidth(self.CONTROL_WIDTH)
         dark_theme_btn.setStyleSheet("""
             QPushButton {
                 background-color: #1e293b;
                 color: #f1f5f9;
                 border: 1px solid #334155;
                 border-radius: 8px;
-                padding: 10px 20px;
+                padding: 10px 16px;
                 font-size: {FONT_SIZE_16};
                 font-weight: {FONT_WEIGHT_600};
             }
@@ -868,6 +899,8 @@ class SettingsPlugin(ToolPlugin):
 
         general_card.content_layout.addLayout(theme_btn_layout)
 
+        general_card.content_layout.addSpacing(SPACING_SMALL)
+
         # 语言切换行：bind_combo 自动填充并在语言切换时重放（保持选中 data）
         self.language_label = SelectableLabel(t("settings.label.language"))
         self.language_label.setStyleSheet(f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600};")
@@ -875,7 +908,8 @@ class SettingsPlugin(ToolPlugin):
 
         language_layout = QHBoxLayout()
         self.language_combo = CenteredComboBox()
-        self.language_combo.setMinimumSize(150, 36)
+        self.language_combo.setFixedHeight(self.CONTROL_HEIGHT)
+        self.language_combo.setMinimumWidth(self.CONTROL_WIDTH)
         self.language_combo.setStyleSheet(
             get_combo_style(Theme.DARK, FONT_SIZE_14, FONT_WEIGHT_600))
         bind_combo(self.language_combo, [
@@ -889,6 +923,28 @@ class SettingsPlugin(ToolPlugin):
         language_layout.addWidget(self.language_combo)
         language_layout.addStretch()
         general_card.content_layout.addLayout(language_layout)
+
+        general_card.content_layout.addSpacing(SPACING_SMALL)
+
+        # 恢复默认设置
+        self.reset_label = SelectableLabel(t("settings.label.reset_defaults"))
+        self.reset_label.setStyleSheet(
+            f"font-size: {FONT_SIZE_16}; font-weight: {FONT_WEIGHT_600}; color: {self.parent.current_theme['text']};")
+        general_card.content_layout.addWidget(self.reset_label)
+
+        self.reset_hint_label = SelectableLabel(t("settings.label.reset_hint"))
+        self.reset_hint_label.setWordWrap(True)
+        general_card.content_layout.addWidget(self.reset_hint_label)
+
+        self.reset_btn = QPushButton(t("settings.button.reset_defaults"))
+        self.reset_btn.setFixedHeight(self.CONTROL_HEIGHT)
+        self.reset_btn.setMinimumWidth(self.CONTROL_WIDTH)
+        self.reset_btn.clicked.connect(self.reset_defaults)
+        reset_btn_layout = QHBoxLayout()
+        reset_btn_layout.addWidget(self.reset_btn)
+        reset_btn_layout.addStretch()
+        general_card.content_layout.addLayout(reset_btn_layout)
+        self._apply_reset_style(self.parent.current_theme)
 
         general_card.content_layout.addStretch()
 
@@ -975,14 +1031,65 @@ class SettingsPlugin(ToolPlugin):
             self._settings_ref.set("general", "theme", theme_name)
             self._settings_ref.save()
 
+    def reset_defaults(self):
+        """恢复默认设置：清空 INI 保存值，按全新安装状态重新初始化
+
+        语言与首次启动一致按系统语言检测；主题回到默认深色；窗口几何复位。
+        """
+        from common.message_utils import show_error, show_info, show_question
+
+        theme = self.parent.current_theme
+        if not show_question(
+                self.parent,
+                t("settings.dialog.reset_title"),
+                t("settings.dialog.reset_confirm"),
+                theme=theme):
+            return
+
+        try:
+            self._settings_ref.reset()
+        except OSError as e:
+            print(f"恢复默认设置失败：{e}")
+            show_error(
+                self.parent,
+                t("settings.dialog.reset_title"),
+                t("settings.dialog.reset_failed", error=e),
+                theme=theme)
+            return
+
+        # 主题回到默认深色
+        self.switch_theme("dark")
+
+        # 语言与首次启动一致：按系统语言重新检测（索引变化时触发全窗重放）
+        code = i18n.detect_system_language()
+        index = self.language_combo.findData(code)
+        if index >= 0:
+            self.language_combo.setCurrentIndex(index)
+        # 索引未变化时不会触发持久化，这里统一写回检测结果
+        self._persist_language(code)
+
+        # 窗口布局恢复默认尺寸并居中
+        if hasattr(self.parent, "apply_default_geometry"):
+            self.parent.apply_default_geometry()
+
+        show_info(
+            self.parent,
+            t("settings.dialog.reset_title"),
+            t("settings.dialog.reset_done"),
+            theme=self.parent.current_theme)
+
+    def _persist_language(self, code):
+        """把语言代码持久化到 INI [general] language"""
+        if self._settings_ref is not None:
+            self._settings_ref.set("general", "language", code)
+            self._settings_ref.save()
+
     def _on_language_changed(self, index):
         """语言下拉变化：持久化到 INI 并切换语言（触发全窗 retranslate）"""
         code = self.language_combo.itemData(index)
         if not code or code == i18n.manager.current_language:
             return
-        if self._settings_ref is not None:
-            self._settings_ref.set("general", "language", code)
-            self._settings_ref.save()
+        self._persist_language(code)
         i18n.set_language(code)
         install_qt_translator(QApplication.instance(), code)
 
@@ -994,6 +1101,9 @@ class SettingsPlugin(ToolPlugin):
         self.language_label.setText(t("settings.label.language"))
         self.light_theme_btn.setText(t("settings.button.light_theme"))
         self.dark_theme_btn.setText(t("settings.button.dark_theme"))
+        self.reset_label.setText(t("settings.label.reset_defaults"))
+        self.reset_hint_label.setText(t("settings.label.reset_hint"))
+        self.reset_btn.setText(t("settings.button.reset_defaults"))
         self._about_card.title_label.setText(t("settings.card.about"))
         self.version_label.setText(t("settings.label.version", version=APP_VERSION))
         self._update_label.setText(
@@ -1759,8 +1869,12 @@ class ToolboxWindow(QMainWindow):
         if state:
             self.restoreState(bytes_to_qbytearray(state))
         if not geometry:
-            self.resize(1200, 800)
-            self.move(
-                QApplication.primaryScreen().geometry().center() -
-                self.rect().center()
-            )
+            self.apply_default_geometry()
+
+    def apply_default_geometry(self):
+        """窗口恢复为默认尺寸并居中（无已保存几何时使用）"""
+        self.resize(1200, 800)
+        self.move(
+            QApplication.primaryScreen().geometry().center() -
+            self.rect().center()
+        )

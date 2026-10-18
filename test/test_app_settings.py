@@ -98,6 +98,25 @@ def test_persist_roundtrip(tmp_path):
     assert s2.get("general", "theme") == "light"
 
 
+def test_reset_restores_defaults(tmp_path):
+    """reset 清空所有已保存值并恢复默认值，旧文件保留 .bak 备份"""
+    s = AppSettings(config_dir=tmp_path)
+    s.set("general", "language", "en")
+    s.set("general", "theme", "light")
+    s.set("window", "geometry", "abc")
+    s.save()
+
+    s.reset()
+
+    ini = _read_ini(tmp_path / INI_NAME)
+    assert ini.get("general", "language") == "zh_CN"
+    assert ini.get("general", "theme") == "dark"
+    assert ini.get("window", "geometry") == ""
+    assert (tmp_path / (INI_NAME + ".bak")).exists()
+    # 恢复后的值视为默认值，而非用户显式保存
+    assert not s.is_explicit("general", "language")
+
+
 # ==================== 3. 损坏文件回退 ====================
 
 
