@@ -7,6 +7,8 @@
 import os
 from collections import namedtuple
 
+from common.i18n import t
+
 # ==================== 模块可用性检查 ====================
 try:
     from PIL import Image, ImageOps
@@ -53,7 +55,7 @@ def get_image_size(file_path):
             return f"{img.width} x {img.height}"
     except Exception as e:
         print(f"get_image_size error: {e}")
-        return "读取失败"
+        return t("common.cell.read_failed")
 
 
 def get_file_size(file_path):
@@ -68,7 +70,7 @@ def get_file_size(file_path):
             return f"{size / (1024 * 1024):.1f} MB"
     except OSError as e:
         print(f"get_file_size error: {e}")
-        return "未知"
+        return t("common.cell.unknown")
 
 
 def get_create_time(file_path):
@@ -79,7 +81,7 @@ def get_create_time(file_path):
         return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t))
     except OSError as e:
         print(f"get_create_time error: {e}")
-        return "未知"
+        return t("common.cell.unknown")
 
 
 def get_modify_time(file_path):
@@ -90,7 +92,7 @@ def get_modify_time(file_path):
         return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(t))
     except OSError as e:
         print(f"get_modify_time error: {e}")
-        return "未知"
+        return t("common.cell.unknown")
 
 
 def get_pdf_pages(file_path):
@@ -160,7 +162,7 @@ def check_dir_writable(dir_path):
             f"请检查目录权限，或关闭可能占用该目录的程序。"
         )
     except Exception as e:
-        return False, f"无法访问输出目录：{str(e)}"
+        return False, t("common.error.dir_access", error=str(e))
 
 
 def check_file_writable(file_path):
@@ -179,7 +181,7 @@ def check_file_writable(file_path):
             f"请先关闭该文件（如在 WPS、Adobe Reader 等软件中打开），然后重试。"
         )
     except Exception as e:
-        return False, f"无法访问目标文件：{str(e)}"
+        return False, t("common.error.file_access", error=str(e))
 
 
 # ==================== 主题样式生成器 ====================

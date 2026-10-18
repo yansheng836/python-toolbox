@@ -119,7 +119,7 @@ class FileListPanel(QWidget):
         # 表格
         self.table = QTableWidget()
         self.table.setColumnCount(len(self.columns))
-        self.table.setHorizontalHeaderLabels([col.label for col in self.columns])
+        self.table.setHorizontalHeaderLabels([self._column_label(col) for col in self.columns])
         header = self.table.horizontalHeader()
 
         # 应用列宽设置
@@ -171,6 +171,15 @@ class FileListPanel(QWidget):
 
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
+
+    def _column_label(self, col):
+        """列显示名：优先词典 column.<id>，缺失时回退列自带 label
+
+        创建表头与语言切换重放共用，保证英文启动时表头即为英文。
+        """
+        key = f"column.{col.id}"
+        translated = t(key)
+        return translated if translated != key else col.label
 
     def retranslate_ui(self):
         """语言切换后重放表头（按钮/水印已由 bind 自动重放）
@@ -352,7 +361,7 @@ class FileListPanel(QWidget):
                     text = str(col.func(file_path))
                 except Exception as e:
                     print(f"Error in file_list_panel: {e}")
-                    text = "错误"
+                    text = t("common.cell.error")
                 item = QTableWidgetItem(text)
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.table.setItem(row, col_idx, item)
