@@ -52,6 +52,15 @@ except ImportError:
 
 block_cipher = None
 
+# Qt 标准对话框翻译（qtbase_<locale>.qm），供 i18n.install_qt_translator 使用
+try:
+    from PyInstaller.utils.hooks import collect_data_files
+    _qt_translations = collect_data_files(
+        'PyQt6', subdir='Qt6/translations', includes=['qtbase_*.qm'])
+except Exception as e:
+    print(f"警告：未能收集 Qt 标准翻译文件，Qt 标准对话框将回退默认语言：{e}")
+    _qt_translations = []
+
 a = Analysis(
     ['main.py'],  # 主入口点改为 main.py
     pathex=[],
@@ -64,7 +73,7 @@ a = Analysis(
         ('plugins', 'plugins'),
         ('i18n', 'i18n'),  # 语言词典（运行时从 _MEIPASS/i18n 加载）
         ('favicon.ico', '.'),
-    ],
+    ] + _qt_translations,
     hiddenimports=[
         # 项目模块
         'toolbox',
