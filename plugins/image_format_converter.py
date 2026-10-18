@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
     QComboBox, QLineEdit, QGridLayout
 )
 
+from common.i18n import t
 from common.dialog_utils import get_existing_directory
 from common.action_panel import ActionPanel
 from common.utils import PIL_AVAILABLE, load_oriented_image
@@ -225,7 +226,7 @@ class FormatConverter(ToolPlugin):
     def start_convert(self):
         files = self.file_panel.get_files()
         if not files:
-            self._show_empty_warning("请先添加图片！")
+            self._show_empty_warning(t("plugin.image_format_converter.warning.no_files"))
             return
 
         self.action_panel.start_task(len(files), status="")

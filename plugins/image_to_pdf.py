@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QGridLayout, QCheckBox
 )
 
+from common.i18n import t
 from common.dialog_utils import get_save_file_name
 from common.action_panel import ActionPanel
 from common.utils import PIL_AVAILABLE, IMG2PDF_AVAILABLE, FITZ_AVAILABLE
@@ -445,7 +446,7 @@ class ImageToPDF(ToolPlugin):
     def start_conversion(self):
         files = self.file_panel.get_files()
         if not files:
-            self._show_empty_warning("请先添加图片！")
+            self._show_empty_warning(t("plugin.image_to_pdf.warning.no_files"))
             return
 
         output = self.output_path.text()

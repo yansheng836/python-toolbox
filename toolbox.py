@@ -12,10 +12,10 @@ from typing import Dict
 
 # 从config.py导入全局配置
 from config import (
-    APP_NAME, APP_VERSION, APP_COPYRIGHT,
+    APP_VERSION, APP_COPYRIGHT,
     APP_WEBSITE_URL, APP_WEBSITE_LINK_TEXT,
     APP_UPDATE_URL, APP_ISSUE_URL,
-    FEATURE_MODULES, PLUGIN_MODULES, UI_CONFIG, WELCOME_CONFIG,
+    PLUGIN_MODULES, UI_CONFIG,
     TITLE_STYLES, FONT_SIZE_12, FONT_SIZE_14, FONT_SIZE_16, FONT_SIZE_20,
     FONT_WEIGHT_600, FONT_WEIGHT_700, FONT_WEIGHT_800,
     SPACING_SMALL
@@ -206,6 +206,7 @@ class SidebarButton(QPushButton):
     def __init__(self, plugin_id, text, icon_text, parent=None):
         super().__init__(parent)
         self._plugin_id = plugin_id
+        self._icon_text = icon_text
         self.setText(f"  {icon_text}  {text}")
         self.setMinimumHeight(48)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -236,6 +237,11 @@ class SidebarButton(QPushButton):
         """返回该按钮绑定的插件稳定 id"""
         return self._plugin_id
 
+    def set_texts(self, text, icon_text):
+        """更新按钮显示文本（保留 icon+文本的双空格布局），供语言切换重放"""
+        self._icon_text = icon_text
+        self.setText(f"  {icon_text}  {text}")
+
 
 # ==================== 核心功能模块 ====================
 class ToolPlugin:
@@ -264,6 +270,9 @@ class ToolPlugin:
 
     def update_theme(self, theme):
         """更新主题 - 由子类实现"""
+
+    def retranslate_ui(self):
+        """语言切换时刷新界面文本 - 由子类实现（与 update_theme 对称）"""
 
     # ==================== 共享辅助方法 ====================
 
@@ -297,11 +306,13 @@ class ToolPlugin:
         )
         layout.addWidget(self.desc_label)
 
-    def _show_empty_warning(self, message="请先添加文件！"):
+    def _show_empty_warning(self, message=None):
         """弹出文件为空警告"""
         from common.message_utils import show_warning
+        if message is None:
+            message = t("app.warning.empty_files")
         parent = self.widget if self.widget else None
-        show_warning(parent, "警告", message)
+        show_warning(parent, t("app.dialog.warning_title"), message)
 
     def _finish_with_message(self, action_panel, success, message):
         """完成任务并显示结果消息
@@ -312,9 +323,9 @@ class ToolPlugin:
         action_panel.finish_task(message)
         parent = self.widget if self.widget else None
         if success:
-            show_info(parent, "完成", message)
+            show_info(parent, t("app.dialog.done_title"), message)
         else:
-            show_error(parent, "错误", message)
+            show_error(parent, t("app.dialog.error_title"), message)
 
 
 # ==================== 拖拽处理工具类 ====================
@@ -504,6 +515,23 @@ class WelcomePage(QWidget):
                 }}
             """)
 
+    def retranslate_ui(self):
+        """语言切换后重放欢迎页文本（title/subtitle/hint/功能卡片）"""
+        if self.title:
+            self.title.setText(t("welcome.title"))
+        if self.subtitle:
+            self.subtitle.setText(t("welcome.subtitle"))
+        if self.hint:
+            self.hint.setText(t("welcome.hint"))
+        for pid, text_label, desc_label in zip(
+            self._feature_ids, self.text_labels, self.desc_labels
+        ):
+            if text_label:
+                text_label.setText(t(f"plugin.{pid}.name"))
+            if desc_label:
+                desc = t(f"plugin.{pid}.description")
+                desc_label.setText(desc[:40] + "..." if len(desc) > 40 else desc)
+
     @staticmethod
     def _get_favicon_path():
         """获取 favicon.ico 的路径，支持开发模式和打包模式"""
@@ -535,7 +563,7 @@ class WelcomePage(QWidget):
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(logo)
 
-        self.title = SelectableLabel(APP_NAME)
+        self.title = SelectableLabel(t("welcome.title"))
         self.title.setStyleSheet(f"""
             font-size: 36px;
             font-weight: {FONT_WEIGHT_800};
@@ -544,7 +572,7 @@ class WelcomePage(QWidget):
         self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.title)
 
-        self.subtitle = SelectableLabel(WELCOME_CONFIG.get("subtitle", ""))
+        self.subtitle = SelectableLabel(t("welcome.subtitle"))
         self.subtitle.setStyleSheet(f"""
             font-size: {FONT_SIZE_16};
             color: {Theme.DARK['text_secondary']};
@@ -590,7 +618,12 @@ class WelcomePage(QWidget):
         features_layout.setSpacing(10)
         features_layout.setContentsMargins(5, 10, 5, 10)
 
-        for icon, text, desc in FEATURE_MODULES:
+        # 卡片按 PLUGIN_MODULES 顺序创建；记录稳定 id 供语言切换重放
+        self._feature_ids = [p["id"] for p in PLUGIN_MODULES if p["order"] < 999]
+        for p in PLUGIN_MODULES:
+            if p["order"] >= 999:
+                continue
+            icon, text, desc = p["icon"], t(f"plugin.{p['id']}.name"), t(f"plugin.{p['id']}.description")
             card = QFrame()
             card.setObjectName("card")
             # 卡片内边距：左右调小至8px，使内容更紧凑（原12px）
@@ -650,7 +683,7 @@ class WelcomePage(QWidget):
         self.scroll_area.setWidget(self.features_widget)
         layout.addWidget(self.scroll_area)
 
-        self.hint = SelectableLabel(WELCOME_CONFIG.get("hint", ""))
+        self.hint = SelectableLabel(t("welcome.hint"))
         self.hint.setStyleSheet(f"""
             font-size: {FONT_SIZE_16};
             color: {Theme.DARK['primary']};
@@ -890,6 +923,10 @@ class ToolboxWindow(QMainWindow):
         self.init_theme()
         self.setup_menu()
 
+        # 语言切换：信号驱动全窗重放（构造时语言已由 main.py 设置，文本即正确）
+        from common import i18n
+        i18n.manager.language_changed.connect(self.retranslate_ui)
+
     def setup_ui(self):
         central = QWidget()
         self.setCentralWidget(central)
@@ -925,7 +962,7 @@ class ToolboxWindow(QMainWindow):
         else:
             self.logo_icon.setText("🧰")
             self.logo_icon.setStyleSheet("font-size: 28px;")
-        self.logo_text = SelectableLabel("工具箱")
+        self.logo_text = SelectableLabel(t("sidebar.logo_text"))
         logo_layout.addWidget(self.logo_icon)
         logo_layout.addWidget(self.logo_text)
         logo_layout.addStretch()
@@ -938,7 +975,7 @@ class ToolboxWindow(QMainWindow):
         sidebar_layout.addWidget(self.sidebar_line)
 
         # 首页按钮
-        self.home_btn = SidebarButton(None, "首页", "🏠")
+        self.home_btn = SidebarButton(None, t("sidebar.home"), "🏠")
         self.home_btn.setChecked(True)
         self.home_btn.clicked.connect(self.switch_to_welcome)
         sidebar_layout.addWidget(self.home_btn)
@@ -951,7 +988,7 @@ class ToolboxWindow(QMainWindow):
 
         sidebar_layout.addStretch()
 
-        self.version_label = SelectableLabel(f"v{APP_VERSION}")
+        self.version_label = SelectableLabel(t("sidebar.version", version=APP_VERSION))
         self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sidebar_layout.addWidget(self.version_label)
 
@@ -961,7 +998,7 @@ class ToolboxWindow(QMainWindow):
         self.sidebar_toggle_btn.setFixedWidth(36)
         self.sidebar_toggle_btn.setIconSize(QSize(22, 22))
         self.sidebar_toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.sidebar_toggle_btn.setToolTip("收起侧边栏")
+        self.sidebar_toggle_btn.setToolTip(t("sidebar.tooltip.collapse"))
         self.sidebar_toggle_btn.clicked.connect(self._toggle_sidebar)
         self.sidebar_toggle_btn.installEventFilter(self)
         self._set_toggle_icon()
@@ -1018,7 +1055,7 @@ class ToolboxWindow(QMainWindow):
             plugin = plugin_class(self)
             self.plugins[plugin.id] = plugin
 
-            btn = SidebarButton(plugin.id, plugin.name, plugin.icon)
+            btn = SidebarButton(plugin.id, t(f"plugin.{plugin.id}.name"), plugin.icon)
             from functools import partial
             btn.clicked.connect(partial(self.switch_plugin, plugin.id))
             self.nav_layout.addWidget(btn)
@@ -1187,7 +1224,7 @@ class ToolboxWindow(QMainWindow):
                 self._cleanup_expand_effects
             )
             self._expand_fadein_anims.start()
-            self.sidebar_toggle_btn.setToolTip("收起侧边栏")
+            self.sidebar_toggle_btn.setToolTip(t("sidebar.tooltip.collapse"))
         else:
             self._sidebar_animating = False
             # 子控件已在动画中淡出，此时彻底隐藏
@@ -1195,7 +1232,7 @@ class ToolboxWindow(QMainWindow):
             # 移除透明度效果，恢复常规渲染
             for w in self._sidebar_children:
                 w.setGraphicsEffect(None)
-            self.sidebar_toggle_btn.setToolTip("展开侧边栏")
+            self.sidebar_toggle_btn.setToolTip(t("sidebar.tooltip.expand"))
 
         # 更新折叠态的按钮装饰线
         self._update_toggle_button_style()
@@ -1459,9 +1496,11 @@ class ToolboxWindow(QMainWindow):
             self.welcome_page.update_theme(theme)
 
     def setup_tray(self):
+        self._tray_show_action = None
+        self._tray_quit_action = None
         if QSystemTrayIcon.isSystemTrayAvailable():
             self.tray = QSystemTrayIcon(self)
-            self.tray.setToolTip("工具箱")
+            self.tray.setToolTip(t("tray.tooltip"))
 
             current_dir = os.path.dirname(os.path.abspath(__file__))
             icon_path = os.path.join(current_dir, "favicon.ico")
@@ -1473,36 +1512,75 @@ class ToolboxWindow(QMainWindow):
                 self.tray.setIcon(QIcon(pixmap))
 
             menu = QMenu()
-            show_action = menu.addAction("显示")
-            show_action.triggered.connect(self.show)
-            quit_action = menu.addAction("退出")
-            quit_action.triggered.connect(QApplication.quit)
+            self._tray_show_action = menu.addAction(t("tray.show"))
+            self._tray_show_action.triggered.connect(self.show)
+            self._tray_quit_action = menu.addAction(t("tray.quit"))
+            self._tray_quit_action.triggered.connect(QApplication.quit)
             self.tray.setContextMenu(menu)
             self.tray.activated.connect(self.tray_activated)
             self.tray.show()
 
     def setup_menu(self):
         menubar = self.menuBar()
-        file_menu = menubar.addMenu('文件')
-        exit_action = QAction('退出', self)
-        exit_action.setShortcut('Ctrl+Q')
-        exit_action.triggered.connect(QApplication.quit)
-        file_menu.addAction(exit_action)
+        self.file_menu = menubar.addMenu(t("menu.file"))
+        self.exit_action = QAction(t("menu.exit"), self)
+        self.exit_action.setShortcut('Ctrl+Q')
+        self.exit_action.triggered.connect(QApplication.quit)
+        self.file_menu.addAction(self.exit_action)
 
-        tools_menu = menubar.addMenu('工具')
-        settings_action = QAction('设置', self)
-        settings_action.setShortcut('Ctrl+S')
-        settings_action.triggered.connect(self.show_settings)
-        tools_menu.addAction(settings_action)
+        self.tools_menu = menubar.addMenu(t("menu.tools"))
+        self.settings_action = QAction(t("menu.settings"), self)
+        self.settings_action.setShortcut('Ctrl+S')
+        self.settings_action.triggered.connect(self.show_settings)
+        self.tools_menu.addAction(self.settings_action)
 
-        view_menu = menubar.addMenu('视图')
-        toggle_sidebar_action = QAction('切换侧边栏', self)
-        toggle_sidebar_action.setShortcut('Ctrl+B')
-        toggle_sidebar_action.triggered.connect(self._toggle_sidebar)
-        view_menu.addAction(toggle_sidebar_action)
+        self.view_menu = menubar.addMenu(t("menu.view"))
+        self.toggle_sidebar_action = QAction(t("menu.toggle_sidebar"), self)
+        self.toggle_sidebar_action.setShortcut('Ctrl+B')
+        self.toggle_sidebar_action.triggered.connect(self._toggle_sidebar)
+        self.view_menu.addAction(self.toggle_sidebar_action)
 
     def show_settings(self):
         self.switch_plugin("settings")
+
+    def retranslate_ui(self):
+        """语言切换后重放主框架全部用户可见文本"""
+        self.setWindowTitle(t("app.window_title", version=APP_VERSION))
+        self.logo_text.setText(t("sidebar.logo_text"))
+        self.home_btn.set_texts(t("sidebar.home"), "🏠")
+        self.version_label.setText(t("sidebar.version", version=APP_VERSION))
+        self.sidebar_toggle_btn.setToolTip(
+            t("sidebar.tooltip.expand" if not self.sidebar_expanded else "sidebar.tooltip.collapse")
+        )
+
+        # 侧边栏插件按钮：按稳定 id 查词典
+        for i in range(self.nav_layout.count()):
+            widget = self.nav_layout.itemAt(i).widget()
+            if isinstance(widget, SidebarButton) and widget.plugin_id() is not None:
+                pid = widget.plugin_id()
+                widget.set_texts(t(f"plugin.{pid}.name"), widget._icon_text)
+
+        # 托盘（未托盘环境为 None）
+        if getattr(self, "tray", None) is not None:
+            self.tray.setToolTip(t("tray.tooltip"))
+        if self._tray_show_action is not None:
+            self._tray_show_action.setText(t("tray.show"))
+        if self._tray_quit_action is not None:
+            self._tray_quit_action.setText(t("tray.quit"))
+
+        # 菜单
+        self.file_menu.setTitle(t("menu.file"))
+        self.exit_action.setText(t("menu.exit"))
+        self.tools_menu.setTitle(t("menu.tools"))
+        self.settings_action.setText(t("menu.settings"))
+        self.view_menu.setTitle(t("menu.view"))
+        self.toggle_sidebar_action.setText(t("menu.toggle_sidebar"))
+
+        # 欢迎页与各插件（基类空实现兜底）
+        if hasattr(self, "welcome_page"):
+            self.welcome_page.retranslate_ui()
+        for plugin in self.plugins.values():
+            plugin.retranslate_ui()
 
     def tray_activated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
