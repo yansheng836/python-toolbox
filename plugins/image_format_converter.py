@@ -61,7 +61,10 @@ class FormatConvertWorker(BaseWorker):
             processed = 0
             pil_fmt, ext = self.FORMAT_MAP[self.target_fmt]
             for i, file_path in enumerate(self.files):
-                self.status.emit(f"正在转换: {os.path.basename(file_path)}")
+                self.status.emit(t(
+                    "plugin.image_format_converter.msg.converting",
+                    name=os.path.basename(file_path),
+                ))
                 # 校正 EXIF 方向后返回独立副本，保存时不受源文件句柄生命周期影响
                 img = self._prepare_image(load_oriented_image(file_path), pil_fmt)
                 base = os.path.splitext(os.path.basename(file_path))[0]
@@ -91,10 +94,12 @@ class FormatConvertWorker(BaseWorker):
                 img.close()  # 释放内存
                 processed += 1
                 self.progress.emit(i + 1)
-            self.finished.emit(True, f"成功转换 {processed} 张图片！")
+            self.finished.emit(True, t(
+                "plugin.image_format_converter.msg.success", count=processed))
         except Exception as e:
             print(f"Error in image_format_converter: {e}")
-            self.finished.emit(False, f"转换失败: {str(e)}")
+            self.finished.emit(False, t(
+                "plugin.image_format_converter.error.convert_failed", error=str(e)))
 
     def _prepare_image(self, img, pil_fmt):
         """处理模式兼容性，JPEG/BMP 不支持透明通道"""
@@ -159,6 +164,30 @@ class FormatConverter(ToolPlugin):
         except RuntimeError:
             pass  # C++ object already deleted
 
+    def retranslate_ui(self):
+        """语言切换后重放全部用户可见文本"""
+        self.title_label.setText(
+            f"{self.icon} {t('plugin.image_format_converter.name')}")
+        self.desc_label.setText(
+            t("plugin.image_format_converter.description"))
+        self.file_card.title_label.setText(
+            t("plugin.image_format_converter.card.select_images"))
+        self.settings_card.title_label.setText(
+            t("plugin.image_format_converter.card.settings"))
+        self.target_format_label.setText(
+            t("plugin.image_format_converter.label.target_format"))
+        self.output_dir_label.setText(
+            t("plugin.image_format_converter.label.output_dir"))
+        self.output_path.setPlaceholderText(
+            t("plugin.image_format_converter.placeholder.output_dir"))
+        self.browse_btn.setText(
+            t("plugin.image_format_converter.button.browse"))
+        self.action_panel.btn.setText(
+            t("plugin.image_format_converter.button.start"))
+        # FileListPanel 内部按钮/水印属于共享组件，此处只同步本插件传入的过滤器
+        self.file_panel.file_filter = t(
+            "plugin.image_format_converter.filter.images")
+
     def create_ui(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
@@ -166,48 +195,59 @@ class FormatConverter(ToolPlugin):
         self.theme = Theme.DARK
 
         # 标题 + 描述
-        self._setup_header(layout, theme=self.theme)
+        self._setup_header(
+            layout,
+            title=f"{self.icon} {t('plugin.image_format_converter.name')}",
+            desc=t("plugin.image_format_converter.description"),
+            theme=self.theme,
+        )
 
         # 文件选择区域
-        file_card = Card(title="选择图片")
+        self.file_card = Card(title=t("plugin.image_format_converter.card.select_images"))
         self.file_panel = FileListPanel(
             columns=IMAGE_COLUMNS,
-            file_filter="图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.tiff *.tif *.gif)",
+            file_filter=t("plugin.image_format_converter.filter.images"),
             button_class=AnimatedButton,
             show_buttons=["add", "remove", "clear"]
         )
-        file_card.content_layout.addWidget(self.file_panel)
-        layout.addWidget(file_card)
+        self.file_card.content_layout.addWidget(self.file_panel)
+        layout.addWidget(self.file_card)
 
         # 转换设置
-        settings_card = Card(title="转换设置")
+        self.settings_card = Card(title=t("plugin.image_format_converter.card.settings"))
         settings_layout = QGridLayout()
         settings_layout.setSpacing(SPACING_SMALL)
-        settings_card.content_layout.addLayout(settings_layout)
+        self.settings_card.content_layout.addLayout(settings_layout)
 
-        settings_layout.addWidget(SelectableLabel("目标格式:"), 0, 0)
+        self.target_format_label = SelectableLabel(
+            t("plugin.image_format_converter.label.target_format"))
+        settings_layout.addWidget(self.target_format_label, 0, 0)
         self.fmt_combo = QComboBox()
         for fmt in self.FORMATS:
             self.fmt_combo.addItem(fmt, fmt)
         self.fmt_combo.setStyleSheet(get_combo_style(self.theme))
         settings_layout.addWidget(self.fmt_combo, 0, 1)
 
-        settings_layout.addWidget(SelectableLabel("输出目录:"), 1, 0)
+        self.output_dir_label = SelectableLabel(
+            t("plugin.image_format_converter.label.output_dir"))
+        settings_layout.addWidget(self.output_dir_label, 1, 0)
         out_row = QHBoxLayout()
         self.output_path = QLineEdit()
-        self.output_path.setPlaceholderText("默认保存到原图目录")
+        self.output_path.setPlaceholderText(
+            t("plugin.image_format_converter.placeholder.output_dir"))
         self.output_path.setStyleSheet(get_lineedit_style(self.theme))
-        browse_btn = AnimatedButton("浏览")
-        browse_btn.setMaximumWidth(80)
-        browse_btn.clicked.connect(self.browse_output)
+        self.browse_btn = AnimatedButton(
+            t("plugin.image_format_converter.button.browse"))
+        self.browse_btn.setMaximumWidth(80)
+        self.browse_btn.clicked.connect(self.browse_output)
         out_row.addWidget(self.output_path)
-        out_row.addWidget(browse_btn)
+        out_row.addWidget(self.browse_btn)
         settings_layout.addLayout(out_row, 1, 1)
-        layout.addWidget(settings_card)
+        layout.addWidget(self.settings_card)
 
         # 操作面板（按钮 + 进度条 + 状态标签）
         self.action_panel = ActionPanel(
-            button_text="开始转换"
+            button_text=t("plugin.image_format_converter.button.start")
         )
         self.action_panel.clicked.connect(self.start_convert)
         layout.addWidget(self.action_panel)
@@ -219,7 +259,8 @@ class FormatConverter(ToolPlugin):
 
     def browse_output(self):
         parent = self.widget if self.widget else None
-        path = get_existing_directory(parent, "选择输出目录")
+        path = get_existing_directory(
+            parent, t("plugin.image_format_converter.dialog.select_output_dir"))
         if path:
             self.output_path.setText(path)
 
