@@ -36,7 +36,7 @@ from common.i18n import t, bind_combo
 class ScalingWorker(BaseWorker):
     progress_updated = pyqtSignal(int, int)
     image_processed = pyqtSignal(str, str)
-    # 继承 BaseWorker 的 finished 信号
+    # 继承 BaseWorker 的 result 信号
 
     def __init__(self, input_files: List[str], output_dir: str, scale_type: str,
                  scale_value: float, quality: int, maintain_aspect: bool,
@@ -58,7 +58,7 @@ class ScalingWorker(BaseWorker):
             output_dir = self.output_dir or os.path.dirname(self.input_files[0]) if self.input_files else '.'
             writable, err_msg = check_dir_writable(output_dir)
             if not writable:
-                self.finished.emit(False, err_msg)
+                self.result.emit(False, err_msg)
                 return
 
             # 如果指定了输出目录，则创建
@@ -66,10 +66,12 @@ class ScalingWorker(BaseWorker):
                 os.makedirs(self.output_dir, exist_ok=True)
             total = len(self.input_files)
             success_count = 0
+            failed_files = []
 
             for i, input_file in enumerate(self.input_files):
                 try:
                     img = load_oriented_image(input_file)
+                    exif_bytes = img.info.get('exif')
                     try:
                         if self.scale_type == "percent":
                             new_width = int(img.width * self.scale_value / 100)
@@ -103,11 +105,11 @@ class ScalingWorker(BaseWorker):
                         )
 
                         if input_path.suffix.lower() in ['.jpg', '.jpeg']:
-                            scaled_img.save(output_file, "JPEG", quality=self.quality)
+                            scaled_img.save(output_file, "JPEG", quality=self.quality, exif=exif_bytes)
                         elif input_path.suffix.lower() == '.png':
-                            scaled_img.save(output_file, "PNG")
+                            scaled_img.save(output_file, "PNG", exif=exif_bytes)
                         else:
-                            scaled_img.save(output_file)
+                            scaled_img.save(output_file, exif=exif_bytes)
                     finally:
                         scaled_img.close()  # 释放内存
 
@@ -116,17 +118,27 @@ class ScalingWorker(BaseWorker):
 
                 except Exception as e:
                     print(f"Error processing {input_file}: {str(e)}")
+                    failed_files.append(f"{input_file}: {str(e)}")
 
                 progress = int((i + 1) / total * 100)
                 self.progress_updated.emit(progress, i + 1)
 
-            self.finished.emit(
-                True, t("plugin.image_scaler.msg.success", count=success_count, total=total)
+            result_msg = t(
+                "plugin.image_scaler.msg.success", count=success_count, total=total
             )
+            if failed_files:
+                result_msg += t("plugin.image_scaler.msg.failures_header")
+                result_msg += "\n".join(failed_files[:5])
+                if len(failed_files) > 5:
+                    result_msg += t(
+                        "plugin.image_scaler.msg.more_failures",
+                        count=len(failed_files) - 5,
+                    )
+            self.result.emit(True, result_msg)
 
         except Exception as e:
             print(f"Error in image_scaler: {e}")
-            self.finished.emit(
+            self.result.emit(
                 False, t("plugin.image_scaler.error.process_failed", error=str(e))
             )
 
@@ -384,7 +396,7 @@ class ImageScalerWidget(QWidget):
         )
 
         self.worker.progress_updated.connect(self.on_progress_updated)
-        self.worker.finished.connect(self.on_scaling_finished)
+        self.worker.result.connect(self.on_scaling_finished)
         self.worker.image_processed.connect(self.on_image_processed)
 
         self.action_panel.start_task(

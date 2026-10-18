@@ -133,7 +133,7 @@ def test_worker_scan_emits_candidates_and_completion(tmp_path):
     found = []
     finished = []
     worker.folders_found.connect(found.append)
-    worker.finished.connect(lambda success, message: finished.append((success, message)))
+    worker.result.connect(lambda success, message: finished.append((success, message)))
 
     worker.run()
 

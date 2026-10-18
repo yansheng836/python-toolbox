@@ -236,7 +236,7 @@ def test_worker_messages_use_dictionary(qapp, tmp_path):
     statuses = []
     results = []
     worker.status.connect(statuses.append)
-    worker.finished.connect(lambda ok, msg: results.append((ok, msg)))
+    worker.result.connect(lambda ok, msg: results.append((ok, msg)))
 
     worker.run()
 

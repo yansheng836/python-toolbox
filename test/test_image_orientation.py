@@ -27,7 +27,7 @@ def _make_orientation_six_jpeg(path, size=(120, 60), color=(220, 40, 40)):
 def _run_worker(worker):
     """同步运行 worker，返回完成信号结果。"""
     results = []
-    worker.finished.connect(lambda success, message: results.append((success, message)))
+    worker.result.connect(lambda success, message: results.append((success, message)))
     worker.run()
     assert results, "worker 未发出完成信号"
     return results[-1]

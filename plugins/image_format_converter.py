@@ -29,7 +29,7 @@ from common.utils import IMAGE_COLUMNS, get_combo_style, get_lineedit_style
 
 class FormatConvertWorker(BaseWorker):
     """图片格式转换工作线程"""
-    # 继承 BaseWorker 的标准信号：progress, status, finished
+    # 继承 BaseWorker 的标准信号：progress, status, result
 
     FORMAT_MAP = {
         "JPEG": ("JPEG", "jpg"),
@@ -55,51 +55,99 @@ class FormatConvertWorker(BaseWorker):
             )
             writable, err_msg = check_dir_writable(out_dir)
             if not writable:
-                self.finished.emit(False, err_msg)
+                self.result.emit(False, err_msg)
                 return
 
-            processed = 0
             pil_fmt, ext = self.FORMAT_MAP[self.target_fmt]
+            # 归一化源文件路径集合，用于输出防覆盖判断（H3）
+            self._source_paths = {
+                os.path.normcase(os.path.abspath(f)) for f in self.files
+            }
+            processed = 0
+            failed = 0
+            failed_files = []
             for i, file_path in enumerate(self.files):
-                self.status.emit(t(
-                    "plugin.image_format_converter.msg.converting",
-                    name=os.path.basename(file_path),
-                ))
-                # 校正 EXIF 方向后返回独立副本，保存时不受源文件句柄生命周期影响
-                img = self._prepare_image(load_oriented_image(file_path), pil_fmt)
-                base = os.path.splitext(os.path.basename(file_path))[0]
-                out_dir = self.output_dir or os.path.dirname(file_path)
-                out_path = os.path.join(out_dir, f"{base}.{ext}")
-                # 为各格式添加压缩参数，避免文件变大
-                save_kwargs = {}
-                if pil_fmt == "JPEG":
-                    save_kwargs['quality'] = 85
-                    save_kwargs['optimize'] = True
-                    # 去除 ICC 配置，避免某些图片报 "broken data stream" 错误
-                    if 'icc_profile' in img.info:
-                        del img.info['icc_profile']
-                elif pil_fmt == "PNG":
-                    save_kwargs['compress_level'] = 6
-                    save_kwargs['optimize'] = True
-                elif pil_fmt == "BMP":
-                    if img.mode != "RGB":
-                        new_img = img.convert("RGB")
-                        img.close()
-                        img = new_img
-                elif pil_fmt == "TIFF":
-                    save_kwargs['compression'] = "tiff_deflate"
-                elif pil_fmt == "GIF":
-                    save_kwargs['optimize'] = True
-                img.save(out_path, pil_fmt, **save_kwargs)
-                img.close()  # 释放内存
-                processed += 1
+                try:
+                    self._convert_one(file_path, pil_fmt, ext)
+                    processed += 1
+                except Exception as e:
+                    # per-file 捕获：单个坏文件不再中止整批（H8）
+                    print(f"convert error {file_path}: {e}")
+                    failed += 1
+                    failed_files.append(f"{file_path}: {str(e)}")
                 self.progress.emit(i + 1)
-            self.finished.emit(True, t(
-                "plugin.image_format_converter.msg.success", count=processed))
+
+            self._emit_result(processed, failed, failed_files)
         except Exception as e:
             print(f"Error in image_format_converter: {e}")
-            self.finished.emit(False, t(
+            self.result.emit(False, t(
                 "plugin.image_format_converter.error.convert_failed", error=str(e)))
+
+    def _convert_one(self, file_path, pil_fmt, ext):
+        """转换单张图片；异常向上抛出，由 run() 汇总为失败列表"""
+        self.status.emit(t(
+            "plugin.image_format_converter.msg.converting",
+            name=os.path.basename(file_path),
+        ))
+        # 校正 EXIF 方向后返回独立副本，保存时不受源文件句柄生命周期影响
+        src_img = load_oriented_image(file_path)
+        # 保存前捕获 EXIF：模式转换（convert / 白底合成）会清空 info（H9）
+        exif = src_img.info.get('exif')
+        img = self._prepare_image(src_img, pil_fmt)
+        try:
+            base = os.path.splitext(os.path.basename(file_path))[0]
+            out_dir = self.output_dir or os.path.dirname(file_path)
+            out_path = os.path.join(out_dir, f"{base}.{ext}")
+            # 防覆盖（H3）：目标路径若与任一待处理源文件相同（含自身，如 a.jpg→JPEG、
+            # a.png→JPEG 落在既有的 a.jpg 上），追加后缀，避免就地覆盖或覆盖待处理文件
+            out_abs = os.path.normcase(os.path.abspath(out_path))
+            if out_abs in self._source_paths:
+                out_path = os.path.join(out_dir, f"{base}_converted.{ext}")
+
+            # 为各格式添加压缩参数，避免文件变大
+            save_kwargs = {}
+            if pil_fmt == "JPEG":
+                save_kwargs['quality'] = 85
+                save_kwargs['optimize'] = True
+                # 主动移除 ICC：部分源图的 ICC 会触发 Pillow "broken data stream" 错误。
+                # 无损保留需重写 ICC 流，超出本次修复范围，维持既有降级策略（见 H9）
+                if 'icc_profile' in img.info:
+                    del img.info['icc_profile']
+            elif pil_fmt == "PNG":
+                save_kwargs['compress_level'] = 6
+                save_kwargs['optimize'] = True
+            elif pil_fmt == "BMP":
+                if img.mode != "RGB":
+                    new_img = img.convert("RGB")
+                    img.close()
+                    img = new_img
+            elif pil_fmt == "TIFF":
+                save_kwargs['compression'] = "tiff_deflate"
+            elif pil_fmt == "GIF":
+                save_kwargs['optimize'] = True
+
+            # 仅对支持 EXIF 的格式传入（BMP/GIF 不支持）
+            if exif and pil_fmt in ("JPEG", "PNG", "WEBP", "TIFF"):
+                save_kwargs['exif'] = exif
+
+            img.save(out_path, pil_fmt, **save_kwargs)
+        finally:
+            img.close()  # 释放内存
+
+    def _emit_result(self, success_count, failed, failed_files):
+        """汇总成功/失败结果；失败文件明细附在消息中（H8）"""
+        if failed == 0:
+            self.result.emit(True, t(
+                "plugin.image_format_converter.msg.success", count=success_count))
+            return
+        msg = t("plugin.image_format_converter.msg.convert_summary",
+                success=success_count, failed=failed)
+        msg += t("plugin.file_deduplicator.msg.failures_header")
+        msg += "\n".join(failed_files[:5])
+        if len(failed_files) > 5:
+            msg += t("plugin.file_deduplicator.msg.more_failures",
+                     count=len(failed_files) - 5)
+        self.result.emit(False, msg)
 
     def _prepare_image(self, img, pil_fmt):
         """处理模式兼容性，JPEG/BMP 不支持透明通道"""
@@ -280,7 +328,7 @@ class FormatConverter(ToolPlugin):
         )
         self.worker.progress.connect(self.action_panel.update_progress)
         self.worker.status.connect(self.action_panel.update_status)
-        self.worker.finished.connect(self.convert_finished)
+        self.worker.result.connect(self.convert_finished)
         self.worker.start()
 
     def convert_finished(self, success, message):

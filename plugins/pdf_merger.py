@@ -42,11 +42,11 @@ class PDFMergeWorker(BaseWorker):
             if self.output:
                 writable, err_msg = check_file_writable(self.output)
                 if not writable:
-                    self.finished.emit(False, err_msg)
+                    self.result.emit(False, err_msg)
                     return
 
             if not FITZ_AVAILABLE:
-                self.finished.emit(
+                self.result.emit(
                     False, t("plugin.pdf_merger.error.pymupdf_not_installed"))
                 return
 
@@ -58,16 +58,23 @@ class PDFMergeWorker(BaseWorker):
                     "plugin.pdf_merger.msg.processing",
                     name=os.path.basename(file_path)))
                 doc = fitz.open(file_path)
+                if doc.is_encrypted and doc.needs_pass:
+                    doc.close()
+                    merged.close()
+                    self.result.emit(False, t(
+                        "plugin.pdf_merger.error.encrypted",
+                        path=file_path))
+                    return
                 merged.insert_pdf(doc)
                 doc.close()
                 self.progress.emit(i + 1)
 
             merged.save(self.output)
             merged.close()
-            self.finished.emit(True, t(
+            self.result.emit(True, t(
                 "plugin.pdf_merger.msg.merge_done", count=len(self.files)))
         except Exception as e:
-            self.finished.emit(False, t(
+            self.result.emit(False, t(
                 "plugin.pdf_merger.error.merge_failed", error=str(e)))
 
 class PDFMergerWidget(QWidget):
@@ -202,7 +209,7 @@ class PDFMergerWidget(QWidget):
         self.worker = PDFMergeWorker(files, output)
         self.worker.progress.connect(self.action_panel.update_progress)
         self.worker.status.connect(self.action_panel.update_status)
-        self.worker.finished.connect(self.merge_finished)
+        self.worker.result.connect(self.merge_finished)
         self.worker.start()
 
     def merge_finished(self, success, message):

@@ -28,11 +28,19 @@ class TestBaseWorker:
         sig = BaseWorker.status
         assert isinstance(sig, pyqtSignal)
 
-    def test_has_finished_signal(self):
-        """应有 finished 信号 (bool, str)"""
-        assert hasattr(BaseWorker, "finished")
-        sig = BaseWorker.finished
+    def test_has_result_signal(self):
+        """应有 result 信号 (bool, str)"""
+        assert hasattr(BaseWorker, "result")
+        sig = BaseWorker.result
         assert isinstance(sig, pyqtSignal)
+
+    def test_does_not_shadow_builtin_finished(self):
+        """自定义结果信号不应遮蔽 QThread 内置的无参 finished 信号"""
+        worker = BaseWorker()
+        assert issubclass(type(worker), QThread)
+        # QThread 内置 finished 无参数；自定义 result 才是 (bool, str)
+        assert "finished" not in (BaseWorker.__dict__)
+        assert "result" in BaseWorker.__dict__
 
     def test_worker_can_be_instantiated(self, qapp):
         """BaseWorker 可以被实例化"""
@@ -48,12 +56,12 @@ class TestBaseWorker:
 
         worker.progress.connect(lambda v: results["progress"].append(v))
         worker.status.connect(lambda v: results["status"].append(v))
-        worker.finished.connect(lambda s, m: results["finished"].append((s, m)))
+        worker.result.connect(lambda s, m: results["finished"].append((s, m)))
 
         # 直接发射信号（不启动线程）
         worker.progress.emit(50)
         worker.status.emit("工作中...")
-        worker.finished.emit(True, "完成")
+        worker.result.emit(True, "完成")
 
         assert results["progress"] == [50]
         assert results["status"] == ["工作中..."]
@@ -67,7 +75,7 @@ class TestBaseWorker:
         worker = CustomWorker()
         assert hasattr(worker, "progress")
         assert hasattr(worker, "status")
-        assert hasattr(worker, "finished")
+        assert hasattr(worker, "result")
         assert hasattr(worker, "extra_data")
 
         results = []

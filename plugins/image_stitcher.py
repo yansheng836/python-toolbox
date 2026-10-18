@@ -17,7 +17,7 @@ from common.i18n import t, bind_combo
 from common.message_utils import show_warning
 from common.dialog_utils import get_save_file_name
 from common.action_panel import ActionPanel
-from common.utils import PIL_AVAILABLE, load_oriented_image
+from common.utils import PIL_AVAILABLE, check_file_writable, load_oriented_image
 from common.base_worker import BaseWorker
 
 if PIL_AVAILABLE:
@@ -33,11 +33,14 @@ from common.file_list_panel import FileListPanel
 from common.utils import IMAGE_COLUMNS, Column, get_create_time, get_combo_style, get_lineedit_style, get_spinbox_style
 
 MAX_DIMENSION = 60000  # Pillow 实际限制 65500，保守取值
+# 画布像素总量预算（宽×高）。RGBA 画布每像素约 4 字节，200M px 峰值约 800MB，
+# 超出后与 JPG 转码副本叠加易触发 MemoryError，故在分配画布前提前拦截
+MAX_PIXEL_BUDGET = 200_000_000
 
 
 class ImageStitchWorker(BaseWorker):
     """图片拼接工作线程（支持自动分批）"""
-    # 继承 BaseWorker 的标准信号：progress, status, finished
+    # 继承 BaseWorker 的标准信号：progress, status, result
     # progress 和 status 在此直接可用  # 整体进度 0-100
 
     def __init__(self, files, output_path, direction, align, bg_color):
@@ -164,7 +167,7 @@ class ImageStitchWorker(BaseWorker):
                     continue
 
             if not file_info:
-                self.finished.emit(False, t("plugin.image_stitcher.error.no_readable_images"))
+                self.result.emit(False, t("plugin.image_stitcher.error.no_readable_images"))
                 return
 
             # ========= 分批：max_size 先全局缩放，再分批；其他模式直接分批 =========
@@ -178,7 +181,7 @@ class ImageStitchWorker(BaseWorker):
                             ratio = max_w / w
                             nh = int(h * ratio)
                             if nh > MAX_DIMENSION:
-                                self.finished.emit(False, t(
+                                self.result.emit(False, t(
                                     "plugin.image_stitcher.error.scaled_too_large_height",
                                     height=nh,
                                     limit=MAX_DIMENSION,
@@ -187,7 +190,7 @@ class ImageStitchWorker(BaseWorker):
                             scaled.append((f, max_w, nh))
                         else:
                             if h > MAX_DIMENSION:
-                                self.finished.emit(False, t(
+                                self.result.emit(False, t(
                                     "plugin.image_stitcher.error.image_too_large_height",
                                     name=os.path.basename(f),
                                     height=h,
@@ -203,7 +206,7 @@ class ImageStitchWorker(BaseWorker):
                             ratio = max_h / h
                             nw = int(w * ratio)
                             if nw > MAX_DIMENSION:
-                                self.finished.emit(False, t(
+                                self.result.emit(False, t(
                                     "plugin.image_stitcher.error.scaled_too_large_width",
                                     width=nw,
                                     limit=MAX_DIMENSION,
@@ -212,7 +215,7 @@ class ImageStitchWorker(BaseWorker):
                             scaled.append((f, nw, max_h))
                         else:
                             if w > MAX_DIMENSION:
-                                self.finished.emit(False, t(
+                                self.result.emit(False, t(
                                     "plugin.image_stitcher.error.image_too_large_width",
                                     name=os.path.basename(f),
                                     width=w,
@@ -233,29 +236,19 @@ class ImageStitchWorker(BaseWorker):
                         else:
                             key = "plugin.image_stitcher.error.image_too_large_height"
                             params["height"] = img_dim
-                        self.finished.emit(False, t(key, **params))
+                        self.result.emit(False, t(key, **params))
                         return
                 batches = self._split_into_batches(file_info, self.direction)
 
             num_batches = len(batches)
 
             # ========= 预检查：所有目标文件是否被占用 =========
+            # check_file_writable 对不存在的目标仅验证父目录可写，不会创建 0 字节文件
             for bi in range(num_batches):
                 out_path = self._make_output_path(bi)
-                try:
-                    with open(out_path, 'ab') as f:
-                        pass
-                except PermissionError:
-                    self.finished.emit(False, t(
-                        "plugin.image_stitcher.error.output_locked",
-                        path=out_path,
-                    ))
-                    return
-                except Exception as e:
-                    self.finished.emit(False, t(
-                        "plugin.image_stitcher.error.output_access_failed",
-                        error=str(e),
-                    ))
+                writable, err = check_file_writable(out_path)
+                if not writable:
+                    self.result.emit(False, err)
                     return
 
             # ========= 逐批次拼接 =========
@@ -276,12 +269,23 @@ class ImageStitchWorker(BaseWorker):
 
                 # 最终检查：画布尺寸不得超过 Pillow 限制
                 if batch_w > MAX_DIMENSION or batch_h > MAX_DIMENSION:
-                    self.finished.emit(False, t(
+                    self.result.emit(False, t(
                         "plugin.image_stitcher.error.canvas_too_large",
                         index=bi + 1,
                         width=batch_w,
                         height=batch_h,
                         limit=MAX_DIMENSION,
+                    ))
+                    return
+
+                # 像素总量预算：防止超大画布耗尽内存（60000x60000 即可达 14.4GB）
+                if batch_w * batch_h > MAX_PIXEL_BUDGET:
+                    self.result.emit(False, t(
+                        "plugin.image_stitcher.error.pixel_budget_exceeded",
+                        index=bi + 1,
+                        width=batch_w,
+                        height=batch_h,
+                        limit=MAX_PIXEL_BUDGET,
                     ))
                     return
 
@@ -334,7 +338,7 @@ class ImageStitchWorker(BaseWorker):
                 to_save = canvas
                 if ext in (".jpg", ".jpeg", ".bmp"):
                     bg = Image.new("RGB", canvas.size, self.bg_color)
-                    bg.paste(canvas, mask=canvas.split()[3])
+                    bg.paste(canvas, mask=canvas.getchannel("A"))
                     to_save = bg
 
                 save_kwargs = {}
@@ -349,7 +353,7 @@ class ImageStitchWorker(BaseWorker):
 
                 # 最后防线：Pillow 硬限制 65500
                 if to_save.width > 65500 or to_save.height > 65500:
-                    self.finished.emit(False, t(
+                    self.result.emit(False, t(
                         "plugin.image_stitcher.error.pillow_limit",
                         width=to_save.width,
                         height=to_save.height,
@@ -369,11 +373,11 @@ class ImageStitchWorker(BaseWorker):
                 )
             if skipped > 0:
                 msg += t("plugin.image_stitcher.msg.skipped_note", count=skipped)
-            self.finished.emit(True, msg)
+            self.result.emit(True, msg)
         except Exception as e:
             error_detail = f"{str(e)}\n\n详细错误:\n{traceback.format_exc()}"
             print(error_detail)
-            self.finished.emit(False, t("plugin.image_stitcher.error.stitch_failed", error=str(e)))
+            self.result.emit(False, t("plugin.image_stitcher.error.stitch_failed", error=str(e)))
 
 
 class ImageStitcher(ToolPlugin):
@@ -591,7 +595,7 @@ class ImageStitcher(ToolPlugin):
         )
         self.worker.status.connect(self.action_panel.update_status)
         self.worker.progress.connect(self.action_panel.update_progress)
-        self.worker.finished.connect(self.stitch_finished)
+        self.worker.result.connect(self.stitch_finished)
         self.worker.start()
 
     def stitch_finished(self, success, message):

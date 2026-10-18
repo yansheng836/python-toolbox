@@ -206,16 +206,50 @@ class TestWritabilityErrorPath:
     """测试可写性检查的权限错误路径（i18n 错误消息）"""
 
     def test_check_file_writable_permission_error(self, monkeypatch):
-        """open 抛 PermissionError 时返回包含路径的 i18n 错误消息"""
+        """已存在的文件 open 抛 PermissionError 时返回包含路径的 i18n 错误消息"""
         file_path = "locked_file_marker.txt"
+        real_exists = os.path.exists
+
+        def fake_exists(path):
+            if path == file_path:
+                return True  # 目标已存在，才会走追加模式探测
+            return real_exists(path)
 
         def fake_open(path, *args, **kwargs):
             raise PermissionError("locked")
 
+        monkeypatch.setattr(os.path, "exists", fake_exists)
         monkeypatch.setattr(builtins, "open", fake_open)
         writable, msg = check_file_writable(file_path)
         assert writable is False
         assert file_path in msg
+
+    def test_check_file_writable_missing_file_no_probe(self, tmp_path, monkeypatch):
+        """目标不存在时不得创建探针文件，仅验证父目录可写"""
+        target = tmp_path / "new_output.pdf"
+        real_open = builtins.open
+
+        def fail_if_target_opened(path, *args, **kwargs):
+            if os.path.abspath(str(path)) == os.path.abspath(str(target)):
+                raise AssertionError("不存在的目标不应以任何模式打开文件")
+            return real_open(path, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "open", fail_if_target_opened)
+        writable, msg = check_file_writable(str(target))
+        assert writable is True
+        assert msg == ""
+        assert not target.exists()  # 未凭空创建 0 字节文件
+
+    def test_check_file_writable_locked_parent_dir(self, tmp_path, monkeypatch):
+        """目标不存在且父目录不可写时返回错误"""
+        target = tmp_path / "new_output.pdf"
+        monkeypatch.setattr(
+            "common.utils.check_dir_writable",
+            lambda _dir: (False, "locked"),
+        )
+        writable, msg = check_file_writable(str(target))
+        assert writable is False
+        assert msg == "locked"
 
     def test_check_dir_writable_permission_error(self, monkeypatch):
         """写测试文件抛 PermissionError 时返回包含目录路径的 i18n 错误消息"""

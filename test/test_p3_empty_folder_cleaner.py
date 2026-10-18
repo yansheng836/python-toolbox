@@ -134,7 +134,7 @@ def test_worker_scan_message_uses_dictionary(tmp_path):
     root.mkdir()
     worker = EmptyFolderWorker(str(root), "scan")
     finished = []
-    worker.finished.connect(
+    worker.result.connect(
         lambda success, message: finished.append((success, message))
     )
 
@@ -154,7 +154,7 @@ def test_worker_error_message_uses_dictionary(tmp_path):
     """不支持的操作走词典错误消息"""
     worker = EmptyFolderWorker(str(tmp_path), "unknown")
     finished = []
-    worker.finished.connect(
+    worker.result.connect(
         lambda success, message: finished.append((success, message))
     )
 

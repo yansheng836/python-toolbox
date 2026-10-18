@@ -15,7 +15,7 @@ def _run_worker(files, output, page_size):
     """直接运行 PDF worker，返回完成信号结果。"""
     results = []
     worker = PDFWorker(files, str(output), page_size, compress=False)
-    worker.finished.connect(lambda success, message: results.append((success, message)))
+    worker.result.connect(lambda success, message: results.append((success, message)))
     worker.run()
     assert results, "PDF worker 未发出完成信号"
     return results[-1]

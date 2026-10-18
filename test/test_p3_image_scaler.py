@@ -166,7 +166,7 @@ def test_worker_emits_dictionary_message(qapp, tmp_path, test_images):
         maintain_aspect=True,
     )
     messages = []
-    worker.finished.connect(lambda ok, msg: messages.append((ok, msg)))
+    worker.result.connect(lambda ok, msg: messages.append((ok, msg)))
 
     worker.run()
 

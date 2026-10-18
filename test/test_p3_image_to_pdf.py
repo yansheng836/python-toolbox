@@ -144,7 +144,7 @@ def test_worker_messages_use_dictionary(tmp_path, qapp):
     i18n.set_language("zh_CN")
     worker = PDFWorker([], str(tmp_path / "out.pdf"), "original")
     results = []
-    worker.finished.connect(lambda success, message: results.append((success, message)))
+    worker.result.connect(lambda success, message: results.append((success, message)))
 
     worker.run()
 

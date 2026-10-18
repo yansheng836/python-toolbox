@@ -8,6 +8,8 @@ worker 完成/失败消息走词典（不启动线程）。
 
 import pytest
 
+from PIL import Image
+
 from common import i18n
 from plugins.image_format_converter import FormatConverter, FormatConvertWorker
 from toolbox import Theme
@@ -134,7 +136,7 @@ def test_worker_success_message_uses_dictionary(qapp, tmp_path):
     """worker 成功消息走词典（不启动线程，直接调用 run）"""
     worker = FormatConvertWorker([], str(tmp_path), "PNG")
     captured = []
-    worker.finished.connect(lambda ok, msg: captured.append((ok, msg)))
+    worker.result.connect(lambda ok, msg: captured.append((ok, msg)))
 
     worker.run()
 
@@ -142,7 +144,7 @@ def test_worker_success_message_uses_dictionary(qapp, tmp_path):
 
 
 def test_worker_error_message_uses_dictionary(qapp, tmp_path, monkeypatch):
-    """worker 失败消息走词典占位符"""
+    """worker 失败消息走词典占位符（H8：单文件失败汇总，不中止整批）"""
     import plugins.image_format_converter as module
 
     def broken_loader(_path):
@@ -151,8 +153,50 @@ def test_worker_error_message_uses_dictionary(qapp, tmp_path, monkeypatch):
     monkeypatch.setattr(module, "load_oriented_image", broken_loader)
     worker = FormatConvertWorker(["fake.png"], str(tmp_path), "PNG")
     captured = []
-    worker.finished.connect(lambda ok, msg: captured.append((ok, msg)))
+    worker.result.connect(lambda ok, msg: captured.append((ok, msg)))
 
     worker.run()
 
-    assert captured == [(False, "转换失败: boom")]
+    assert len(captured) == 1
+    ok, msg = captured[0]
+    assert ok is False
+    # 汇总消息包含成功/失败计数与失败文件明细
+    assert "成功 0 张，失败 1 张" in msg
+    assert "fake.png: boom" in msg
+
+
+def test_no_overwrite_when_output_conflicts_with_source(qapp, tmp_path):
+    """H3：同目录同格式转换不得静默覆盖源文件（改写到 _converted 后缀）"""
+    src = tmp_path / "a.png"
+    Image.new("RGB", (80, 60), (10, 20, 30)).save(src)
+    original_bytes = src.read_bytes()
+
+    # 目标格式 PNG 且未指定输出目录 → 输出路径与源文件同名
+    worker = FormatConvertWorker([str(src)], None, "PNG")
+    captured = []
+    worker.result.connect(lambda ok, msg: captured.append((ok, msg)))
+    worker.run()
+
+    assert captured and captured[0][0] is True
+    # 源文件内容未被改写
+    assert src.read_bytes() == original_bytes
+    # 转换结果落到 _converted 后缀文件
+    assert (tmp_path / "a_converted.png").exists()
+
+
+def test_overwrite_allowed_when_output_dir_differs(qapp, tmp_path):
+    """H3：指定独立输出目录时可正常输出，不加后缀"""
+    src_dir = tmp_path / "src"
+    out_dir = tmp_path / "out"
+    src_dir.mkdir()
+    out_dir.mkdir()
+    src = src_dir / "pic.png"
+    Image.new("RGB", (80, 60), (1, 2, 3)).save(src)
+
+    worker = FormatConvertWorker([str(src)], str(out_dir), "PNG")
+    captured = []
+    worker.result.connect(lambda ok, msg: captured.append((ok, msg)))
+    worker.run()
+
+    assert captured and captured[0][0] is True
+    assert (out_dir / "pic.png").exists()

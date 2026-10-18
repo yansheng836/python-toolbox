@@ -165,12 +165,21 @@ def check_dir_writable(dir_path):
 def check_file_writable(file_path):
     """检查文件是否可写入（未被其他程序锁定）
 
-    尝试以追加模式打开文件来验证可写性。
+    目标已存在时，以追加模式探测是否被占用（落实 Rule 9 写前检查）；
+    目标不存在时***不创建 0 字节文件***，改为仅验证父目录可写，
+    避免在用户输出路径留下误导性的空"成品"。
     返回 (is_writable: bool, error_message: str)
     """
     try:
-        with open(file_path, 'ab') as _:
-            pass
+        if os.path.exists(file_path):
+            with open(file_path, 'ab') as _:
+                pass
+            return True, ""
+        parent_dir = os.path.dirname(file_path)
+        if parent_dir and os.path.exists(parent_dir):
+            writable, err = check_dir_writable(parent_dir)
+            if not writable:
+                return False, err
         return True, ""
     except PermissionError:
         return False, t("common.error.file_locked", path=file_path)

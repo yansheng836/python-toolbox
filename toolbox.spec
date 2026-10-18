@@ -68,8 +68,6 @@ a = Analysis(
     datas=[
         ('config.py', '.'),
         ('toolbox.py', '.'),
-        ('menu_system.py', '.'),
-        ('settings_page.py', '.'),
         ('plugins', 'plugins'),
         ('i18n', 'i18n'),  # 语言词典（运行时从 _MEIPASS/i18n 加载）
         ('favicon.ico', '.'),
@@ -78,8 +76,6 @@ a = Analysis(
         # 项目模块
         'toolbox',
         'config',
-        'menu_system',
-        'settings_page',
 
         # 插件模块（动态加载的插件必须明确指定）
         'plugins.image_scaler',

@@ -48,15 +48,21 @@ class PDFSplitWorker(BaseWorker):
             if self.output_path:
                 writable, err_msg = check_dir_writable(self.output_path)
                 if not writable:
-                    self.finished.emit(False, err_msg)
+                    self.result.emit(False, err_msg)
                     return
 
             if not FITZ_AVAILABLE:
-                self.finished.emit(
+                self.result.emit(
                     False, t("plugin.pdf_splitter.error.pymupdf_not_installed"))
                 return
 
             doc = fitz.open(self.input_file)
+            if doc.is_encrypted and doc.needs_pass:
+                doc.close()
+                self.result.emit(False, t(
+                    "plugin.pdf_splitter.error.encrypted",
+                    path=self.input_file))
+                return
             total_pages = len(doc)
 
             if self.output_format == "pdf":
@@ -97,9 +103,9 @@ class PDFSplitWorker(BaseWorker):
                 msg = t("plugin.pdf_splitter.msg.convert_done", count=count)
 
             doc.close()
-            self.finished.emit(True, msg)
+            self.result.emit(True, msg)
         except Exception as e:
-            self.finished.emit(False, t(
+            self.result.emit(False, t(
                 "plugin.pdf_splitter.error.split_failed", error=str(e)))
 
 class PDFSplitterWidget(QWidget):
@@ -356,7 +362,7 @@ class PDFSplitterWidget(QWidget):
         )
         self.worker.progress.connect(self.action_panel.update_progress)
         self.worker.status.connect(self.action_panel.update_status)
-        self.worker.finished.connect(self.split_finished)
+        self.worker.result.connect(self.split_finished)
         self.worker.start()
 
     def split_finished(self, success, message):

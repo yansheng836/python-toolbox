@@ -36,7 +36,7 @@ from common.utils import IMAGE_COLUMNS, Column, get_create_time, check_file_writ
 
 class PDFWorker(BaseWorker):
     """PDF转换工作线程"""
-    # 继承 BaseWorker 的标准信号：progress, status, finished
+    # 继承 BaseWorker 的标准信号：progress, status, result
 
     def __init__(self, files, output, page_size, compress=True, quality=85):
         super().__init__()
@@ -52,6 +52,9 @@ class PDFWorker(BaseWorker):
         "A3": (842, 1191),
     }
     PDF_DPI = 72
+    # 源图为 RGB 类模式时 ICC 描述与转出的 RGB/RGBA 像素一致可保留；
+    # CMYK/灰度等模式的 ICC 与 RGB 像素不符，保留会错标色彩空间
+    RGB_LIKE_MODES = frozenset({'RGB', 'RGBA', 'RGBX', 'RGBa', 'P', 'PA'})
 
     @staticmethod
     def _load_oriented_image(file_path):
@@ -60,11 +63,16 @@ class PDFWorker(BaseWorker):
             src_img.load()
             oriented_img = ImageOps.exif_transpose(src_img)
             try:
+                keep_icc = oriented_img.mode in PDFWorker.RGB_LIKE_MODES
                 if oriented_img.mode in ('RGBA', 'LA', 'P'):
-                    return oriented_img.convert('RGBA')
-                return oriented_img.convert('RGB')
+                    result = oriented_img.convert('RGBA')
+                else:
+                    result = oriented_img.convert('RGB')
             finally:
                 oriented_img.close()
+        if not keep_icc:
+            result.info.pop('icc_profile', None)
+        return result
 
     @classmethod
     def _fit_to_page(cls, image, page_size):
@@ -87,6 +95,7 @@ class PDFWorker(BaseWorker):
     def _prepare_image(self, file_path, max_width=None):
         """读取图片，按页面设置处理尺寸并转换为 RGB。"""
         img = self._load_oriented_image(file_path)
+        icc = img.info.get('icc_profile')
         if self.page_size == "smart" and max_width is not None and img.width != max_width:
             ratio = max_width / img.width
             resized = img.resize((max_width, max(1, int(img.height * ratio))), Image.Resampling.LANCZOS)
@@ -104,6 +113,9 @@ class PDFWorker(BaseWorker):
             rgb = img.convert('RGB')
             img.close()
             img = rgb
+        # fit_to_page / RGBA 压平生成的新图不带 info，回填 ICC 防止广色域偏色
+        if icc and 'icc_profile' not in img.info:
+            img.info['icc_profile'] = icc
         return img
 
     def run(self):
@@ -112,7 +124,7 @@ class PDFWorker(BaseWorker):
             # ========= 预检查：目标文件是否被占用 =========
             ok, error = check_file_writable(self.output)
             if not ok:
-                self.finished.emit(False, error)
+                self.result.emit(False, error)
                 return
 
             total = len(self.files)
@@ -134,7 +146,7 @@ class PDFWorker(BaseWorker):
                         print(f"Error in image_to_pdf: {e}")
                         skipped += 1
                 if max_width is None:
-                    self.finished.emit(False, t("plugin.image_to_pdf.error.no_images_read"))
+                    self.result.emit(False, t("plugin.image_to_pdf.error.no_images_read"))
                     return
 
             # ========= 阶段2：分批处理图片 =========
@@ -172,9 +184,10 @@ class PDFWorker(BaseWorker):
                 batch_jpeg_files = []
 
                 for img in batch_imgs:
-                    # 去除 ICC 配置，避免 "broken data stream" 错误
-                    if 'icc_profile' in img.info:
-                        del img.info['icc_profile']
+                    # 保留 RGB 源图的 ICC 配置，避免广色域图在 PDF 中偏色；
+                    # 仅非 RGB 源（CMYK/L 等）转换后的 ICC 描述与 RGB 像素不符，
+                    # 保留反而错标色彩空间，故转色时已在 _load_oriented_image 中剔除
+                    icc = img.info.get('icc_profile')
 
                     # 保存为临时 JPEG（使用时间戳+随机数避免文件名冲突）
                     import time
@@ -187,6 +200,8 @@ class PDFWorker(BaseWorker):
                         'quality': jpeg_quality,
                         'optimize': True,
                     }
+                    if icc:
+                        save_options['icc_profile'] = icc
                     if self.page_size in self.PAGE_SIZES:
                         save_options['dpi'] = (self.PDF_DPI, self.PDF_DPI)
                     img.save(tmp_jpg, **save_options)
@@ -269,7 +284,7 @@ class PDFWorker(BaseWorker):
                         print(f"Error removing JPEG {jpg_file}: {e}")
 
             if not temp_pdfs:
-                self.finished.emit(False, t("plugin.image_to_pdf.error.no_images_processed"))
+                self.result.emit(False, t("plugin.image_to_pdf.error.no_images_processed"))
                 return
 
             # ========= 阶段3：合并所有临时 PDF =========
@@ -295,7 +310,7 @@ class PDFWorker(BaseWorker):
                     doc.save(self.output, garbage=0, deflate=False)
                     doc.close()
                 else:
-                    self.finished.emit(False, t("plugin.image_to_pdf.error.pymupdf_missing"))
+                    self.result.emit(False, t("plugin.image_to_pdf.error.pymupdf_missing"))
                     return
 
             # ========= 阶段4：清理所有临时 PDF =========
@@ -320,10 +335,10 @@ class PDFWorker(BaseWorker):
                     "plugin.image_to_pdf.error.output_empty",
                     path=self.output,
                 ))
-            self.finished.emit(True, msg)
+            self.result.emit(True, msg)
         except Exception as e:
             print(f"Error in image_to_pdf: {e}")
-            self.finished.emit(False, t("plugin.image_to_pdf.error.convert_failed", error=str(e)))
+            self.result.emit(False, t("plugin.image_to_pdf.error.convert_failed", error=str(e)))
         finally:
             # 异常或正常结束时，清理所有未删除的临时文件
             for tf in list(temp_files):
@@ -525,7 +540,7 @@ class ImageToPDF(ToolPlugin):
         )
         self.worker.progress.connect(self.action_panel.update_progress)
         self.worker.status.connect(self.action_panel.update_status)
-        self.worker.finished.connect(self.conversion_finished)
+        self.worker.result.connect(self.conversion_finished)
         self.worker.start()
 
     def conversion_finished(self, success, message):

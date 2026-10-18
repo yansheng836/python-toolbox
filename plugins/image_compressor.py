@@ -32,7 +32,7 @@ from common.utils import IMAGE_COLUMNS, get_combo_style, get_lineedit_style
 
 class CompressionWorker(BaseWorker):
     """图片压缩工作线程"""
-    # 继承 BaseWorker 的标准信号：progress, status, finished
+    # 继承 BaseWorker 的标准信号：progress, status, result
 
     def __init__(self, files, output_dir, format_code, quality):
         super().__init__()
@@ -48,91 +48,121 @@ class CompressionWorker(BaseWorker):
             output_dir = self.output_dir or os.path.dirname(self.files[0]) if self.files else '.'
             writable, err_msg = check_dir_writable(output_dir)
             if not writable:
-                self.finished.emit(False, err_msg)
+                self.result.emit(False, err_msg)
                 return
 
             processed = 0
+            failed = 0
+            failed_files = []
             for i, file_path in enumerate(self.files):
-                self.status.emit(t(
-                    "plugin.image_compressor.msg.processing",
-                    name=os.path.basename(file_path)))
-
-                # 将 EXIF 方向落实到像素，避免保存后丢失方向信息
-                img = load_oriented_image(file_path)
-
-                # 确定输出格式及扩展名
-                # Pillow 格式映射（JPG/JPEG 底层都是 JPEG）
-                format_map = {'JPG': 'JPEG', 'JPEG': 'JPEG', 'PNG': 'PNG', 'WebP': 'WEBP'}
-                # 输出扩展名：JPG→jpg，JPEG→jpeg，其余用对应小写
-                out_ext_map = {'JPG': 'jpg', 'JPEG': 'jpeg', 'PNG': 'png',
-                               'WebP': 'webp'}
-
-                if self.format_code == "keep":
-                    # 保留原扩展名（区分 jpg/jpeg）
-                    orig_ext = os.path.splitext(file_path)[1].lstrip('.')
-                    if orig_ext.lower() in ('jpg', 'jpeg'):
-                        fmt = 'JPEG'
-                        output_ext = orig_ext  # 保留原始大小写风格
-                    elif orig_ext.lower() == 'png':
-                        fmt = 'PNG'
-                        output_ext = orig_ext
-                    elif orig_ext.lower() == 'webp':
-                        fmt = 'WEBP'
-                        output_ext = orig_ext
-                    else:
-                        fmt = img.format if img.format else 'JPEG'
-                        output_ext = fmt.lower()
-                else:
-                    fmt = format_map[self.format_code]
-                    output_ext = out_ext_map[self.format_code]
-
-                # 确定输出路径
-                base_name = os.path.splitext(os.path.basename(file_path))[0]
-                if self.output_dir:
-                    output_path = os.path.join(self.output_dir, f"{base_name}_compressed.{output_ext}")
-                else:
-                    dir_name = os.path.dirname(file_path)
-                    output_path = os.path.join(dir_name, f"{base_name}_compressed.{output_ext}")
-
-                # 处理图片
-                if fmt == 'JPEG':
-                    if img.mode in ('RGBA', 'LA'):
-                        background = Image.new('RGB', img.size, (255, 255, 255))
-                        background.paste(img, mask=img.split()[-1])
-                        img.close()  # 关闭之前的图像
-                        img = background
-                    elif img.mode == 'P':
-                        img = img.convert('RGBA')
-                        background = Image.new('RGB', img.size, (255, 255, 255))
-                        background.paste(img, mask=img.split()[-1])
-                        img.close()
-                        img = background
-                    elif img.mode != 'RGB':
-                        new_img = img.convert('RGB')
-                        img.close()
-                        img = new_img
-
-                # 保存
-                save_kwargs = {}
-                if fmt in ('JPEG', 'WEBP'):
-                    save_kwargs['quality'] = self.quality
-                    save_kwargs['optimize'] = True
-                elif fmt == 'PNG':
-                    # quality 1-100 映射到 compress_level 9-0（值越小压缩越弱）
-                    save_kwargs['compress_level'] = max(0, min(9, int(10 - self.quality / 10)))
-                    save_kwargs['optimize'] = True
-
-                img.save(output_path, fmt, **save_kwargs)
-                img.close()  # 释放内存
-                processed += 1
+                try:
+                    self._compress_one(file_path)
+                    processed += 1
+                except Exception as e:
+                    # per-file 捕获：单个坏文件不再中止整批（H8）
+                    print(f"compress error {file_path}: {e}")
+                    failed += 1
+                    failed_files.append(f"{file_path}: {str(e)}")
                 self.progress.emit(i + 1)
 
-            self.finished.emit(True, t(
-                "plugin.image_compressor.msg.compress_done", count=processed))
+            self._emit_result(processed, failed, failed_files)
         except Exception as e:
             print(f"Error in image_compressor: {e}")
-            self.finished.emit(False, t(
+            self.result.emit(False, t(
                 "plugin.image_compressor.error.compress_failed", error=str(e)))
+
+    def _compress_one(self, file_path):
+        """压缩单张图片；异常向上抛出，由 run() 汇总为失败列表"""
+        self.status.emit(t(
+            "plugin.image_compressor.msg.processing",
+            name=os.path.basename(file_path)))
+
+        # 将 EXIF 方向落实到像素，避免保存后丢失方向信息
+        img = load_oriented_image(file_path)
+        # 保存前捕获 EXIF：像素运算（convert / 白底合成）会清空 info（H9）
+        exif = img.info.get('exif')
+        try:
+            # 确定输出格式及扩展名
+            # Pillow 格式映射（JPG/JPEG 底层都是 JPEG）
+            format_map = {'JPG': 'JPEG', 'JPEG': 'JPEG', 'PNG': 'PNG', 'WebP': 'WEBP'}
+            # 输出扩展名：JPG→jpg，JPEG→jpeg，其余用对应小写
+            out_ext_map = {'JPG': 'jpg', 'JPEG': 'jpeg', 'PNG': 'png',
+                           'WebP': 'webp'}
+
+            if self.format_code == "keep":
+                # 保留原扩展名（区分 jpg/jpeg）
+                orig_ext = os.path.splitext(file_path)[1].lstrip('.')
+                if orig_ext.lower() in ('jpg', 'jpeg'):
+                    fmt = 'JPEG'
+                    output_ext = orig_ext  # 保留原始大小写风格
+                elif orig_ext.lower() == 'png':
+                    fmt = 'PNG'
+                    output_ext = orig_ext
+                elif orig_ext.lower() == 'webp':
+                    fmt = 'WEBP'
+                    output_ext = orig_ext
+                else:
+                    fmt = img.format if img.format else 'JPEG'
+                    output_ext = fmt.lower()
+            else:
+                fmt = format_map[self.format_code]
+                output_ext = out_ext_map[self.format_code]
+
+            # 确定输出路径
+            base_name = os.path.splitext(os.path.basename(file_path))[0]
+            if self.output_dir:
+                output_path = os.path.join(self.output_dir, f"{base_name}_compressed.{output_ext}")
+            else:
+                dir_name = os.path.dirname(file_path)
+                output_path = os.path.join(dir_name, f"{base_name}_compressed.{output_ext}")
+
+            # 处理图片
+            if fmt == 'JPEG':
+                if img.mode in ('RGBA', 'LA'):
+                    background = Image.new('RGB', img.size, (255, 255, 255))
+                    background.paste(img, mask=img.split()[-1])
+                    img.close()  # 关闭之前的图像
+                    img = background
+                elif img.mode == 'P':
+                    img = img.convert('RGBA')
+                    background = Image.new('RGB', img.size, (255, 255, 255))
+                    background.paste(img, mask=img.split()[-1])
+                    img.close()
+                    img = background
+                elif img.mode != 'RGB':
+                    new_img = img.convert('RGB')
+                    img.close()
+                    img = new_img
+
+            # 保存
+            save_kwargs = {}
+            if fmt in ('JPEG', 'WEBP'):
+                save_kwargs['quality'] = self.quality
+                save_kwargs['optimize'] = True
+            elif fmt == 'PNG':
+                # PNG 为无损格式，quality 滑杆对其无意义；固定较高压缩级别，
+                # 避免旧映射在 quality=100 时取到 compress_level=0 反而变大（H10）
+                save_kwargs['compress_level'] = 9
+                save_kwargs['optimize'] = True
+
+            img.save(output_path, fmt, exif=exif, **save_kwargs)
+        finally:
+            img.close()  # 释放内存
+
+    def _emit_result(self, success_count, failed, failed_files):
+        """汇总成功/失败结果；失败文件明细附在消息中（H8）"""
+        if failed == 0:
+            self.result.emit(True, t(
+                "plugin.image_compressor.msg.compress_done", count=success_count))
+            return
+        msg = t("plugin.image_compressor.msg.compress_summary",
+                success=success_count, failed=failed)
+        msg += t("plugin.file_deduplicator.msg.failures_header")
+        msg += "\n".join(failed_files[:5])
+        if len(failed_files) > 5:
+            msg += t("plugin.file_deduplicator.msg.more_failures",
+                     count=len(failed_files) - 5)
+        self.result.emit(False, msg)
 
 
 class ImageCompressor(ToolPlugin):
@@ -312,7 +342,7 @@ class ImageCompressor(ToolPlugin):
         )
         self.worker.progress.connect(self.action_panel.update_progress)
         self.worker.status.connect(self.action_panel.update_status)
-        self.worker.finished.connect(self.compression_finished)
+        self.worker.result.connect(self.compression_finished)
         self.worker.start()
 
     def compression_finished(self, success, message):

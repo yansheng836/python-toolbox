@@ -265,7 +265,7 @@ class EmptyFolderWorker(BaseWorker):
         folders = find_empty_folder_candidates(self.root_path)
         self.folders_found.emit(folders)
         self.progress.emit(100)
-        self.finished.emit(
+        self.result.emit(
             True,
             t("plugin.empty_folder_cleaner.msg.worker_scan_done", count=len(folders)),
         )
@@ -313,7 +313,7 @@ class EmptyFolderWorker(BaseWorker):
                     "plugin.empty_folder_cleaner.error.failed_more",
                     count=len(failed) - 10,
                 )
-        self.finished.emit(not failed, message)
+        self.result.emit(not failed, message)
 
     def run(self):
         """执行扫描或删除任务"""
@@ -331,13 +331,13 @@ class EmptyFolderWorker(BaseWorker):
                 )
         except (OSError, ValueError) as exc:
             print(f"空文件夹任务失败: {exc}")
-            self.finished.emit(
+            self.result.emit(
                 False,
                 t("plugin.empty_folder_cleaner.error.operation_failed", error=str(exc)),
             )
         except Exception as exc:
             print(f"空文件夹任务发生未预期错误: {exc}")
-            self.finished.emit(
+            self.result.emit(
                 False,
                 t("plugin.empty_folder_cleaner.error.operation_failed", error=str(exc)),
             )
@@ -555,8 +555,19 @@ class EmptyFolderCleanerWidget(QWidget):
             t("plugin.empty_folder_cleaner.msg.folder_selected", path=dir_path)
         )
 
+    def _busy(self):
+        """是否有后台任务正在运行（防重入，避免旧 Worker 被覆盖导致崩溃）"""
+        return self.worker is not None and self.worker.isRunning()
+
     def start_scan(self):
         """启动后台扫描"""
+        if self._busy():
+            show_warning(
+                self,
+                t("plugin.empty_folder_cleaner.dialog.warning_title"),
+                t("plugin.empty_folder_cleaner.warning.busy"),
+            )
+            return
         if not self.selected_folder or not os.path.isdir(self.selected_folder):
             show_warning(
                 self,
@@ -566,6 +577,8 @@ class EmptyFolderCleanerWidget(QWidget):
             return
 
         self.scan_panel.btn.setEnabled(False)
+        self.folder_display.setEnabled(False)
+        self.browse_btn.setEnabled(False)
         self.scan_panel.start_task(
             maximum=0,
             status=t("plugin.empty_folder_cleaner.msg.status_scanning"),
@@ -583,7 +596,7 @@ class EmptyFolderCleanerWidget(QWidget):
         self.worker = EmptyFolderWorker(self.selected_folder, "scan")
         self.worker.folders_found.connect(self.show_candidates)
         self.worker.status.connect(self.scan_panel.update_status)
-        self.worker.finished.connect(self.scan_finished)
+        self.worker.result.connect(self.scan_finished)
         self.worker.start()
 
     def show_candidates(self, candidates):
@@ -621,6 +634,8 @@ class EmptyFolderCleanerWidget(QWidget):
         """扫描完成回调"""
         self.scan_panel.finish_task(message)
         self.scan_panel.btn.setEnabled(True)
+        self.folder_display.setEnabled(True)
+        self.browse_btn.setEnabled(True)
         if not success:
             self.delete_panel.btn.setEnabled(False)
             show_error(
@@ -661,6 +676,13 @@ class EmptyFolderCleanerWidget(QWidget):
 
     def delete_selected(self):
         """确认并删除勾选的空目录"""
+        if self._busy():
+            show_warning(
+                self,
+                t("plugin.empty_folder_cleaner.dialog.warning_title"),
+                t("plugin.empty_folder_cleaner.warning.busy"),
+            )
+            return
         paths = self.get_checked_paths()
         if not paths:
             show_warning(
@@ -697,6 +719,8 @@ class EmptyFolderCleanerWidget(QWidget):
             return
 
         self.scan_panel.btn.setEnabled(False)
+        self.folder_display.setEnabled(False)
+        self.browse_btn.setEnabled(False)
         self.delete_panel.start_task(
             maximum=100,
             status=t("plugin.empty_folder_cleaner.msg.status_deleting"),
@@ -707,7 +731,7 @@ class EmptyFolderCleanerWidget(QWidget):
         )
         self.worker.status.connect(self.delete_panel.update_status)
         self.worker.progress.connect(self.delete_panel.update_progress)
-        self.worker.finished.connect(self.delete_finished)
+        self.worker.result.connect(self.delete_finished)
         self.worker.start()
 
     def delete_finished(self, success, message):
@@ -715,6 +739,8 @@ class EmptyFolderCleanerWidget(QWidget):
         self.delete_panel.finish_task(message)
         self.delete_panel.btn.setEnabled(False)
         self.scan_panel.btn.setEnabled(True)
+        self.folder_display.setEnabled(True)
+        self.browse_btn.setEnabled(True)
         self.results_tree.clear()
         self.candidates = []
         self.stats_label.setText(

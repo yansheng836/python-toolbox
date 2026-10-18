@@ -200,7 +200,7 @@ def test_worker_missing_fitz_message_uses_dictionary(qapp, monkeypatch):
     monkeypatch.setattr(pdf_splitter_module, "FITZ_AVAILABLE", False)
     worker = PDFSplitWorker("in.pdf", "", "pdf", 1, "PNG", 85)
     received = []
-    worker.finished.connect(lambda ok, msg: received.append((ok, msg)))
+    worker.result.connect(lambda ok, msg: received.append((ok, msg)))
 
     worker.run()  # 直接调用 run，不启动线程
 
