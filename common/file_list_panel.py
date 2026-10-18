@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent
 
+from common.i18n import t, bind
 from common.utils import Column
 
 
@@ -39,7 +40,7 @@ class FileListPanel(QWidget):
 
     def __init__(self, parent=None, *,
                  columns=None,
-                 file_filter="所有文件 (*.*)",
+                 file_filter=None,
                  button_class=None,
                  show_buttons=None,
                  column_widths=None,
@@ -70,13 +71,13 @@ class FileListPanel(QWidget):
                 self.columns.append(Column(col[0], col[1], col[2]))
             else:  # (label, func) -> 推导 id
                 self.columns.append(Column(col[0], col[0], col[1]))
-        self.file_filter = file_filter
+        self.file_filter = file_filter or t("common.filter.all_files")
         self.button_class = button_class
         self.show_buttons = show_buttons if show_buttons is not None else ["add", "remove", "up", "down"]
         self.column_widths = column_widths
         self.table_min_height = table_min_height
         # 从 file_filter 解析允许的文件扩展名，用于拖拽过滤
-        self._allowed_extensions = self._parse_filter_extensions(file_filter)
+        self._allowed_extensions = self._parse_filter_extensions(self.file_filter)
         self._setup_ui()
 
     def _setup_ui(self):
@@ -96,9 +97,8 @@ class FileListPanel(QWidget):
         watermark_layout.setContentsMargins(0, 0, 0, 0)
         watermark_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.watermark_label = QLabel(
-            "拖拽文件到此处，或点击下方「添加文件」"
-        )
+        self.watermark_label = QLabel()
+        bind(self.watermark_label, "setText", "common.watermark.drop_here")
         self.watermark_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
             | Qt.TextInteractionFlag.LinksAccessibleByMouse
@@ -141,29 +141,49 @@ class FileListPanel(QWidget):
         btn_layout = QHBoxLayout()
         for btn_key in self.show_buttons:
             if btn_key == "add":
-                self.add_btn = self._create_btn("添加文件(💡支持拖拽)", "add")
+                self.add_btn = self._create_btn("", "add")
+                bind(self.add_btn, "setText", "common.button.add_files")
                 btn_layout.addWidget(self.add_btn)
             elif btn_key == "remove":
-                self.remove_btn = self._create_btn("删除选中", "remove")
+                self.remove_btn = self._create_btn("", "remove")
+                bind(self.remove_btn, "setText", "common.button.remove_selected")
                 btn_layout.addWidget(self.remove_btn)
             elif btn_key == "clear":
-                self.clear_btn = self._create_btn("清空列表", "clear")
+                self.clear_btn = self._create_btn("", "clear")
+                bind(self.clear_btn, "setText", "common.button.clear_list")
                 btn_layout.addWidget(self.clear_btn)
             elif btn_key == "up":
-                self.up_btn = self._create_btn("上移", "up")
+                self.up_btn = self._create_btn("", "up")
+                bind(self.up_btn, "setText", "common.button.move_up")
                 btn_layout.addWidget(self.up_btn)
             elif btn_key == "down":
-                self.down_btn = self._create_btn("下移", "down")
+                self.down_btn = self._create_btn("", "down")
+                bind(self.down_btn, "setText", "common.button.move_down")
                 btn_layout.addWidget(self.down_btn)
             elif btn_key == "sort_name":
-                self.sort_name_btn = self._create_btn("按名称排序", "sort_name")
+                self.sort_name_btn = self._create_btn("", "sort_name")
+                bind(self.sort_name_btn, "setText", "common.button.sort_by_name")
                 btn_layout.addWidget(self.sort_name_btn)
             elif btn_key == "sort_time":
-                self.sort_time_btn = self._create_btn("按创建时间排序", "sort_time")
+                self.sort_time_btn = self._create_btn("", "sort_time")
+                bind(self.sort_time_btn, "setText", "common.button.sort_by_time")
                 btn_layout.addWidget(self.sort_time_btn)
 
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
+
+    def retranslate_ui(self):
+        """语言切换后重放表头（按钮/水印已由 bind 自动重放）
+
+        仅当词典中存在 column.<id> 时替换；插件自有列（列 id 无对应
+        通用 key）保持原 label，避免把 key 字符串显示给用户。
+        """
+        for i, col in enumerate(self.columns):
+            key = f"column.{col.id}"
+            translated = t(key)
+            item = self.table.horizontalHeaderItem(i)
+            if item is not None and translated != key:
+                item.setText(translated)
 
     def _apply_column_widths(self, header):
         """应用列宽设置
@@ -227,7 +247,7 @@ class FileListPanel(QWidget):
         """弹出文件选择对话框，添加文件"""
         from PyQt6.QtWidgets import QFileDialog
         files, _ = QFileDialog.getOpenFileNames(
-            self, "选择文件", "", self.file_filter
+            self, t("common.dialog.select_files"), "", self.file_filter
         )
         if files:
             existing = set(self.files)

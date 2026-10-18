@@ -6,11 +6,11 @@
 适用于需要"开始/停止"操作的插件（如图片转PDF、压缩、格式转换等）。
 """
 
-from PyQt6.QtWidgets import QProgressBar, QLabel
+from PyQt6.QtWidgets import QProgressBar
 from PyQt6.QtCore import Qt, pyqtSignal
 
 from toolbox import AnimatedButton, Card, SelectableLabel, Theme, FONT_SIZE_14, FONT_WEIGHT_600
-from common.message_utils import show_info
+from common.i18n import t
 
 
 class ActionPanel(Card):
@@ -24,7 +24,7 @@ class ActionPanel(Card):
     clicked = pyqtSignal()
 
     def __init__(self, parent=None, *,
-                 button_text="开始",
+                 button_text=None,
                  use_gradient=True,
                  gradient_colors=None,
                  gradient_hover_colors=None,
@@ -40,6 +40,8 @@ class ActionPanel(Card):
         self.gradient_hover_colors = gradient_hover_colors or (Theme.DARK['action_gradient_hover_start'], Theme.DARK['action_gradient_hover_end'])
         self.progress_chunk_color = progress_chunk_color or Theme.DARK['secondary']
 
+        if button_text is None:
+            button_text = t("common.action_panel.button.default")
         self._setup_content(button_text, status_text)
 
     def _setup_content(self, button_text, status_text):
