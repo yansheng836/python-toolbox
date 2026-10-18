@@ -529,8 +529,12 @@ class FileDeduplicatorWidget(QWidget):
         """更新状态标签"""
         self.scan_panel.update_status(message)
 
-    def show_duplicates(self, duplicates):
-        """显示重复文件"""
+    def show_duplicates(self, duplicates, checked_hashes=None, expanded_hashes=None):
+        """显示重复文件
+
+        checked_hashes/expanded_hashes 为 None 时使用默认状态（全部未勾选、
+        全部展开）；语言切换重放时传入当前状态以保留用户勾选与展开。
+        """
         self.duplicates = duplicates
         self.results_tree.clear()
         total_duplicates = 0
@@ -549,8 +553,9 @@ class FileDeduplicatorWidget(QWidget):
             group_item.setFont(0, QFont("Arial", 10, QFont.Weight.Bold))
             group_item.setBackground(0, self.group_bg_color)
             group_item.setForeground(0, QBrush(QColor(text_color)))
-            # 设置父节点可勾选
+            # 设置父节点可勾选；重放时恢复用户原有勾选（在子项创建后设置以联动高亮）
             group_item.setFlags(group_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            is_checked = checked_hashes is not None and file_hash in checked_hashes
             group_item.setCheckState(0, Qt.CheckState.Unchecked)
             # 存储hash到item中，方便删除时查找
             group_item.setData(0, Qt.ItemDataRole.UserRole, file_hash)
@@ -586,22 +591,48 @@ class FileDeduplicatorWidget(QWidget):
                 file_item.setForeground(3, QBrush(QColor(text_color)))
                 total_duplicates += 1
 
+            if is_checked:
+                group_item.setCheckState(0, Qt.CheckState.Checked)
+
         self.stats_label.setText(
             t("plugin.file_deduplicator.msg.stats_duplicates",
               count=len(duplicates),
               total=total_duplicates,
               size=self.format_size(total_savings))
         )
-        # 自动展开所有重复组
-        self.results_tree.expandAll()
         if hasattr(self, 'toggle_expand_btn'):
             self.toggle_expand_btn.setText(
                 t("plugin.file_deduplicator.button.collapse")
             )
         # 扫描完成后，启用删除按钮
         self.delete_panel.btn.setEnabled(bool(duplicates))
-        # 按默认规则排序并标记保留/删除
+        # 按默认规则排序并标记保留/删除（内部会展开全部）
         self._sort_by_rule()
+        # 重放时在排序展开之后恢复用户原有展开状态
+        if expanded_hashes is not None:
+            for i in range(self.results_tree.topLevelItemCount()):
+                item = self.results_tree.topLevelItem(i)
+                item.setExpanded(
+                    item.data(0, Qt.ItemDataRole.UserRole) in expanded_hashes
+                )
+
+    def checked_hashes(self):
+        """返回当前勾选的重复组 hash 集合"""
+        checked = set()
+        for i in range(self.results_tree.topLevelItemCount()):
+            item = self.results_tree.topLevelItem(i)
+            if item.checkState(0) == Qt.CheckState.Checked:
+                checked.add(item.data(0, Qt.ItemDataRole.UserRole))
+        return checked
+
+    def expanded_hashes(self):
+        """返回当前处于展开状态的重复组 hash 集合"""
+        expanded = set()
+        for i in range(self.results_tree.topLevelItemCount()):
+            item = self.results_tree.topLevelItem(i)
+            if item.isExpanded():
+                expanded.add(item.data(0, Qt.ItemDataRole.UserRole))
+        return expanded
 
     def _on_parent_checked(self, item, column):
         """父节点勾选状态变化，联动子节点背景色"""
@@ -960,10 +991,14 @@ class FileDeduplicator(ToolPlugin):
         )
         # 组合框由 bind_combo 自动重放
 
-        # 结果树中的分组标签与保留/删除前缀：有数据时按当前语言重建
-        # （勾选状态会被重置，避免语言切换后误删旧勾选）
+        # 结果树中的分组标签与保留/删除前缀：有数据时按当前语言重建，
+        # 同时保留用户已勾选的组与展开状态
         if widget.duplicates:
-            widget.show_duplicates(widget.duplicates)
+            widget.show_duplicates(
+                widget.duplicates,
+                checked_hashes=widget.checked_hashes(),
+                expanded_hashes=widget.expanded_hashes(),
+            )
 
         # 展开/折叠按钮文字跟随当前树状态
         tree = widget.results_tree

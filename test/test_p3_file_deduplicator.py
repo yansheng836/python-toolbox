@@ -20,6 +20,8 @@ EN_DICT = {
     "plugin.file_deduplicator.column.size": "Size",
     "plugin.file_deduplicator.column.created": "Created",
     "plugin.file_deduplicator.column.modified": "Modified",
+    "plugin.file_deduplicator.tree.group_label": (
+        "Duplicate group: {hash}... ({count} files)"),
     "plugin.file_deduplicator.placeholder.folder": "Choose a folder to scan...",
     "plugin.file_deduplicator.button.browse": "Browse",
     "plugin.file_deduplicator.button.scan": "Start scan",
@@ -200,6 +202,32 @@ def test_tree_labels_use_dictionary_and_userrole(dedup, tmp_path):
         "plugin.file_deduplicator.tree.delete", path=str(second))
     assert parent.child(0).data(0, Qt.ItemDataRole.UserRole) == str(first)
     assert parent.child(1).data(0, Qt.ItemDataRole.UserRole) == str(second)
+
+
+def test_retranslate_preserves_checked_and_expanded(dedup, en_dict, tmp_path):
+    """语言切换重建结果树时保留用户勾选与展开状态"""
+    widget = dedup.widget
+    first = tmp_path / "a.txt"
+    second = tmp_path / "b.txt"
+    first.write_text("same content", encoding="utf-8")
+    second.write_text("same content", encoding="utf-8")
+
+    widget.duplicates = {"abcdef123456": [str(first), str(second)]}
+    widget.show_duplicates(widget.duplicates)
+    tree = widget.results_tree
+    parent = tree.topLevelItem(0)
+    parent.setCheckState(0, Qt.CheckState.Checked)
+    parent.setExpanded(False)
+
+    i18n.set_language("en")
+    dedup.retranslate_ui()
+
+    rebuilt = tree.topLevelItem(0)
+    assert rebuilt.checkState(0) == Qt.CheckState.Checked
+    assert not rebuilt.isExpanded()
+    assert rebuilt.text(0) == EN_DICT[
+        "plugin.file_deduplicator.tree.group_label"].format(
+            hash="abcdef12", count=2)
 
 
 def test_worker_messages_use_dictionary(qapp, tmp_path):

@@ -36,7 +36,7 @@ except ImportError as e:
 def load_oriented_image(file_path):
     """读取图片并返回应用 EXIF 方向后的独立图像副本"""
     if not PIL_AVAILABLE:
-        raise RuntimeError("Pillow 未安装")
+        raise RuntimeError("Pillow is not installed")
     with Image.open(file_path) as src_img:
         src_img.load()
         oriented_img = ImageOps.exif_transpose(src_img)

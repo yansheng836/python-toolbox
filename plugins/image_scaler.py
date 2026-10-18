@@ -87,7 +87,7 @@ class ScalingWorker(BaseWorker):
                             else:
                                 new_width = self.width
                         else:
-                            raise ValueError(f"未知缩放类型: {self.scale_type}")
+                            raise ValueError(f"unknown scale type: {self.scale_type}")
 
                         scaled_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
                     finally:
