@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QComboBox, QSlider, QLineEdit, QGridLayout
 )
 
-from common.i18n import t
+from common.i18n import t, bind_combo
 from common.dialog_utils import get_existing_directory
 from common.action_panel import ActionPanel
 from common.utils import PIL_AVAILABLE, load_oriented_image
@@ -53,7 +53,9 @@ class CompressionWorker(BaseWorker):
 
             processed = 0
             for i, file_path in enumerate(self.files):
-                self.status.emit(f"正在处理: {os.path.basename(file_path)}")
+                self.status.emit(t(
+                    "plugin.image_compressor.msg.processing",
+                    name=os.path.basename(file_path)))
 
                 # 将 EXIF 方向落实到像素，避免保存后丢失方向信息
                 img = load_oriented_image(file_path)
@@ -125,10 +127,12 @@ class CompressionWorker(BaseWorker):
                 processed += 1
                 self.progress.emit(i + 1)
 
-            self.finished.emit(True, f"成功压缩 {processed} 张图片！")
+            self.finished.emit(True, t(
+                "plugin.image_compressor.msg.compress_done", count=processed))
         except Exception as e:
             print(f"Error in image_compressor: {e}")
-            self.finished.emit(False, f"压缩失败: {str(e)}")
+            self.finished.emit(False, t(
+                "plugin.image_compressor.error.compress_failed", error=str(e)))
 
 
 class ImageCompressor(ToolPlugin):
@@ -180,36 +184,45 @@ class ImageCompressor(ToolPlugin):
         self.theme = Theme.DARK
 
         # 标题 + 描述
-        self._setup_header(layout, theme=self.theme)
+        self._setup_header(
+            layout,
+            title=f"{self.icon} {t('plugin.image_compressor.name')}",
+            desc=t("plugin.image_compressor.description"),
+            theme=self.theme,
+        )
 
         # 文件选择区域
-        file_card = Card(title="选择图片")
+        self.file_card = Card(title=t("plugin.image_compressor.card.select_images"))
         self.file_panel = FileListPanel(
             columns=IMAGE_COLUMNS,
-            file_filter="图片文件 (*.jpg *.jpeg *.png *.webp *.bmp *.gif)",
+            file_filter=t("plugin.image_compressor.filter.images"),
             button_class=AnimatedButton,
             show_buttons=["add", "remove", "clear"]
         )
-        file_card.content_layout.addWidget(self.file_panel)
-        layout.addWidget(file_card)
+        self.file_card.content_layout.addWidget(self.file_panel)
+        layout.addWidget(self.file_card)
 
         # 设置区域
-        settings_card = Card(title="压缩设置")
+        self.settings_card = Card(title=t("plugin.image_compressor.card.settings"))
         settings_layout = QGridLayout()
         settings_layout.setSpacing(SPACING_SMALL)
-        settings_card.content_layout.addLayout(settings_layout)
+        self.settings_card.content_layout.addLayout(settings_layout)
 
-        settings_layout.addWidget(SelectableLabel("输出格式:"), 0, 0)
+        self.format_label = SelectableLabel(t("plugin.image_compressor.label.format"))
+        settings_layout.addWidget(self.format_label, 0, 0)
         self.format_combo = QComboBox()
-        self.format_combo.addItem("保持原格式", "keep")
-        self.format_combo.addItem("JPG", "JPG")
-        self.format_combo.addItem("JPEG", "JPEG")
-        self.format_combo.addItem("PNG", "PNG")
-        self.format_combo.addItem("WebP", "WebP")
+        bind_combo(self.format_combo, [
+            ("plugin.image_compressor.combo.keep", "keep"),
+            ("JPG", "JPG"),
+            ("JPEG", "JPEG"),
+            ("PNG", "PNG"),
+            ("WebP", "WebP"),
+        ])
         self.format_combo.setStyleSheet(get_combo_style(self.theme))
         settings_layout.addWidget(self.format_combo, 0, 1)
 
-        settings_layout.addWidget(SelectableLabel("压缩质量:"), 1, 0)
+        self.quality_caption_label = SelectableLabel(t("plugin.image_compressor.label.quality"))
+        settings_layout.addWidget(self.quality_caption_label, 1, 0)
         quality_layout = QHBoxLayout()
         self.quality_slider = QSlider(Qt.Orientation.Horizontal)
         self.quality_slider.setRange(1, 100)
@@ -222,23 +235,24 @@ class ImageCompressor(ToolPlugin):
         quality_layout.addWidget(self.quality_label)
         settings_layout.addLayout(quality_layout, 1, 1)
 
-        settings_layout.addWidget(SelectableLabel("输出目录:"), 2, 0)
+        self.output_dir_label = SelectableLabel(t("plugin.image_compressor.label.output_dir"))
+        settings_layout.addWidget(self.output_dir_label, 2, 0)
         output_layout = QHBoxLayout()
         self.output_path = QLineEdit()
-        self.output_path.setPlaceholderText("默认保存到原图目录（图片压缩后带 _compressed 后缀）")
+        self.output_path.setPlaceholderText(t("plugin.image_compressor.placeholder.output_dir"))
         self.output_path.setStyleSheet(get_lineedit_style(self.theme))
-        self.browse_btn = AnimatedButton("浏览")
+        self.browse_btn = AnimatedButton(t("plugin.image_compressor.button.browse"))
         self.browse_btn.clicked.connect(self.browse_output)
         self.browse_btn.setMaximumWidth(80)
         output_layout.addWidget(self.output_path)
         output_layout.addWidget(self.browse_btn)
         settings_layout.addLayout(output_layout, 2, 1)
 
-        layout.addWidget(settings_card)
+        layout.addWidget(self.settings_card)
 
         # 操作面板（按钮 + 进度条 + 状态标签）
         self.action_panel = ActionPanel(
-            button_text="开始压缩"
+            button_text=t("plugin.image_compressor.button.start")
         )
         self.action_panel.clicked.connect(self.start_compression)
         layout.addWidget(self.action_panel)
@@ -248,9 +262,27 @@ class ImageCompressor(ToolPlugin):
             self.update_theme(Theme.DARK)
         return widget
 
+    def retranslate_ui(self):
+        """语言切换后重放全部用户可见文本"""
+        self.title_label.setText(f"{self.icon} {t('plugin.image_compressor.name')}")
+        self.desc_label.setText(t("plugin.image_compressor.description"))
+        self.file_card.title_label.setText(t("plugin.image_compressor.card.select_images"))
+        # 文件选择过滤器在下次打开对话框时生效（扩展名解析结果不变）
+        self.file_panel.file_filter = t("plugin.image_compressor.filter.images")
+        self.settings_card.title_label.setText(t("plugin.image_compressor.card.settings"))
+        self.format_label.setText(t("plugin.image_compressor.label.format"))
+        self.quality_caption_label.setText(t("plugin.image_compressor.label.quality"))
+        self.output_dir_label.setText(t("plugin.image_compressor.label.output_dir"))
+        self.output_path.setPlaceholderText(
+            t("plugin.image_compressor.placeholder.output_dir"))
+        self.browse_btn.setText(t("plugin.image_compressor.button.browse"))
+        self.action_panel.btn.setText(t("plugin.image_compressor.button.start"))
+        # 格式下拉框由 bind_combo 自动重放；质量百分比（"75%"）与语言无关
+
     def browse_output(self):
         parent = self.widget if self.widget else None
-        path = get_existing_directory(parent, "选择输出目录")
+        path = get_existing_directory(
+            parent, t("plugin.image_compressor.dialog.select_output_dir"))
         if path:
             self.output_path.setText(path)
 
@@ -263,7 +295,10 @@ class ImageCompressor(ToolPlugin):
         if not PIL_AVAILABLE:
             from common.message_utils import show_error
             parent = self.widget if self.widget else None
-            show_error(parent, "错误", "请先安装 Pillow: pip install Pillow")
+            show_error(
+                parent,
+                t("plugin.image_compressor.dialog.error_title"),
+                t("plugin.image_compressor.error.need_pillow"))
             return
 
         self.action_panel.start_task(len(files), status="")
