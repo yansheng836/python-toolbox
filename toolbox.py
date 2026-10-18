@@ -166,6 +166,8 @@ class SelectableLabel(QLabel):
             | Qt.TextInteractionFlag.LinksAccessibleByMouse
         )
         self.setCursor(Qt.CursorShape.IBeamCursor)
+        # 悬停链接时以 tooltip 显示目标地址；离开链接时信号传空串，自动清除
+        self.linkHovered.connect(self.setToolTip)
 
 
 class Card(QFrame):
