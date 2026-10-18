@@ -365,11 +365,13 @@ class EmptyFolderCleanerWidget(QWidget):
         self.title_label = SelectableLabel(
             f"{self.icon} {t('plugin.empty_folder_cleaner.name')}"
         )
+        self.title_label.setWordWrap(True)
         layout.addWidget(self.title_label)
 
         self.desc_label = SelectableLabel(
             t("plugin.empty_folder_cleaner.description")
         )
+        self.desc_label.setWordWrap(True)
         layout.addWidget(self.desc_label)
 
         self.folder_card = Card(
@@ -780,11 +782,17 @@ class EmptyFolderCleaner(ToolPlugin):
         widget.scan_panel.btn.setText(
             t("plugin.empty_folder_cleaner.button.start_scan")
         )
+        widget.scan_panel.status_label.setText(
+            t("plugin.empty_folder_cleaner.msg.status_idle_scan")
+        )
         widget.results_card.title_label.setText(
             t("plugin.empty_folder_cleaner.card.results")
         )
         widget.results_tree.setHeaderLabels(
             [t("plugin.empty_folder_cleaner.column.path")]
+        )
+        widget.stats_label.setText(
+            t("plugin.empty_folder_cleaner.msg.stats_not_scanned")
         )
         widget.select_all_btn.setText(
             t("plugin.empty_folder_cleaner.button.select_all")
@@ -797,6 +805,9 @@ class EmptyFolderCleaner(ToolPlugin):
         )
         widget.delete_panel.btn.setText(
             t("plugin.empty_folder_cleaner.button.delete_selected")
+        )
+        widget.delete_panel.status_label.setText(
+            t("plugin.empty_folder_cleaner.msg.status_idle_delete")
         )
 
     def update_theme(self, theme):

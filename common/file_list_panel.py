@@ -62,7 +62,7 @@ class FileListPanel(QWidget):
         self._text_secondary = "#94a3b8"  # 默认次级文本颜色（深色模式）
         self.setAcceptDrops(True)  # 允许整个面板接收拖拽事件
         # 规范化列定义：接受 Column 或旧式 (label, func) / (id, label, func) 元组
-        raw_cols = columns or [Column("filename", "文件名", lambda f: os.path.basename(f))]
+        raw_cols = columns or [Column("filename", t("column.filename"), lambda f: os.path.basename(f))]
         self.columns = []
         for col in raw_cols:
             if isinstance(col, Column):
@@ -182,7 +182,7 @@ class FileListPanel(QWidget):
         return translated if translated != key else col.label
 
     def retranslate_ui(self):
-        """语言切换后重放表头（按钮/水印已由 bind 自动重放）
+        """语言切换后重放表头并重渲染单元格（按钮/水印已由 bind 自动重放）
 
         仅当词典中存在 column.<id> 时替换；插件自有列（列 id 无对应
         通用 key）保持原 label，避免把 key 字符串显示给用户。
@@ -193,6 +193,7 @@ class FileListPanel(QWidget):
             item = self.table.horizontalHeaderItem(i)
             if item is not None and translated != key:
                 item.setText(translated)
+        self.update_list()
 
     def _apply_column_widths(self, header):
         """应用列宽设置

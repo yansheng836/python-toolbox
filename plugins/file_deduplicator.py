@@ -203,6 +203,7 @@ class FileDeduplicatorWidget(QWidget):
             f"{self.icon} {t('plugin.file_deduplicator.name')}"
         )
         self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700};")
+        self.title_label.setWordWrap(True)
         layout.addWidget(self.title_label)
 
         # 描述（使用词典）
@@ -210,6 +211,7 @@ class FileDeduplicatorWidget(QWidget):
             t("plugin.file_deduplicator.description")
         )
         self.desc_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_14};")
+        self.desc_label.setWordWrap(True)
         layout.addWidget(self.desc_label)
 
         # 文件夹选择卡片
@@ -280,6 +282,11 @@ class FileDeduplicatorWidget(QWidget):
             ("plugin.file_deduplicator.combo.rule_smart_asc", 4),
             ("plugin.file_deduplicator.combo.rule_smart_desc", 5),
         ])
+        # 限制最小宽度按 16 字符计算，避免长英文文案撑爆布局
+        self.rule_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        self.rule_combo.setMinimumContentsLength(16)
         left_half.addWidget(self.rule_combo, 1)
         self.rule_combo.currentIndexChanged.connect(self._sort_by_rule)
 
@@ -917,6 +924,9 @@ class FileDeduplicator(ToolPlugin):
         )
         widget.browse_btn.setText(t("plugin.file_deduplicator.button.browse"))
         widget.scan_panel.btn.setText(t("plugin.file_deduplicator.button.scan"))
+        widget.scan_panel.status_label.setText(
+            t("plugin.file_deduplicator.msg.select_folder_hint")
+        )
         widget.results_card.title_label.setText(
             t("plugin.file_deduplicator.card.results")
         )
@@ -926,6 +936,9 @@ class FileDeduplicator(ToolPlugin):
             t("plugin.file_deduplicator.column.created"),
             t("plugin.file_deduplicator.column.modified"),
         ])
+        widget.stats_label.setText(
+            t("plugin.file_deduplicator.msg.not_scanned")
+        )
         widget.deletion_card.title_label.setText(
             t("plugin.file_deduplicator.card.deletion_rules")
         )

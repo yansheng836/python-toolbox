@@ -142,20 +142,22 @@ class ImageScalerWidget(QWidget):
         self.setup_ui()
 
         if not PIL_AVAILABLE:
-            self.status_label.setText(t("plugin.image_scaler.error.pil_missing"))
-            self.start_btn.setEnabled(False)
+            self.action_panel.status_label.setText(t("plugin.image_scaler.error.pil_missing"))
+            self.action_panel.btn.setEnabled(False)
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
 
-        # 标题（使用 PLUGIN_MODULES 配置中的 icon + name）
+        # 标题（icon 来自配置，名称由词典提供）
         self.title_label = SelectableLabel(f"{self.icon} {self.name}")
+        self.title_label.setWordWrap(True)
         self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700};")
         layout.addWidget(self.title_label)
 
-        # 说明（使用 PLUGIN_MODULES 配置中的 description）
+        # 说明（由词典提供）
         self.desc_label = SelectableLabel(self.description)
+        self.desc_label.setWordWrap(True)
         self.desc_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
@@ -436,7 +438,11 @@ class ImageScaler(ToolPlugin):
             self.widget.apply_theme(theme)
 
     def create_ui(self):
-        widget = ImageScalerWidget(icon=self.icon, name=self.name, description=self.description)
+        widget = ImageScalerWidget(
+            icon=self.icon,
+            name=t("plugin.image_scaler.name"),
+            description=t("plugin.image_scaler.description"),
+        )
         # 将 Widget 的标签属性复制到插件实例，统一访问入口
         self.title_label = widget.title_label
         self.desc_label = widget.desc_label

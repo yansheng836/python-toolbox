@@ -188,6 +188,7 @@ class Card(QFrame):
             self.title_label.setObjectName("cardTitle")
             self.title_label.setStyleSheet(
                 f"font-size: {FONT_SIZE_20}; font-weight: {FONT_WEIGHT_700};")
+            self.title_label.setWordWrap(True)
             layout.addWidget(self.title_label)
 
         self.content = QWidget()
@@ -291,21 +292,23 @@ class ToolPlugin:
         if theme is None:
             from toolbox import Theme
             theme = Theme.DARK
-        t = title or f"{self.icon} {self.name}"
-        d = desc or self.description
+        title_text = title or f"{self.icon} {self.name}"
+        desc_text = desc or self.description
 
-        self.title_label = SelectableLabel(t)
+        self.title_label = SelectableLabel(title_text)
         self.title_label.setStyleSheet(
             f"font-size: {TITLE_STYLES['font_size']}; "
             f"font-weight: {TITLE_STYLES['font_weight']}; "
             f"color: {theme['text']};"
         )
+        self.title_label.setWordWrap(True)
         layout.addWidget(self.title_label)
 
-        self.desc_label = SelectableLabel(d)
+        self.desc_label = SelectableLabel(desc_text)
         self.desc_label.setStyleSheet(
             f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_14};"
         )
+        self.desc_label.setWordWrap(True)
         layout.addWidget(self.desc_label)
 
     def _show_empty_warning(self, message=None):
@@ -658,6 +661,7 @@ class WelcomePage(QWidget):
             font.setBold(True)
             text_label.setFont(font)
             text_label.setStyleSheet(f"color: {Theme.DARK['text']};")
+            text_label.setWordWrap(True)
             text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.text_labels.append(text_label)
             card_layout.addWidget(text_label)
@@ -1091,7 +1095,7 @@ class ToolboxWindow(QMainWindow):
         self.welcome_page = WelcomePage(self.plugins)
         welcome_scroll = QScrollArea()
         welcome_scroll.setWidgetResizable(True)
-        welcome_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        welcome_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         welcome_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         welcome_scroll.setWidget(self.welcome_page)
         # 设置视口背景色为透明，避免白色背景
@@ -1132,7 +1136,7 @@ class ToolboxWindow(QMainWindow):
             widget = plugin.get_widget()
             scroll_area = QScrollArea()
             scroll_area.setWidgetResizable(True)
-            scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
             scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
             scroll_area.setWidget(widget)
             # 设置视口背景色为透明，避免白色背景

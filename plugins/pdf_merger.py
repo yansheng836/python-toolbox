@@ -96,11 +96,13 @@ class PDFMergerWidget(QWidget):
         self.title_label = SelectableLabel(
             f"{self.icon} {t('plugin.pdf_merger.name')}")
         self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700};")
+        self.title_label.setWordWrap(True)
         layout.addWidget(self.title_label)
 
         # 说明
         self.desc_label = SelectableLabel(t("plugin.pdf_merger.description"))
         self.desc_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_14};")
+        self.desc_label.setWordWrap(True)
         layout.addWidget(self.desc_label)
 
         # PDF文件列表区域

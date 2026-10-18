@@ -126,10 +126,12 @@ class PDFSplitterWidget(QWidget):
         self.title_label = SelectableLabel(
             f"{self.icon} {t('plugin.pdf_splitter.name')}")
         self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700};")
+        self.title_label.setWordWrap(True)
         layout.addWidget(self.title_label)
 
         self.desc_label = SelectableLabel(t("plugin.pdf_splitter.description"))
         self.desc_label.setStyleSheet(f"color: {Theme.DARK['text_secondary']}; font-size: {FONT_SIZE_14};")
+        self.desc_label.setWordWrap(True)
         layout.addWidget(self.desc_label)
 
         # PDF文件列表区域（列表模式，参考PDF合并）
