@@ -4,7 +4,8 @@
 
 [![ToolBox](README.assets/ToolBox.png)](https://github.com/yansheng836/python-toolbox)
 
-<div align="center">
+<div align="center" markdown="1">
+
 **Offline · Efficient · Beautiful** — a desktop toolbox for everyday file processing
 
 [Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Usage Guide](#usage-guide) · [Plugin Development](#plugin-development) · [User Manual](UserManual.en.md)
@@ -314,6 +315,8 @@ This project is open source under the [MIT License](./LICENSE.txt). Feel free to
 
 ---
 
-<div align="center">
+<div align="center" markdown="1">
+
 **ToolBox** — Making file processing simpler 🚀
+
 </div>

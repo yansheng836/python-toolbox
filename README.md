@@ -4,7 +4,8 @@
 
 [![ToolBox](README.assets/ToolBox.png)](https://github.com/yansheng836/python-toolbox)
 
-<div align="center">
+<div align="center" markdown="1">
+
 **离线 · 高效 · 美观** 的桌面工具集合
 
 [功能特色](#功能特色) · [截图预览](#截图预览) · [快速开始](#快速开始) · [使用指南](#使用指南) · [插件开发](#插件开发) · [用户手册](用户手册.md)
@@ -314,6 +315,8 @@ pyinstaller toolbox.spec
 
 ---
 
-<div align="center">
+<div align="center" markdown="1">
+
 **工具箱** — 让文件处理更简单 🚀
+
 </div>
