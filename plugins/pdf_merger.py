@@ -7,6 +7,7 @@ import os
 import sys
 
 from common.utils import FITZ_AVAILABLE
+from common.i18n import t
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
@@ -45,14 +46,17 @@ class PDFMergeWorker(BaseWorker):
                     return
 
             if not FITZ_AVAILABLE:
-                self.finished.emit(False, "PyMuPDF 未安装")
+                self.finished.emit(
+                    False, t("plugin.pdf_merger.error.pymupdf_not_installed"))
                 return
 
-            self.status.emit("正在合并PDF...")
+            self.status.emit(t("plugin.pdf_merger.msg.status_merging"))
             merged = fitz.open()
 
             for i, file_path in enumerate(self.files):
-                self.status.emit(f"正在处理: {os.path.basename(file_path)}")
+                self.status.emit(t(
+                    "plugin.pdf_merger.msg.processing",
+                    name=os.path.basename(file_path)))
                 doc = fitz.open(file_path)
                 merged.insert_pdf(doc)
                 doc.close()
@@ -60,9 +64,11 @@ class PDFMergeWorker(BaseWorker):
 
             merged.save(self.output)
             merged.close()
-            self.finished.emit(True, f"合并完成，共 {len(self.files)} 个文件")
+            self.finished.emit(True, t(
+                "plugin.pdf_merger.msg.merge_done", count=len(self.files)))
         except Exception as e:
-            self.finished.emit(False, f"合并失败: {str(e)}")
+            self.finished.emit(False, t(
+                "plugin.pdf_merger.error.merge_failed", error=str(e)))
 
 class PDFMergerWidget(QWidget):
     """PDF合并工具主界面"""
@@ -78,54 +84,59 @@ class PDFMergerWidget(QWidget):
 
         # 检查PyMuPDF是否可用
         if not FITZ_AVAILABLE:
-            self.status_label.setText("错误: 未安装PyMuPDF库，请运行: pip install PyMuPDF")
-            self.merge_btn.setEnabled(False)
+            self.action_panel.status_label.setText(t(
+                "plugin.pdf_merger.error.pymupdf_missing_status"))
+            self.action_panel.btn.setEnabled(False)
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setSpacing(16)
 
-        # 标题（使用 PLUGIN_MODULES 配置中的 icon + name）
-        self.title_label = SelectableLabel(f"{self.icon} {self.name}")
+        # 标题（使用 PLUGIN_MODULES 配置中的 icon + 名称词典）
+        self.title_label = SelectableLabel(
+            f"{self.icon} {t('plugin.pdf_merger.name')}")
         self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700};")
         layout.addWidget(self.title_label)
 
-        # 说明（使用 PLUGIN_MODULES 配置中的 description）
-        self.desc_label = SelectableLabel(self.description)
+        # 说明
+        self.desc_label = SelectableLabel(t("plugin.pdf_merger.description"))
         self.desc_label.setStyleSheet(f"color: {self.theme['text_secondary']}; font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
         # PDF文件列表区域
-        file_card = Card(title="PDF文件列表（顺序即为合并顺序）")
-        file_layout = file_card.content_layout
+        self.file_card = Card(title=t("plugin.pdf_merger.card.file_list"))
+        file_layout = self.file_card.content_layout
 
         self.file_panel = FileListPanel(
             columns=PDF_COLUMNS,
-            file_filter="PDF文件 (*.pdf);;所有文件 (*.*)",
+            file_filter=t("plugin.pdf_merger.filter.add_files"),
             button_class=AnimatedButton,
             show_buttons=["add", "remove", "clear", "up", "down", "sort_name", "sort_time"]
         )
         file_layout.addWidget(self.file_panel)
-        layout.addWidget(file_card)
+        layout.addWidget(self.file_card)
 
         # 输出设置
-        output_card = Card(title="输出设置")
+        self.output_card = Card(title=t("plugin.pdf_merger.card.output"))
         output_layout = QHBoxLayout()
-        output_layout.addWidget(SelectableLabel("输出文件:"))
+        self.output_file_label = SelectableLabel(
+            t("plugin.pdf_merger.label.output_file"))
+        output_layout.addWidget(self.output_file_label)
         self.output_path = QLineEdit()
-        self.output_path.setPlaceholderText("选择输出文件路径...")
+        self.output_path.setPlaceholderText(
+            t("plugin.pdf_merger.placeholder.output_path"))
         self.output_path.setStyleSheet(get_lineedit_style(self.theme))
-        browse_btn = AnimatedButton("浏览")
-        browse_btn.setMaximumWidth(80)
-        browse_btn.clicked.connect(self.browse_output)
+        self.browse_btn = AnimatedButton(t("plugin.pdf_merger.button.browse"))
+        self.browse_btn.setMaximumWidth(80)
+        self.browse_btn.clicked.connect(self.browse_output)
         output_layout.addWidget(self.output_path)
-        output_layout.addWidget(browse_btn)
-        output_card.content_layout.addLayout(output_layout)
-        layout.addWidget(output_card)
+        output_layout.addWidget(self.browse_btn)
+        self.output_card.content_layout.addLayout(output_layout)
+        layout.addWidget(self.output_card)
 
         # 操作面板（按钮 + 进度条 + 状态标签）
         self.action_panel = ActionPanel(
-            button_text="开始合并"
+            button_text=t("plugin.pdf_merger.button.start_merge")
         )
         self.action_panel.clicked.connect(self.start_merge)
         layout.addWidget(self.action_panel)
@@ -147,9 +158,9 @@ class PDFMergerWidget(QWidget):
 
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "保存合并后的PDF",
+            t("plugin.pdf_merger.dialog.save_pdf"),
             default_path,
-            "PDF文件 (*.pdf)"
+            t("plugin.pdf_merger.filter.save_pdf")
         )
 
         if path:
@@ -161,7 +172,10 @@ class PDFMergerWidget(QWidget):
         """开始合并PDF"""
         files = self.file_panel.get_files()
         if len(files) < 2:
-            show_warning(self, "警告", "请至少添加 2 个PDF文件！")
+            show_warning(
+                self,
+                t("plugin.pdf_merger.dialog.warning_title"),
+                t("plugin.pdf_merger.warning.min_files"))
             return
 
         output = self.output_path.text()
@@ -172,11 +186,15 @@ class PDFMergerWidget(QWidget):
                 return
 
         if not FITZ_AVAILABLE:
-            show_error(self, "错误", "请先安装 PyMuPDF: pip install PyMuPDF")
+            show_error(
+                self,
+                t("plugin.pdf_merger.dialog.error_title"),
+                t("plugin.pdf_merger.error.install_pymupdf"))
             return
 
         # 开始任务
-        self.action_panel.start_task(len(files), status="正在合并...")
+        self.action_panel.start_task(
+            len(files), status=t("plugin.pdf_merger.msg.starting"))
 
         # 创建工作线程
         self.worker = PDFMergeWorker(files, output)
@@ -190,9 +208,28 @@ class PDFMergerWidget(QWidget):
         self.action_panel.finish_task(message)
 
         if success:
-            show_info(self, "完成", message)
+            show_info(self, t("plugin.pdf_merger.dialog.done_title"), message)
         else:
-            show_error(self, "错误", message)
+            show_error(self, t("plugin.pdf_merger.dialog.error_title"), message)
+
+    def retranslate_ui(self):
+        """语言切换后重放全部用户可见文本"""
+        self.title_label.setText(f"{self.icon} {t('plugin.pdf_merger.name')}")
+        self.desc_label.setText(t("plugin.pdf_merger.description"))
+        self.file_card.title_label.setText(
+            t("plugin.pdf_merger.card.file_list"))
+        # 文件选择过滤器在下次打开对话框时生效（扩展名解析结果不变）
+        self.file_panel.file_filter = t("plugin.pdf_merger.filter.add_files")
+        self.output_card.title_label.setText(t("plugin.pdf_merger.card.output"))
+        self.output_file_label.setText(t("plugin.pdf_merger.label.output_file"))
+        self.output_path.setPlaceholderText(
+            t("plugin.pdf_merger.placeholder.output_path"))
+        self.browse_btn.setText(t("plugin.pdf_merger.button.browse"))
+        self.action_panel.btn.setText(
+            t("plugin.pdf_merger.button.start_merge"))
+        if not FITZ_AVAILABLE:
+            self.action_panel.status_label.setText(t(
+                "plugin.pdf_merger.error.pymupdf_missing_status"))
 
     def apply_theme(self, theme):
         """应用主题到所有组件"""
@@ -216,6 +253,11 @@ class PDFMerger(ToolPlugin):
         self.title_label = self.widget.title_label
         self.desc_label = self.widget.desc_label
         return self.widget
+
+    def retranslate_ui(self):
+        """语言切换后重放全部用户可见文本"""
+        if getattr(self, 'widget', None) is not None:
+            self.widget.retranslate_ui()
 
     def update_theme(self, theme):
         """更新主题"""
