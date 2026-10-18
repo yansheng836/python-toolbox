@@ -183,8 +183,17 @@ def check_file_writable(file_path):
 # 注意：theme 参数应为 Theme.DARK 或 Theme.LIGHT 字典
 
 
-def get_combo_style(theme):
-    """生成 QComboBox 的主题样式表"""
+def get_combo_style(theme, font_size=None, font_weight=None):
+    """生成 QComboBox 的主题样式表
+
+    font_size / font_weight 可选：下拉框默认继承应用字体（约 9pt），
+    需要与相邻的大字号标签对齐时传入，例如设置页传 14px/600。
+    """
+    font_css = ""
+    if font_size:
+        font_css += f"font-size: {font_size}; "
+    if font_weight:
+        font_css += f"font-weight: {font_weight}; "
     return f"""
         QComboBox {{
             background-color: {theme['bg']};
@@ -192,6 +201,7 @@ def get_combo_style(theme):
             border-radius: 6px;
             padding: 6px;
             color: {theme['text']};
+            {font_css}
         }}
         QComboBox::drop-down {{
             border: none;
@@ -203,6 +213,10 @@ def get_combo_style(theme):
             selection-color: {theme['text']};
             padding: 4px;
             border: none;
+            {font_css}
+        }}
+        QComboBox QAbstractItemView::item {{
+            padding-left: 10px;
         }}
     """
 

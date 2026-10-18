@@ -25,13 +25,14 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QStackedWidget, QFrame, QComboBox,
     QGraphicsDropShadowEffect, QGraphicsOpacityEffect,
-    QSystemTrayIcon, QMenu, QScrollArea
+    QSystemTrayIcon, QMenu, QScrollArea,
+    QStylePainter, QStyleOptionComboBox, QStyle
 )
 from PyQt6.QtCore import (
     Qt, QSize, QPropertyAnimation, QParallelAnimationGroup, QEasingCurve, QTimer, QEvent
 )
 from PyQt6.QtGui import (
-    QIcon, QPixmap, QColor, QAction, QPainter, QPainterPath, QPen
+    QIcon, QPixmap, QColor, QAction, QPainter, QPainterPath, QPen, QPalette
 )
 
 from common import i18n
@@ -276,6 +277,24 @@ class SidebarButton(QPushButton):
 
 
 # ==================== 核心功能模块 ====================
+class CenteredComboBox(QComboBox):
+    """文本水平居中的下拉框
+
+    Qt 样式表的 text-align 对 QComboBox 不生效，因此改为自绘：
+    让样式只画边框与箭头，再在整个控件范围内居中绘制当前文本。
+    """
+
+    def paintEvent(self, event):
+        painter = QStylePainter(self)
+        option = QStyleOptionComboBox()
+        self.initStyleOption(option)
+        text = option.currentText
+        option.currentText = ""
+        painter.drawComplexControl(QStyle.ComplexControl.CC_ComboBox, option)
+        painter.setPen(self.palette().color(QPalette.ColorRole.Text))
+        painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, text)
+
+
 class ToolPlugin:
     """插件基类 - 所有工具都应继承此类"""
     name = "Base Tool"
@@ -761,7 +780,8 @@ class SettingsPlugin(ToolPlugin):
             self.copyright_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: {FONT_SIZE_12};")
 
         if hasattr(self, 'language_combo'):
-            self.language_combo.setStyleSheet(get_combo_style(theme))
+            self.language_combo.setStyleSheet(
+                get_combo_style(theme, FONT_SIZE_14, FONT_WEIGHT_600))
 
     def create_ui(self) -> QWidget:
         widget = QWidget()
@@ -852,9 +872,10 @@ class SettingsPlugin(ToolPlugin):
         general_card.content_layout.addWidget(self.language_label)
 
         language_layout = QHBoxLayout()
-        self.language_combo = QComboBox()
-        self.language_combo.setMinimumHeight(36)
-        self.language_combo.setStyleSheet(get_combo_style(Theme.DARK))
+        self.language_combo = CenteredComboBox()
+        self.language_combo.setMinimumSize(150, 36)
+        self.language_combo.setStyleSheet(
+            get_combo_style(Theme.DARK, FONT_SIZE_14, FONT_WEIGHT_600))
         bind_combo(self.language_combo, [
             ("settings.combo.zh_CN", "zh_CN"),
             ("settings.combo.en", "en"),
