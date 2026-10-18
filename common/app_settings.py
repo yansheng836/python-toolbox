@@ -5,16 +5,16 @@ app_settings — INI 配置持久化（含旧 QSettings 注册表迁移与便携
 基于 docs/2026-10-17-多语言国际化方案分析.md §7 的设计：
 
 - 配置以 INI 格式存储于 config.ini（configparser，UTF-8）
-- 默认位置 QStandardPaths.AppConfigLocation（依赖应用身份，见 setup_app_identity）
+- 默认位置为本地应用数据目录下的单层应用名文件夹，如 Windows 的
+  %LOCALAPPDATA%/Toolbox/config.ini（不含组织名层）
 - exe 同目录存在可写的 portable.flag 时进入便携模式，配置随程序携带
 - 文件缺失/损坏时用默认值初始化并报告错误；加载不会覆盖已存在的值
 - 写入前把旧文件备份为 config.ini.bak，写入采用 tmp + os.replace 原子替换
 - migrate_from_qsettings() 读取旧版 QSettings("Toolbox", "App") 的
   theme/geometry/windowState，仅在 INI 尚无对应值时复制，且不删除注册表
 
-使用 config_dir=None（自动定位）时，调用方须先创建 QApplication 并调用
-setup_app_identity(app)，否则 AppConfigLocation 不含应用名（"Toolbox"），
-会落到错误的目录。
+使用 config_dir=None（自动定位）时，调用方须先创建 QApplication，
+否则 QStandardPaths 无法解析本地应用数据目录。
 
 迁移时机约定：migrate_from_qsettings() 应在首次创建 INI 时（即第一次
 构造 AppSettings 后）调用——此时默认值尚未被视为已保存值，注册表数据
@@ -77,8 +77,8 @@ class AppSettings:
         参数:
             config_dir: 配置目录。None 时按优先级自动定位：
                 1. exe/脚本同目录存在 portable.flag 且可写 -> 该目录下 config.ini
-                2. 否则 QStandardPaths.AppConfigLocation
-                   （需先创建 QApplication 并调用 setup_app_identity(app)）
+                2. 否则本地应用数据目录 / "Toolbox" / config.ini
+                   （需先创建 QApplication 以解析标准路径）
             portable_flag_name: 便携标志文件名
         """
         self._portable_flag_name = portable_flag_name
@@ -100,7 +100,11 @@ class AppSettings:
 
     @staticmethod
     def _resolve_config_path(config_dir, portable_flag_name):
-        """按优先级解析 config.ini 路径"""
+        """按优先级解析 config.ini 路径
+
+        非便携模式落在本地应用数据目录下的单层应用名目录，
+        如 Windows 的 %LOCALAPPDATA%/Toolbox/config.ini（不含组织名层）。
+        """
         if config_dir is not None:
             return Path(config_dir) / CONFIG_FILE_NAME
 
@@ -108,17 +112,17 @@ class AppSettings:
         if base_dir is not None:
             return base_dir / CONFIG_FILE_NAME
 
-        app_config_dir = QStandardPaths.writableLocation(
-            QStandardPaths.StandardLocation.AppConfigLocation
+        data_dir = QStandardPaths.writableLocation(
+            QStandardPaths.StandardLocation.GenericDataLocation
         )
-        return Path(app_config_dir) / CONFIG_FILE_NAME
+        return Path(data_dir) / APP_NAME / CONFIG_FILE_NAME
 
     @staticmethod
     def _portable_base_dir(portable_flag_name):
         """返回便携模式的基础目录；不满足条件返回 None
 
         打包运行（sys.frozen）用 exe 所在目录，源码运行用项目根目录
-        （common/ 的上一级）。目录不可写时返回 None，回退 AppConfigLocation。
+        （common/ 的上一级）。目录不可写时返回 None，回退本地应用数据目录。
         """
         if getattr(sys, "frozen", False):
             base = Path(os.path.dirname(sys.executable))
@@ -298,9 +302,8 @@ def bytes_to_qbytearray(encoded):
 def setup_app_identity(app):
     """设置应用身份（organizationName/applicationName）
 
-    必须在创建 AppSettings(config_dir=None) 之前调用：
-    QStandardPaths.AppConfigLocation 依赖应用名，未设置时会落到
-    不含 "Toolbox" 的错误目录。
+    配置路径不再依赖应用身份（直接用 APP_NAME 定位），但 QSettings、
+    窗口类名等 Qt 功能仍使用组织名，因此启动时调用一次即可。
     """
     app.setOrganizationName(ORG_NAME)
     app.setApplicationName(APP_NAME)

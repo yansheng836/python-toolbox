@@ -33,7 +33,7 @@ INI_NAME = "config.ini"
 
 @pytest.fixture(autouse=True)
 def _sandbox_standard_paths(tmp_path, monkeypatch):
-    """把 AppConfigLocation 重定向到临时目录，兜底防止触碰真实 AppData
+    """把标准路径重定向到临时目录，兜底防止触碰真实 AppData
 
     正常用例都显式传 config_dir，不会走到 QStandardPaths；此 fixture
     保证即使路径定位逻辑意外回退，也不会读写真实 AppData。
@@ -73,6 +73,14 @@ def test_default_file_created(tmp_path):
     assert ini.get("general", "language") == "zh_CN"
     assert ini.get("general", "theme") == "dark"
     assert ini.get("meta", "config_version") == "1"
+
+
+def test_auto_path_has_single_app_layer(tmp_path):
+    """自动定位：本地数据目录下仅一层 Toolbox，不含组织名层"""
+    s = AppSettings()  # 无 portable.flag → 非便携模式
+
+    # autouse fixture 把标准路径重定向到 tmp_path/appdata_sandbox
+    assert Path(s.config_path) == tmp_path / "appdata_sandbox" / APP_NAME / INI_NAME
 
 
 # ==================== 2. 持久化往返 ====================
