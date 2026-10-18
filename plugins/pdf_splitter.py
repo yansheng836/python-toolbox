@@ -7,6 +7,7 @@ import os
 import sys
 
 from common.utils import FITZ_AVAILABLE, PIL_AVAILABLE
+from common.i18n import t
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
@@ -51,7 +52,8 @@ class PDFSplitWorker(BaseWorker):
                     return
 
             if not FITZ_AVAILABLE:
-                self.finished.emit(False, "PyMuPDF 未安装")
+                self.finished.emit(
+                    False, t("plugin.pdf_splitter.error.pymupdf_not_installed"))
                 return
 
             doc = fitz.open(self.input_file)
@@ -62,7 +64,10 @@ class PDFSplitWorker(BaseWorker):
                 base_name = os.path.splitext(os.path.basename(self.input_file))[0]
                 count = 0
                 for i in range(0, total_pages, self.pages_per_split):
-                    self.status.emit(f"正在拆分: 第 {i+1}-{min(i+self.pages_per_split, total_pages)} 页")
+                    self.status.emit(t(
+                        "plugin.pdf_splitter.msg.splitting_pages",
+                        start=i + 1,
+                        end=min(i + self.pages_per_split, total_pages)))
                     new_doc = fitz.open()
                     end = min(i + self.pages_per_split, total_pages)
                     new_doc.insert_pdf(doc, from_page=i, to_page=end-1)
@@ -71,13 +76,16 @@ class PDFSplitWorker(BaseWorker):
                     new_doc.close()
                     count += 1
                     self.progress.emit(count)
-                msg = f"拆分完成，共生成 {count} 个PDF文件"
+                msg = t("plugin.pdf_splitter.msg.split_done", count=count)
             else:
                 # 每页输出为图片
                 base_name = os.path.splitext(os.path.basename(self.input_file))[0]
                 count = 0
                 for i in range(total_pages):
-                    self.status.emit(f"正在转换: 第 {i+1}/{total_pages} 页")
+                    self.status.emit(t(
+                        "plugin.pdf_splitter.msg.converting_page",
+                        index=i + 1,
+                        total=total_pages))
                     page = doc.load_page(i)
                     mat = fitz.Matrix(self.quality / 100, self.quality / 100)
                     pix = page.get_pixmap(matrix=mat)
@@ -86,12 +94,13 @@ class PDFSplitWorker(BaseWorker):
                     pix = None
                     count += 1
                     self.progress.emit(count)
-                msg = f"转换完成，共生成 {count} 张图片"
+                msg = t("plugin.pdf_splitter.msg.convert_done", count=count)
 
             doc.close()
             self.finished.emit(True, msg)
         except Exception as e:
-            self.finished.emit(False, f"拆分失败: {str(e)}")
+            self.finished.emit(False, t(
+                "plugin.pdf_splitter.error.split_failed", error=str(e)))
 
 class PDFSplitterWidget(QWidget):
     """PDF拆分工具主界面"""
@@ -106,65 +115,71 @@ class PDFSplitterWidget(QWidget):
         self.setup_ui()
 
         if not FITZ_AVAILABLE:
-            self.status_label.setText("错误: 未安装PyMuPDF库，请运行: pip install PyMuPDF")
-            self.split_btn.setEnabled(False)
+            self.action_panel.status_label.setText(t(
+                "plugin.pdf_splitter.error.pymupdf_missing_status"))
+            self.action_panel.btn.setEnabled(False)
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setSpacing(16)
 
-        self.title_label = SelectableLabel(f"{self.icon} {self.name}")
+        self.title_label = SelectableLabel(
+            f"{self.icon} {t('plugin.pdf_splitter.name')}")
         self.title_label.setStyleSheet(f"font-size: {TITLE_STYLES['font_size']}; font-weight: {FONT_WEIGHT_700};")
         layout.addWidget(self.title_label)
 
-        self.desc_label = SelectableLabel(self.description)
+        self.desc_label = SelectableLabel(t("plugin.pdf_splitter.description"))
         self.desc_label.setStyleSheet(f"color: {Theme.DARK['text_secondary']}; font-size: {FONT_SIZE_14};")
         layout.addWidget(self.desc_label)
 
         # PDF文件列表区域（列表模式，参考PDF合并）
-        file_card = Card(title="PDF文件列表（仅支持一个文件）")
-        file_layout = file_card.content_layout
+        self.file_card = Card(title=t("plugin.pdf_splitter.card.file_list"))
+        file_layout = self.file_card.content_layout
 
         self.file_panel = FileListPanel(
             columns=PDF_COLUMNS,
-            file_filter="PDF文件 (*.pdf);;所有文件 (*.*)",
+            file_filter=t("plugin.pdf_splitter.filter.add_files"),
             button_class=AnimatedButton,
             show_buttons=["add", "remove", "clear"],
             table_min_height=100
         )
         self.file_panel.files_changed.connect(self.auto_set_output_dir)
         file_layout.addWidget(self.file_panel)
-        layout.addWidget(file_card)
+        layout.addWidget(self.file_card)
 
-        settings_card = Card(title="拆分设置")
+        self.settings_card = Card(title=t("plugin.pdf_splitter.card.settings"))
         settings_layout = QFormLayout()
         settings_layout.setSpacing(12)
 
         self.format_group = QButtonGroup(self)
         format_layout = QHBoxLayout()
-        self.pdf_radio = QRadioButton("单页PDF")
+        self.pdf_radio = QRadioButton(t("plugin.pdf_splitter.radio.pdf"))
         self.pdf_radio.setChecked(True)
-        self.image_radio = QRadioButton("图片")
+        self.image_radio = QRadioButton(t("plugin.pdf_splitter.radio.image"))
         self.format_group.addButton(self.pdf_radio)
         self.format_group.addButton(self.image_radio)
         format_layout.addWidget(self.pdf_radio)
         format_layout.addWidget(self.image_radio)
         format_layout.addStretch()
         self.pdf_radio.toggled.connect(self.on_format_changed)
-        self.format_label = SelectableLabel("输出格式:")
+        self.format_label = SelectableLabel(
+            t("plugin.pdf_splitter.label.output_format"))
         settings_layout.addRow(self.format_label, format_layout)
 
         self.pages_spin = QSpinBox()
         self.pages_spin.setRange(1, 1000)
         self.pages_spin.setValue(1)
-        self.pages_spin.setSuffix(" 页/文件")
-        self.pages_label = SelectableLabel("拆分页数:")
+        self.pages_spin.setSuffix(t("plugin.pdf_splitter.spin.suffix"))
+        self.pages_label = SelectableLabel(
+            t("plugin.pdf_splitter.label.pages_per_split"))
         settings_layout.addRow(self.pages_label, self.pages_spin)
 
         self.image_format_combo = QComboBox()
-        self.image_format_combo.addItems(["JPG", "JPEG", "PNG", "WebP"])
+        for image_format in ("JPG", "JPEG", "PNG", "WebP"):
+            self.image_format_combo.addItem(image_format, image_format)
         self.image_format_combo.setVisible(False)
-        self.image_format_label = SelectableLabel("图片格式:")
+        self.image_format_label = SelectableLabel(
+            t("plugin.pdf_splitter.label.image_format"))
         settings_layout.addRow(self.image_format_label, self.image_format_combo)
 
         # 图片质量：滚动条 + 百分比标签（参考图片压缩功能）
@@ -181,31 +196,35 @@ class PDFSplitterWidget(QWidget):
         quality_h_layout.addWidget(self.quality_slider)
         quality_h_layout.addWidget(self.quality_label)
         self.quality_widget = quality_widget
-        self.quality_row_label = SelectableLabel("图片质量:")
+        self.quality_row_label = SelectableLabel(
+            t("plugin.pdf_splitter.label.quality"))
         settings_layout.addRow(self.quality_row_label, self.quality_widget)
         self.quality_widget.setVisible(False)
 
-        settings_card.content_layout.addLayout(settings_layout)
-        layout.addWidget(settings_card)
+        settings_card_layout = self.settings_card.content_layout
+        settings_card_layout.addLayout(settings_layout)
+        layout.addWidget(self.settings_card)
 
-        output_card = Card(title="输出设置")
+        self.output_card = Card(title=t("plugin.pdf_splitter.card.output"))
         output_layout = QHBoxLayout()
-        self.output_label = SelectableLabel("输出目录:")
+        self.output_label = SelectableLabel(
+            t("plugin.pdf_splitter.label.output_dir"))
         self.output_path = QLineEdit()
-        self.output_path.setPlaceholderText("默认原文件目录")
-        self.browse_btn = AnimatedButton("浏览")
+        self.output_path.setPlaceholderText(
+            t("plugin.pdf_splitter.placeholder.output_dir"))
+        self.browse_btn = AnimatedButton(t("plugin.pdf_splitter.button.browse"))
         self.browse_btn.setMaximumWidth(80)
         self.browse_btn.clicked.connect(self.browse_output)
         output_layout.addWidget(self.output_label)
         output_layout.addWidget(self.output_path)
         output_layout.addWidget(self.browse_btn)
-        output_card.content_layout.addLayout(output_layout)
-        layout.addWidget(output_card)
+        self.output_card.content_layout.addLayout(output_layout)
+        layout.addWidget(self.output_card)
 
         # 操作面板（按钮 + 进度条 + 状态标签，参考PDF合并）
         # 使用Theme中定义的统一action渐变颜色
         self.action_panel = ActionPanel(
-            button_text="开始拆分"
+            button_text=t("plugin.pdf_splitter.button.start_split")
         )
         self.action_panel.clicked.connect(self.start_split)
         layout.addWidget(self.action_panel)
@@ -253,7 +272,7 @@ class PDFSplitterWidget(QWidget):
         )
         dir_path = QFileDialog.getExistingDirectory(
             self,
-            "选择输出目录",
+            t("plugin.pdf_splitter.dialog.choose_output_dir"),
             default_dir
         )
         if dir_path:
@@ -271,29 +290,44 @@ class PDFSplitterWidget(QWidget):
         """开始拆分"""
         files = self.file_panel.get_files()
         if not files:
-            show_warning(self, "警告", "请先添加PDF文件！")
+            show_warning(
+                self,
+                t("plugin.pdf_splitter.dialog.warning_title"),
+                t("plugin.pdf_splitter.warning.no_file"))
             return
         if len(files) > 1:
-            show_warning(self, "警告", "拆分功能仅支持一个PDF文件！")
+            show_warning(
+                self,
+                t("plugin.pdf_splitter.dialog.warning_title"),
+                t("plugin.pdf_splitter.warning.only_one_file"))
             return
 
         input_file = files[0]
 
         if not self.output_path.text():
-            show_warning(self, "警告", "请选择输出目录！")
+            show_warning(
+                self,
+                t("plugin.pdf_splitter.dialog.warning_title"),
+                t("plugin.pdf_splitter.warning.no_output_dir"))
             return
 
         if not FITZ_AVAILABLE:
-            show_error(self, "错误", "请先安装 PyMuPDF: pip install PyMuPDF")
+            show_error(
+                self,
+                t("plugin.pdf_splitter.dialog.error_title"),
+                t("plugin.pdf_splitter.error.install_pymupdf"))
             return
 
         if self.image_radio.isChecked() and not PIL_AVAILABLE:
-            show_error(self, "错误", "输出图片需要 Pillow 库: pip install Pillow")
+            show_error(
+                self,
+                t("plugin.pdf_splitter.dialog.error_title"),
+                t("plugin.pdf_splitter.error.install_pillow"))
             return
 
         output_format = "pdf" if self.pdf_radio.isChecked() else "image"
         pages_per_split = self.pages_spin.value() if output_format == "pdf" else 1
-        image_format = self.image_format_combo.currentText()
+        image_format = self.image_format_combo.currentData()
         quality = self.quality_slider.value()
 
         # 计算总任务数
@@ -307,7 +341,8 @@ class PDFSplitterWidget(QWidget):
             total = 100
 
         # 启动任务
-        self.action_panel.start_task(total, status="正在拆分...")
+        self.action_panel.start_task(
+            total, status=t("plugin.pdf_splitter.msg.starting"))
 
         self.worker = PDFSplitWorker(
             input_file,
@@ -327,13 +362,47 @@ class PDFSplitterWidget(QWidget):
         self.action_panel.finish_task(message)
 
         if success:
-            show_info(self, "完成", message)
+            show_info(self, t("plugin.pdf_splitter.dialog.done_title"), message)
         else:
-            show_error(self, "错误", message)
+            show_error(self, t("plugin.pdf_splitter.dialog.error_title"), message)
+
+    def retranslate_ui(self):
+        """语言切换后重放全部用户可见文本"""
+        self.title_label.setText(f"{self.icon} {t('plugin.pdf_splitter.name')}")
+        self.desc_label.setText(t("plugin.pdf_splitter.description"))
+        self.file_card.title_label.setText(
+            t("plugin.pdf_splitter.card.file_list"))
+        # 文件选择过滤器在下次打开对话框时生效（扩展名解析结果不变）
+        self.file_panel.file_filter = t("plugin.pdf_splitter.filter.add_files")
+        self.settings_card.title_label.setText(
+            t("plugin.pdf_splitter.card.settings"))
+        self.pdf_radio.setText(t("plugin.pdf_splitter.radio.pdf"))
+        self.image_radio.setText(t("plugin.pdf_splitter.radio.image"))
+        self.format_label.setText(t("plugin.pdf_splitter.label.output_format"))
+        self.pages_label.setText(t("plugin.pdf_splitter.label.pages_per_split"))
+        self.pages_spin.setSuffix(t("plugin.pdf_splitter.spin.suffix"))
+        self.image_format_label.setText(
+            t("plugin.pdf_splitter.label.image_format"))
+        self.quality_row_label.setText(t("plugin.pdf_splitter.label.quality"))
+        self.output_card.title_label.setText(t("plugin.pdf_splitter.card.output"))
+        self.output_label.setText(t("plugin.pdf_splitter.label.output_dir"))
+        self.output_path.setPlaceholderText(
+            t("plugin.pdf_splitter.placeholder.output_dir"))
+        self.browse_btn.setText(t("plugin.pdf_splitter.button.browse"))
+        self.action_panel.btn.setText(
+            t("plugin.pdf_splitter.button.start_split"))
+        if not FITZ_AVAILABLE:
+            self.action_panel.status_label.setText(t(
+                "plugin.pdf_splitter.error.pymupdf_missing_status"))
 
 
 class PDFSplitter(ToolPlugin):
     """PDF拆分插件"""
+
+    def retranslate_ui(self):
+        """语言切换后重放全部用户可见文本"""
+        if getattr(self, 'widget', None) is not None:
+            self.widget.retranslate_ui()
 
     def update_theme(self, theme):
         """更新主题"""
