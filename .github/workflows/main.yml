@@ -214,6 +214,7 @@ jobs:
           hdiutil create -volname "工具箱ToolBox-v${VERSION}" \
             -srcfolder dist -ov -format UDZO "../${DMG_NAME}"
           mv "../${DMG_NAME}" "dist/${DMG_NAME}"
+          ls -l "dist/${DMG_NAME}"
           if [ ! -f "dist/${DMG_NAME}" ]; then
             echo "ERROR: .dmg was not created!"
             exit 1
