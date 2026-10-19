@@ -120,7 +120,6 @@ class FileDeduplicationWorker(BaseWorker):
     def __init__(self, folder_path):
         super().__init__()
         self.folder_path = folder_path
-        self.cancel_requested = False
 
     # Windows 保留设备名称定义在 common/utils.py 的 WINDOWS_RESERVED_NAMES 中
 
@@ -130,7 +129,7 @@ class FileDeduplicationWorker(BaseWorker):
             # 第一遍：收集所有文件及大小（os.scandir，跳过符号链接/junction）
             all_files = []
             for file_path in _iter_regular_files(self.folder_path):
-                if self.cancel_requested:
+                if self.is_cancelled():
                     self.result.emit(False, t("plugin.file_deduplicator.msg.scan_cancelled"))
                     return
                 if _is_link_path(file_path):
@@ -167,7 +166,7 @@ class FileDeduplicationWorker(BaseWorker):
             quick_hash_to_files = defaultdict(list)
             scanned = 0
             for file_path in size_candidates:
-                if self.cancel_requested:
+                if self.is_cancelled():
                     self.result.emit(False, t("plugin.file_deduplicator.msg.scan_cancelled"))
                     return
                 try:
@@ -200,7 +199,7 @@ class FileDeduplicationWorker(BaseWorker):
             hash_to_files = defaultdict(list)
             scanned = 0
             for file_path in full_hash_candidates:
-                if self.cancel_requested:
+                if self.is_cancelled():
                     self.result.emit(False, t("plugin.file_deduplicator.msg.scan_cancelled"))
                     return
                 try:
@@ -247,7 +246,7 @@ class FileDeduplicationWorker(BaseWorker):
         hash_sha256 = hashlib.sha256()
         with open(file_path, 'rb') as f:
             while chunk := f.read(chunk_size):
-                if self.cancel_requested:
+                if self.is_cancelled():
                     return None
                 hash_sha256.update(chunk)
         return hash_sha256.hexdigest()
@@ -269,14 +268,11 @@ class FileDeduplicationWorker(BaseWorker):
                 hash_obj.update(tail)
         return hash_obj.hexdigest()
 
-    def cancel(self):
-        self.cancel_requested = True
-
 
 class FileDeletionWorker(BaseWorker):
     """重复文件删除工作线程
 
-    在后台线程逐个删除文件，进度经 progress 上报，响应 cancel_requested。
+    在后台线程逐个删除文件，进度经 progress 上报，响应 is_cancelled()。
     删除前校验目标位于扫描根目录内，防止越界删除。
     """
     progress = pyqtSignal(int, int)  # 已处理数, 总数
@@ -287,7 +283,6 @@ class FileDeletionWorker(BaseWorker):
         self.root_path = root_path
         self.expected_sizes = dict(expected_sizes or {})
         self.use_trash = bool(use_trash and SEND2TRASH_AVAILABLE)
-        self.cancel_requested = False
 
     def _delete_one(self, file_path):
         """删除单个文件，返回 (结果, 说明)
@@ -325,7 +320,7 @@ class FileDeletionWorker(BaseWorker):
             failed = 0
             failed_files = []
             for index, file_path in enumerate(self.file_paths, start=1):
-                if self.cancel_requested:
+                if self.is_cancelled():
                     message = t(
                         "plugin.file_deduplicator.msg.delete_done",
                         count=deleted, failed_count=failed
@@ -372,9 +367,6 @@ class FileDeletionWorker(BaseWorker):
                 False,
                 t("plugin.file_deduplicator.error.scan_failed", error=str(e))
             )
-
-    def cancel(self):
-        self.cancel_requested = True
 
 
 class FileDeduplicatorWidget(QWidget):
