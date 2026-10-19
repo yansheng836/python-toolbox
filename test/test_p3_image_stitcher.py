@@ -1,6 +1,8 @@
 # -*- encoding: utf-8 -*-
 """图片拼接插件 i18n 迁移测试：词典文本、retranslate_ui、组合框稳定 data"""
 
+import os
+
 import pytest
 
 from common import i18n
@@ -141,12 +143,18 @@ def test_combo_keeps_stable_data(stitcher_widget, en_dict):
 
 
 def test_worker_messages_use_dictionary(qapp):
-    """worker 状态消息使用词典格式化（不启动线程）"""
+    """worker 状态消息使用词典格式化（不启动线程）
+
+    路径用平台分隔符构造：os.path.basename 的行为依赖平台，
+    Windows 反斜杠在 macOS/Linux 上不是分隔符，直接传字符串
+    会取不到 basename（CI 在多平台跑同一份测试）。
+    """
     worker = ImageStitchWorker([], "", "horizontal", "start", (255, 255, 255))
     messages = []
     worker.status.connect(messages.append)
 
-    worker._emit_processing_status("C:\\imgs\\a.png", 2, 5, 0, 2)
+    file_path = os.path.join("imgs", "a.png")
+    worker._emit_processing_status(file_path, 2, 5, 0, 2)
 
     assert messages == [t(
         "plugin.image_stitcher.msg.processing",
