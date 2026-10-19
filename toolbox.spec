@@ -233,7 +233,10 @@ _excluded_dlls_exact = frozenset({'Qt6NetworkAuth.dll', 'Qt6Bluetooth.dll'})
 
 
 def _is_excluded_dll(path):
+    # 兼容 Windows（Qt6Qml.dll）与 macOS/Linux（libQt6Qml.dylib）命名
     name = os.path.basename(path)
+    if name.startswith('lib'):
+        name = name[3:]
     return name in _excluded_dlls_exact or name.startswith(_excluded_dll_prefixes)
 
 

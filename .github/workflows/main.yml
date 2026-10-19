@@ -201,10 +201,10 @@ jobs:
       - name: Report bundle size breakdown
         run: |
           APP_FILE=$(find dist -name "*.app" -type d | head -1)
-          echo "== .app total =="
-          du -sh "$APP_FILE"
-          echo "== top 25 largest files in .app =="
-          find "$APP_FILE" -type f -exec du -k {} + | sort -rn | head -25 | awk '{printf "%6.1f MB  %s\n", $1/1024, $2}'
+          echo "== .app total (real bytes) =="
+          find "$APP_FILE" -type f -exec stat -f%z {} + | awk '{s+=$1} END {printf "%.1f MB\n", s/1048576}'
+          echo "== top 25 largest files (real bytes) =="
+          find "$APP_FILE" -type f -exec stat -f "%z %N" {} + | sort -rn | head -25 | awk '{printf "%6.1f MB  %s\n", $1/1048576, $2}'
 
       - name: Build .dmg
         run: |
