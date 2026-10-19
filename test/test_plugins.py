@@ -38,12 +38,15 @@ class TestPluginLoading:
             assert name in plugin_names, f"缺少插件: {name}"
 
     def test_plugin_has_required_attributes(self, loaded_plugins):
-        """每个插件都应有 name, description, icon, version, order"""
+        """每个插件都应有 name, description, icon, order
+
+        version 已删除：版本显示统一走 config.APP_VERSION，插件级
+        version 属性无使用方（补充分析 L1）。
+        """
         for name, plugin in loaded_plugins.items():
             assert hasattr(plugin, "name"), f"{name} 缺少 name"
             assert hasattr(plugin, "description"), f"{name} 缺少 description"
             assert hasattr(plugin, "icon"), f"{name} 缺少 icon"
-            assert hasattr(plugin, "version"), f"{name} 缺少 version"
             assert hasattr(plugin, "order"), f"{name} 缺少 order"
             assert plugin.name, f"{name} 的 name 为空"
 
