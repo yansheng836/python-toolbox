@@ -240,6 +240,7 @@ class PDFWorker(BaseWorker):
                             fitz_img.close()
                         except Exception as e:
                             print(f"Error opening JPEG {jpg_file}: {e}")
+                            skipped += 1  # H-D：批内单张失败计入跳过，不静默丢失
                             continue
                     doc.save(temp_pdf, garbage=0, deflate=False)
                     doc.close()
@@ -271,12 +272,26 @@ class PDFWorker(BaseWorker):
                         for img in pil_imgs:
                             img.close()
 
-                # 验证临时PDF不为空
-                if os.path.getsize(temp_pdf) == 0:
-                    raise Exception(t(
-                        "plugin.image_to_pdf.error.temp_pdf_empty",
-                        path=temp_pdf,
-                    ))
+                # 本批未能产出有效内容（如所有 JPEG 打开失败）→ 跳过空批，
+                # 不再让空 PDF 触发全局 abort，让其余批次继续处理（H-D）
+                if not os.path.exists(temp_pdf) or os.path.getsize(temp_pdf) == 0:
+                    skipped += 1
+                    temp_files.discard(temp_pdf)
+                    if os.path.exists(temp_pdf):
+                        try:
+                            os.remove(temp_pdf)
+                        except OSError as e:
+                            print(f"Error removing empty temp PDF {temp_pdf}: {e}")
+                    # 本批 JPEG 已无用，统一清理后跳过本批
+                    for jpg_file in batch_jpeg_files:
+                        try:
+                            jpg_full = os.path.abspath(jpg_file)
+                            if os.path.exists(jpg_full):
+                                os.remove(jpg_full)
+                            temp_files.discard(jpg_file)
+                        except OSError as e:
+                            print(f"Error removing JPEG {jpg_file}: {e}")
+                    continue
 
                 # 使用相对路径存储，但确保临时文件能被找到
                 temp_pdfs.append(temp_pdf)
@@ -314,6 +329,7 @@ class PDFWorker(BaseWorker):
                             src.close()
                         except Exception as e:
                             print(f"Error opening temp PDF {tpdf}: {e}")
+                            skipped += 1  # H-D：合并阶段失败计入跳过，不静默丢页
                             continue
                     doc.save(self.output, garbage=0, deflate=False)
                     doc.close()
