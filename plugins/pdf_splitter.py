@@ -67,76 +67,79 @@ class PDFSplitWorker(BaseWorker):
                 return
 
             doc = fitz.open(self.input_file)
-            if doc.is_encrypted and doc.needs_pass:
-                doc.close()
-                self.result.emit(False, t(
-                    "plugin.pdf_splitter.error.encrypted",
-                    path=self.input_file))
-                return
-            total_pages = len(doc)
+            try:
+                if doc.is_encrypted and doc.needs_pass:
+                    self.result.emit(False, t(
+                        "plugin.pdf_splitter.error.encrypted",
+                        path=self.input_file))
+                    return
+                total_pages = len(doc)
 
-            skipped = 0
-            if self.output_format == "pdf":
-                # 按页数拆分PDF
-                base_name = os.path.splitext(os.path.basename(self.input_file))[0]
-                count = 0
-                for i in range(0, total_pages, self.pages_per_split):
-                    if self.is_cancelled():
-                        doc.close()
-                        self.result.emit(False, t("common.msg.task_cancelled"))
-                        return
-                    self.status.emit(t(
-                        "plugin.pdf_splitter.msg.splitting_pages",
-                        start=i + 1,
-                        end=min(i + self.pages_per_split, total_pages)))
-                    end = min(i + self.pages_per_split, total_pages)
-                    output_file = os.path.join(self.output_path, f"{base_name}_part{count+1}.pdf")
-                    writable, err = check_file_writable(output_file)
-                    if not writable:
-                        print(f"Skip locked output: {output_file}: {err}")
-                        skipped += 1
-                        continue
-                    new_doc = fitz.open()
-                    new_doc.insert_pdf(doc, from_page=i, to_page=end-1)
-                    new_doc.save(output_file)
-                    new_doc.close()
-                    count += 1
-                    self.progress.emit(count)
-                msg = t("plugin.pdf_splitter.msg.split_done", count=count)
-            else:
-                # 每页输出为图片
-                base_name = os.path.splitext(os.path.basename(self.input_file))[0]
-                count = 0
-                for i in range(total_pages):
-                    if self.is_cancelled():
-                        doc.close()
-                        self.result.emit(False, t("common.msg.task_cancelled"))
-                        return
-                    self.status.emit(t(
-                        "plugin.pdf_splitter.msg.converting_page",
-                        index=i + 1,
-                        total=total_pages))
-                    page = doc.load_page(i)
-                    mat = fitz.Matrix(self.quality / 100, self.quality / 100)
-                    pix = page.get_pixmap(matrix=mat)
-                    output_file = os.path.join(self.output_path, f"{base_name}_page{i+1}.{self.image_format.lower()}")
-                    writable, err = check_file_writable(output_file)
-                    if not writable:
-                        print(f"Skip locked output: {output_file}: {err}")
-                        skipped += 1
+                skipped = 0
+                if self.output_format == "pdf":
+                    # 按页数拆分PDF
+                    base_name = os.path.splitext(os.path.basename(self.input_file))[0]
+                    count = 0
+                    for i in range(0, total_pages, self.pages_per_split):
+                        if self.is_cancelled():
+                            self.result.emit(False, t("common.msg.task_cancelled"))
+                            return
+                        self.status.emit(t(
+                            "plugin.pdf_splitter.msg.splitting_pages",
+                            start=i + 1,
+                            end=min(i + self.pages_per_split, total_pages)))
+                        end = min(i + self.pages_per_split, total_pages)
+                        output_file = os.path.join(self.output_path, f"{base_name}_part{count+1}.pdf")
+                        writable, err = check_file_writable(output_file)
+                        if not writable:
+                            print(f"Skip locked output: {output_file}: {err}")
+                            skipped += 1
+                            continue
+                        new_doc = fitz.open()
+                        try:
+                            new_doc.insert_pdf(doc, from_page=i, to_page=end-1)
+                            new_doc.save(output_file)
+                        finally:
+                            # insert/save 抛异常也保证关闭 new_doc（M-B）
+                            new_doc.close()
+                        count += 1
+                        self.progress.emit(count)
+                    msg = t("plugin.pdf_splitter.msg.split_done", count=count)
+                else:
+                    # 每页输出为图片
+                    base_name = os.path.splitext(os.path.basename(self.input_file))[0]
+                    count = 0
+                    for i in range(total_pages):
+                        if self.is_cancelled():
+                            self.result.emit(False, t("common.msg.task_cancelled"))
+                            return
+                        self.status.emit(t(
+                            "plugin.pdf_splitter.msg.converting_page",
+                            index=i + 1,
+                            total=total_pages))
+                        page = doc.load_page(i)
+                        mat = fitz.Matrix(self.quality / 100, self.quality / 100)
+                        pix = page.get_pixmap(matrix=mat)
+                        output_file = os.path.join(self.output_path, f"{base_name}_page{i+1}.{self.image_format.lower()}")
+                        writable, err = check_file_writable(output_file)
+                        if not writable:
+                            print(f"Skip locked output: {output_file}: {err}")
+                            skipped += 1
+                            pix = None
+                            continue
+                        # 统一经 PIL 保存：PyMuPDF 的 Pixmap.save 对 WebP 支持不稳定
+                        self._save_pixmap(pix, output_file)
                         pix = None
-                        continue
-                    # 统一经 PIL 保存：PyMuPDF 的 Pixmap.save 对 WebP 支持不稳定
-                    self._save_pixmap(pix, output_file)
-                    pix = None
-                    count += 1
-                    self.progress.emit(count)
-                msg = t("plugin.pdf_splitter.msg.convert_done", count=count)
+                        count += 1
+                        self.progress.emit(count)
+                    msg = t("plugin.pdf_splitter.msg.convert_done", count=count)
 
-            doc.close()
-            if skipped:
-                msg += t("plugin.pdf_splitter.msg.skipped_locked", count=skipped)
-            self.result.emit(True, msg)
+                if skipped:
+                    msg += t("plugin.pdf_splitter.msg.skipped_locked", count=skipped)
+                self.result.emit(True, msg)
+            finally:
+                # 任务异常 / 取消 / 加密提前返回都保证关闭 doc（M-B）
+                doc.close()
         except Exception as e:
             self.result.emit(False, t(
                 "plugin.pdf_splitter.error.split_failed", error=str(e)))

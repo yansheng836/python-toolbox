@@ -53,29 +53,31 @@ class PDFMergeWorker(BaseWorker):
 
             self.status.emit(t("plugin.pdf_merger.msg.status_merging"))
             merged = fitz.open()
+            try:
+                for i, file_path in enumerate(self.files):
+                    if self.is_cancelled():
+                        self.result.emit(False, t("common.msg.task_cancelled"))
+                        return
+                    self.status.emit(t(
+                        "plugin.pdf_merger.msg.processing",
+                        name=os.path.basename(file_path)))
+                    doc = fitz.open(file_path)
+                    try:
+                        if doc.is_encrypted and doc.needs_pass:
+                            self.result.emit(False, t(
+                                "plugin.pdf_merger.error.encrypted",
+                                path=file_path))
+                            return
+                        merged.insert_pdf(doc)
+                    finally:
+                        # 异常或加密提前 return 也保证关闭 doc（M-B）
+                        doc.close()
+                    self.progress.emit(i + 1)
 
-            for i, file_path in enumerate(self.files):
-                if self.is_cancelled():
-                    merged.close()
-                    self.result.emit(False, t("common.msg.task_cancelled"))
-                    return
-                self.status.emit(t(
-                    "plugin.pdf_merger.msg.processing",
-                    name=os.path.basename(file_path)))
-                doc = fitz.open(file_path)
-                if doc.is_encrypted and doc.needs_pass:
-                    doc.close()
-                    merged.close()
-                    self.result.emit(False, t(
-                        "plugin.pdf_merger.error.encrypted",
-                        path=file_path))
-                    return
-                merged.insert_pdf(doc)
-                doc.close()
-                self.progress.emit(i + 1)
-
-            merged.save(self.output)
-            merged.close()
+                merged.save(self.output)
+            finally:
+                # 任务异常 / 取消 / 加密提前返回都保证关闭 merged（M-B）
+                merged.close()
             self.result.emit(True, t(
                 "plugin.pdf_merger.msg.merge_done", count=len(self.files)))
         except Exception as e:
