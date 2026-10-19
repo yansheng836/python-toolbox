@@ -59,9 +59,16 @@ def test_resolve_startup_language_keeps_saved_choice(tmp_path, monkeypatch):
 @pytest.mark.usefixtures("qapp")
 def test_toolboxwindow_ini_geometry_roundtrip(tmp_path):
     """ToolboxWindow 用 INI 保存/恢复几何（base64 编码，无 QSettings）"""
+    from PyQt6.QtWidgets import QApplication
+
     settings = AppSettings(config_dir=tmp_path)
     win1 = ToolboxWindow(settings=settings)
-    win1.resize(1100, 760)
+    screen = QApplication.primaryScreen().availableGeometry()
+    # CI 虚拟屏幕可能只有 800x800：目标宽取屏幕的 90%，但不超过 1100，
+    # 且必须 >= 最小宽度，否则 resize 会取不到期望值
+    target_w = min(1100, int(screen.width() * 0.9))
+    target_w = max(target_w, win1.minimumWidth())
+    win1.resize(target_w, 760)
     win1.save_geometry()
 
     ini = _read_ini(tmp_path / INI_NAME)
@@ -70,8 +77,9 @@ def test_toolboxwindow_ini_geometry_roundtrip(tmp_path):
     assert not geo.startswith("b'")  # 不是 Python repr
 
     win2 = ToolboxWindow(settings=AppSettings(config_dir=tmp_path))
-    # restoreGeometry 成功后 geometry() 尺寸应接近保存值
-    assert win2.width() > 900
+    # restoreGeometry 成功后 geometry() 应接近保存值（可能被屏幕裁剪，
+    # 但一定 >= 最小宽度；固定 1100 断言在 800px 屏幕上必挂）
+    assert win2.width() >= target_w - 10
 
     win1.close()
     win2.close()
