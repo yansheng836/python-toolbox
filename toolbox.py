@@ -428,18 +428,24 @@ class ToolPlugin:
         parent = self.widget if self.widget else None
         show_warning(parent, t("app.dialog.warning_title"), message)
 
-    def _finish_with_message(self, action_panel, success, message):
+    def _finish_with_message(self, action_panel, success, message,
+                             done_title=None, error_title=None):
         """完成任务并显示结果消息
 
-        统一处理完成后的操作面板更新和结果弹窗。
+        统一处理完成后的操作面板更新和结果弹窗；用户主动取消按信息提示。
         """
-        from common.message_utils import show_info, show_error
+        from common.base_worker import worker_cancelled
+        from common.message_utils import show_task_result
         action_panel.finish_task(message)
         parent = self.widget if self.widget else None
-        if success:
-            show_info(parent, t("app.dialog.done_title"), message)
-        else:
-            show_error(parent, t("app.dialog.error_title"), message)
+        show_task_result(
+            parent,
+            success,
+            message,
+            done_title or t("app.dialog.done_title"),
+            error_title or t("app.dialog.error_title"),
+            cancelled=worker_cancelled(getattr(self, "worker", None)),
+        )
 
 
 # ==================== 拖拽处理工具类 ====================

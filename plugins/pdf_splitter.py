@@ -22,11 +22,11 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 
-from common.message_utils import show_info, show_error, show_warning
+from common.message_utils import show_error, show_task_result, show_warning
 from common.file_list_panel import FileListPanel
 from common.action_panel import ActionPanel
 from common.utils import PDF_COLUMNS, get_lineedit_style, get_combo_style, get_spinbox_style
-from common.base_worker import BaseWorker
+from common.base_worker import BaseWorker, worker_cancelled
 
 if FITZ_AVAILABLE:
     import pymupdf as fitz
@@ -436,11 +436,14 @@ class PDFSplitterWidget(QWidget):
     def split_finished(self, success, message):
         """拆分完成回调"""
         self.action_panel.finish_task(message)
-
-        if success:
-            show_info(self, t("plugin.pdf_splitter.dialog.done_title"), message)
-        else:
-            show_error(self, t("plugin.pdf_splitter.dialog.error_title"), message)
+        show_task_result(
+            self,
+            success,
+            message,
+            t("plugin.pdf_splitter.dialog.done_title"),
+            t("plugin.pdf_splitter.dialog.error_title"),
+            cancelled=worker_cancelled(self.worker),
+        )
 
     def retranslate_ui(self):
         """语言切换后重放全部用户可见文本"""

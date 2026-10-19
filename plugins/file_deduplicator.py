@@ -14,10 +14,12 @@ from PyQt6.QtWidgets import (
 )
 
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, FONT_WEIGHT_700, Theme
-from common.message_utils import show_info, show_error, show_warning, show_question
+from common.message_utils import (
+    show_info, show_error, show_task_result, show_warning, show_question,
+)
 from common.action_panel import ActionPanel
 from common.utils import get_create_time, get_modify_time, WINDOWS_RESERVED_NAMES, get_combo_style, build_failure_detail
-from common.base_worker import BaseWorker
+from common.base_worker import BaseWorker, worker_cancelled
 from common.directory_drop_line_edit import DirectoryDropLineEdit
 from common.i18n import t, bind_combo
 
@@ -1066,6 +1068,10 @@ class FileDeduplicatorWidget(QWidget):
                     t("plugin.file_deduplicator.dialog.done_title"),
                     t("plugin.file_deduplicator.msg.no_duplicates"),
                 )
+        elif worker_cancelled(self.worker):
+            show_info(
+                self, t("common.dialog.cancelled_title"), message
+            )
         else:
             show_error(
                 self, t("plugin.file_deduplicator.dialog.error_title"), message
@@ -1181,20 +1187,15 @@ class FileDeduplicatorWidget(QWidget):
         self.delete_panel.finish_task(message)
         self.scan_panel.btn.setEnabled(True)
         self._set_inputs_enabled(True)
-        # 按 success 分流对话框类型：失败/取消走 show_error，避免用"信息"图标
-        # 装载失败明细误导用户对结果严重性的判断（H-B）
-        if success:
-            show_info(
-                self,
-                t("plugin.file_deduplicator.dialog.delete_result"),
-                message,
-            )
-        else:
-            show_error(
-                self,
-                t("plugin.file_deduplicator.dialog.error_title"),
-                message,
-            )
+        # 成功走"删除结果"，失败走"错误"；用户主动取消按信息提示而非错误（H-B/M-D）
+        show_task_result(
+            self,
+            success,
+            message,
+            t("plugin.file_deduplicator.dialog.delete_result"),
+            t("plugin.file_deduplicator.dialog.error_title"),
+            cancelled=worker_cancelled(self.worker),
+        )
         # 根据勾选状态决定是否自动重新扫描
         if self.auto_rescan_checkbox.isChecked():
             self.start_scan()

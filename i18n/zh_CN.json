@@ -28,6 +28,7 @@
   "common.cell.read_failed": "读取失败",
   "common.cell.unknown": "未知",
   "common.dialog.select_files": "选择文件",
+  "common.dialog.cancelled_title": "已取消",
   "common.error.config_write": "警告：无法写入配置文件，本次语言设置将不会持久化：{error}",
   "common.msg.failures_header": "\n\n失败文件:\n",
   "common.msg.more_failures": "\n... 还有 {count} 个失败文件",

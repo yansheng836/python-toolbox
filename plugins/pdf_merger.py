@@ -17,11 +17,11 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QLineEdit
 )
-from common.message_utils import show_info, show_error, show_warning
+from common.message_utils import show_error, show_task_result, show_warning
 from common.file_list_panel import FileListPanel
 from common.action_panel import ActionPanel
 from common.utils import PDF_COLUMNS, get_lineedit_style
-from common.base_worker import BaseWorker
+from common.base_worker import BaseWorker, worker_cancelled
 
 if FITZ_AVAILABLE:
     import pymupdf as fitz
@@ -222,11 +222,14 @@ class PDFMergerWidget(QWidget):
     def merge_finished(self, success, message):
         """合并完成回调"""
         self.action_panel.finish_task(message)
-
-        if success:
-            show_info(self, t("plugin.pdf_merger.dialog.done_title"), message)
-        else:
-            show_error(self, t("plugin.pdf_merger.dialog.error_title"), message)
+        show_task_result(
+            self,
+            success,
+            message,
+            t("plugin.pdf_merger.dialog.done_title"),
+            t("plugin.pdf_merger.dialog.error_title"),
+            cancelled=worker_cancelled(self.worker),
+        )
 
     def retranslate_ui(self):
         """语言切换后重放全部用户可见文本"""

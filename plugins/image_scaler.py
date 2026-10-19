@@ -23,13 +23,13 @@ from PyQt6.QtWidgets import (
     QGridLayout, QCheckBox
 )
 
-from common.message_utils import show_info, show_error, show_warning
+from common.message_utils import show_task_result, show_warning
 from PyQt6.QtCore import pyqtSignal
 
 from common.file_list_panel import FileListPanel
 from common.utils import IMAGE_COLUMNS, get_combo_style, get_spinbox_style, get_lineedit_style
 from common.action_panel import ActionPanel
-from common.base_worker import BaseWorker
+from common.base_worker import BaseWorker, worker_cancelled
 from common.i18n import t, bind_combo
 
 
@@ -410,11 +410,14 @@ class ImageScalerWidget(QWidget):
 
     def on_scaling_finished(self, success, message):
         self.action_panel.finish_task(message)
-
-        if success:
-            show_info(self, t("plugin.image_scaler.dialog.done"), message)
-        else:
-            show_error(self, t("plugin.image_scaler.dialog.error"), message)
+        show_task_result(
+            self,
+            success,
+            message,
+            t("plugin.image_scaler.dialog.done"),
+            t("plugin.image_scaler.dialog.error"),
+            cancelled=worker_cancelled(self.worker),
+        )
 
     def apply_theme(self, theme):
         """应用主题到所有组件"""

@@ -21,10 +21,12 @@ from toolbox import (
     TITLE_STYLES, Theme, ToolPlugin,
 )
 from common.action_panel import ActionPanel
-from common.base_worker import BaseWorker
+from common.base_worker import BaseWorker, worker_cancelled
 from common.directory_drop_line_edit import DirectoryDropLineEdit
 from common.i18n import t
-from common.message_utils import show_error, show_info, show_question, show_warning
+from common.message_utils import (
+    show_error, show_info, show_task_result, show_question, show_warning,
+)
 from common.utils import WINDOWS_RESERVED_NAMES, get_lineedit_style
 
 
@@ -665,11 +667,16 @@ class EmptyFolderCleanerWidget(QWidget):
         self.browse_btn.setEnabled(True)
         if not success:
             self.delete_panel.btn.setEnabled(False)
-            show_error(
-                self,
-                t("plugin.empty_folder_cleaner.dialog.scan_failed_title"),
-                message,
-            )
+            if worker_cancelled(self.worker):
+                show_info(
+                    self, t("common.dialog.cancelled_title"), message
+                )
+            else:
+                show_error(
+                    self,
+                    t("plugin.empty_folder_cleaner.dialog.scan_failed_title"),
+                    message,
+                )
             return
         if not self.candidates:
             show_info(
@@ -777,18 +784,14 @@ class EmptyFolderCleanerWidget(QWidget):
         self.delete_panel.update_status(
             t("plugin.empty_folder_cleaner.msg.rescan_hint")
         )
-        if success:
-            show_info(
-                self,
-                t("plugin.empty_folder_cleaner.dialog.delete_done_title"),
-                message,
-            )
-        else:
-            show_error(
-                self,
-                t("plugin.empty_folder_cleaner.dialog.delete_result_title"),
-                message,
-            )
+        show_task_result(
+            self,
+            success,
+            message,
+            t("plugin.empty_folder_cleaner.dialog.delete_done_title"),
+            t("plugin.empty_folder_cleaner.dialog.delete_result_title"),
+            cancelled=worker_cancelled(self.worker),
+        )
 
 
 class EmptyFolderCleaner(ToolPlugin):

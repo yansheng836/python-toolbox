@@ -42,3 +42,8 @@ class BaseWorker(QThread):
     def is_cancelled(self):
         """run() 循环调用，True 表示已收到取消请求应尽快退出"""
         return self._cancelled
+
+
+def worker_cancelled(worker):
+    """安全判定 worker 是否收到取消请求（worker 可能为 None 或尚未创建）"""
+    return bool(worker is not None and worker.is_cancelled())

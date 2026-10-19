@@ -7,6 +7,7 @@
 from PyQt6.QtWidgets import QMessageBox
 
 from toolbox import Theme
+from common.i18n import t
 from common.utils import get_current_theme
 
 
@@ -106,3 +107,22 @@ def show_question(widget, title, message, theme=None):
     _apply_style(msg, theme)
     reply = msg.exec()
     return reply == QMessageBox.StandardButton.Yes
+
+
+def show_task_result(widget, success, message, done_title, error_title, cancelled=False):
+    """统一任务结果弹窗：用户主动取消以信息提示，不按错误处理。
+
+    Args:
+        widget: 父控件
+        success: Worker 上报的成功标志
+        message: 结果消息
+        done_title: 成功时的标题
+        error_title: 失败时的标题
+        cancelled: 是否为用户主动取消（由 worker_cancelled() 判定）
+    """
+    if success:
+        show_info(widget, done_title, message)
+    elif cancelled:
+        show_info(widget, t("common.dialog.cancelled_title"), message)
+    else:
+        show_error(widget, error_title, message)

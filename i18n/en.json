@@ -28,6 +28,7 @@
   "common.cell.read_failed": "Read Failed",
   "common.cell.unknown": "Unknown",
   "common.dialog.select_files": "Select Files",
+  "common.dialog.cancelled_title": "Cancelled",
   "common.error.config_write": "Warning: failed to write config file; this language choice will not persist: {error}",
   "common.msg.failures_header": "\n\nFailed files:\n",
   "common.msg.more_failures": "\n... and {count} more failed",
