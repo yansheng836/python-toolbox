@@ -310,7 +310,9 @@ class FileDeletionWorker(BaseWorker):
             else:
                 os.remove(file_path)
             return "deleted", ""
-        except OSError as exc:
+        except Exception as exc:
+            # send2trash 在网络路径/回收站不可用时可能抛非 OSError 的库异常；
+            # 单个文件失败应计入 failed，而不是中止整批删除（M-E）
             print(f"delete error: {exc}")
             return "failed", str(exc)
 
