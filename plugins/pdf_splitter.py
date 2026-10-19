@@ -25,7 +25,7 @@ from PyQt6.QtCore import Qt
 from common.message_utils import show_error, show_task_result, show_warning
 from common.file_list_panel import FileListPanel
 from common.action_panel import ActionPanel
-from common.utils import PDF_COLUMNS, get_lineedit_style, get_combo_style, get_spinbox_style
+from common.utils import PDF_COLUMNS, get_lineedit_style, get_combo_style, get_spinbox_style, get_current_theme
 from common.base_worker import BaseWorker, worker_cancelled
 
 if FITZ_AVAILABLE:
@@ -305,7 +305,7 @@ class PDFSplitterWidget(QWidget):
         layout.addWidget(self.action_panel)
 
         # 应用初始主题
-        self.apply_theme(Theme.DARK)
+        self.apply_theme(get_current_theme() or Theme.DARK)
 
     def apply_theme(self, theme):
         """应用主题到所有组件"""

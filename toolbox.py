@@ -170,6 +170,22 @@ class SelectableLabel(QLabel):
         self.linkHovered.connect(self.setToolTip)
 
 
+def _install_card_shadow(widget):
+    """为卡片控件安装统一阴影（Card 与欢迎页功能卡片共用）"""
+    shadow = QGraphicsDropShadowEffect(widget)
+    shadow.setBlurRadius(20)
+    shadow.setColor(QColor(Theme.DARK['shadow']))
+    shadow.setOffset(0, 4)
+    widget.setGraphicsEffect(shadow)
+
+
+def update_card_shadow(widget, theme):
+    """按主题更新卡片阴影颜色；无阴影效果的控件调用无副作用"""
+    effect = widget.graphicsEffect()
+    if isinstance(effect, QGraphicsDropShadowEffect):
+        effect.setColor(QColor(theme['shadow']))
+
+
 class Card(QFrame):
     """现代化卡片组件"""
 
@@ -199,17 +215,11 @@ class Card(QFrame):
         self.content_layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.content)
 
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(20)
-        shadow.setColor(QColor(Theme.DARK['shadow']))
-        shadow.setOffset(0, 4)
-        self.setGraphicsEffect(shadow)
+        _install_card_shadow(self)
 
     def update_shadow(self, theme):
         """按主题更新卡片阴影颜色"""
-        effect = self.graphicsEffect()
-        if isinstance(effect, QGraphicsDropShadowEffect):
-            effect.setColor(QColor(theme['shadow']))
+        update_card_shadow(self, theme)
 
 
 class SidebarButton(QPushButton):
@@ -308,7 +318,6 @@ class ToolPlugin:
     name = "Base Tool"
     description = "Base tool description"
     icon = "🔧"
-    version = "2.0.1"
     order = 999  # 插件排序权重，数值越小排在越前面
     id = None  # 插件稳定 id，由 load_plugins 从 config 注入
 
@@ -511,6 +520,7 @@ class WelcomePage(QWidget):
         self.hint = None
         self.text_labels = []
         self.desc_labels = []
+        self._feature_cards = []  # 功能卡片（换肤时更新阴影）
 
         # 轮播相关属性
         self.scroll_area = None
@@ -608,6 +618,8 @@ class WelcomePage(QWidget):
             label.setStyleSheet(f"color: {theme['text']};")
         for label in self.desc_labels:
             label.setStyleSheet(f"color: {theme['text_secondary']};")
+        for card in self._feature_cards:
+            update_card_shadow(card, theme)
 
         if hasattr(self, "empty_hint"):
             self.empty_hint.setStyleSheet(f"""
@@ -790,6 +802,8 @@ class WelcomePage(QWidget):
         # 卡片内边距：左右调小至8px，使内容更紧凑（原12px）
         card.setContentsMargins(6, 10, 6, 10)
         card.setMinimumWidth(200)
+        _install_card_shadow(card)
+        self._feature_cards.append(card)
 
         card_layout = QVBoxLayout(card)
         card_layout.setSpacing(10)
@@ -863,6 +877,7 @@ class WelcomePage(QWidget):
         self.text_labels = []
         self.desc_labels = []
         self.separators = []
+        self._feature_cards = []
         self._feature_ids = []
 
         by_id = {p["id"]: p for p in PLUGIN_MODULES}
@@ -1226,9 +1241,6 @@ class SettingsPlugin(ToolPlugin):
         if hasattr(self.parent, 'apply_theme'):
             self.parent.apply_theme(theme)
 
-        if hasattr(self.parent, 'theme_changed'):
-            self.parent.theme_changed.emit(theme_name)
-
     def save_theme_setting(self, theme_name):
         """主题持久化到 INI [setting] theme（旧 QSettings 注册表已弃用）"""
         if self._settings_ref is not None:
@@ -1483,7 +1495,11 @@ class ToolboxWindow(QMainWindow):
         self.current_plugin = None
         self.sidebar_expanded = True
         self._sidebar_animating = False
-        self._current_theme = Theme.DARK  # 初始默认主题，apply_theme 中会更新
+        # 先按已保存配置确定初始主题并注册，供插件构造时取用，
+        # 避免浅色主题启动时插件页先按深色构建（init_theme 之后统一重放）
+        theme_name = self.app_settings.get("setting", "theme", "dark")
+        self._current_theme = Theme.LIGHT if theme_name == "light" else Theme.DARK
+        set_current_theme(self._current_theme)
 
         self.setup_ui()
         self.load_plugins()

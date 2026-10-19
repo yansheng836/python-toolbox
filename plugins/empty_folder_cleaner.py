@@ -27,7 +27,7 @@ from common.i18n import t
 from common.message_utils import (
     show_error, show_info, show_task_result, show_question, show_warning,
 )
-from common.utils import WINDOWS_RESERVED_NAMES, get_lineedit_style
+from common.utils import WINDOWS_RESERVED_NAMES, build_failure_detail, get_lineedit_style
 
 
 def _is_reserved_name(name: str) -> bool:
@@ -333,13 +333,7 @@ class EmptyFolderWorker(BaseWorker):
             failed=len(failed),
         )
         if failed:
-            message += t("plugin.empty_folder_cleaner.error.failed_paths_header")
-            message += "\n".join(failed[:10])
-            if len(failed) > 10:
-                message += t(
-                    "plugin.empty_folder_cleaner.error.failed_more",
-                    count=len(failed) - 10,
-                )
+            message += build_failure_detail(failed, max_shown=10)
         self.result.emit(not failed, message)
 
     def run(self):
@@ -410,6 +404,7 @@ class EmptyFolderCleanerWidget(QWidget):
             t("plugin.empty_folder_cleaner.placeholder.folder")
         )
         self.folder_display.directory_dropped.connect(self.on_folder_dropped)
+        self.folder_display.cleared.connect(self.on_folder_cleared)
         folder_layout.addWidget(self.folder_display)
 
         self.browse_btn = AnimatedButton(
@@ -582,6 +577,20 @@ class EmptyFolderCleanerWidget(QWidget):
         self.scan_panel.update_status(
             t("plugin.empty_folder_cleaner.msg.folder_selected", path=dir_path)
         )
+
+    def on_folder_cleared(self):
+        """清除已选根目录，复位扫描/删除状态"""
+        self.selected_folder = ""
+        self.candidates = []
+        self.results_tree.clear()
+        self.scan_panel.btn.setEnabled(False)
+        self.scan_panel.update_status(
+            t("plugin.empty_folder_cleaner.msg.status_idle_scan"))
+        self.delete_panel.btn.setEnabled(False)
+        self.delete_panel.update_status(
+            t("plugin.empty_folder_cleaner.msg.status_idle_delete"))
+        self.stats_label.setText(
+            t("plugin.empty_folder_cleaner.msg.stats_not_scanned"))
 
     def _busy(self):
         """是否有后台任务正在运行（防重入，避免旧 Worker 被覆盖导致崩溃）"""

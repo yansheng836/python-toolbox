@@ -25,7 +25,7 @@ from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STY
 from config import SPACING_SMALL
 
 from common.file_list_panel import FileListPanel
-from common.utils import IMAGE_COLUMNS, get_combo_style, get_lineedit_style
+from common.utils import IMAGE_COLUMNS, get_combo_style, get_lineedit_style, get_current_theme
 
 class FormatConvertWorker(BaseWorker):
     """图片格式转换工作线程"""
@@ -319,11 +319,11 @@ class FormatConverter(ToolPlugin):
         layout.addWidget(self.action_panel)
 
         # 应用初始主题
-        self.update_theme(Theme.DARK)
+        self.update_theme(get_current_theme() or Theme.DARK)
         return widget
 
     def load_settings(self):
-        self.set_combo_by_data(self.fmt_combo, self.load_setting("target_format", "JPG"))
+        self.set_combo_by_data(self.fmt_combo, self.load_setting("target_format", "JPEG"))
         self.output_path.setText(self.load_setting("output_dir", ""))
 
     def save_settings(self):

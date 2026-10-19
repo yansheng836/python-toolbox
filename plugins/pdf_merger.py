@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import (
 from common.message_utils import show_error, show_task_result, show_warning
 from common.file_list_panel import FileListPanel
 from common.action_panel import ActionPanel
-from common.utils import PDF_COLUMNS, get_lineedit_style
+from common.utils import PDF_COLUMNS, get_lineedit_style, get_current_theme
 from common.base_worker import BaseWorker, worker_cancelled
 
 if FITZ_AVAILABLE:
@@ -158,7 +158,7 @@ class PDFMergerWidget(QWidget):
         layout.addWidget(self.action_panel)
 
         # 应用初始主题
-        self.apply_theme(Theme.DARK)
+        self.apply_theme(get_current_theme() or Theme.DARK)
 
     def browse_output(self):
         """选择输出文件路径"""
@@ -269,7 +269,7 @@ class PDFMerger(ToolPlugin):
 
     def create_ui(self):
         """创建UI"""
-        self.widget = PDFMergerWidget(icon=self.icon, name=self.name, description=self.description, theme=Theme.DARK)
+        self.widget = PDFMergerWidget(icon=self.icon, name=self.name, description=self.description, theme=get_current_theme() or Theme.DARK)
         # 将 Widget 的标签属性复制到插件实例，统一访问入口
         self.title_label = self.widget.title_label
         self.desc_label = self.widget.desc_label

@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QSizePolicy, QLabel,
     QPushButton
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QEvent
+from PyQt6.QtCore import Qt, pyqtSignal, QEvent, QItemSelection, QItemSelectionModel
 
 from common.i18n import t, bind
 from common.utils import Column, get_birth_time
@@ -355,24 +355,66 @@ class FileListPanel(QWidget):
         self.update_list()
         self.files_changed.emit()
 
+    def _selected_file_paths(self):
+        """返回当前选中行的文件路径（按行顺序去重）"""
+        paths = []
+        seen = set()
+        for item in self.table.selectedItems():
+            if item.column() != 0:
+                continue
+            row = item.row()
+            if 0 <= row < len(self.files):
+                path = self.files[row]
+                if path not in seen:
+                    seen.add(path)
+                    paths.append(path)
+        return paths
+
+    def _restore_selection(self, paths):
+        """按文件路径恢复选中行（表格重建后调用）"""
+        if not paths:
+            return
+        wanted = set(paths)
+        model = self.table.model()
+        selection = QItemSelection()
+        last_col = self.table.columnCount() - 1
+        for row, file_path in enumerate(self.files):
+            if file_path in wanted:
+                selection.select(
+                    model.index(row, 0), model.index(row, last_col)
+                )
+        if not selection.isEmpty():
+            self.table.selectionModel().select(
+                selection,
+                QItemSelectionModel.SelectionFlag.Select
+                | QItemSelectionModel.SelectionFlag.Rows,
+            )
+
     def update_list(self):
         """根据 self.files 和 columns 配置更新表格
 
-        单元格文本按 (路径, mtime, 列 id) 缓存，未变化的文件不再重复解码，
-        避免每次增删都触发全表重算（尤其图片尺寸读取）。
+        单元格文本按 (路径, mtime, 大小, 列 id) 缓存，未变化的文件不再重复解码，
+        避免每次增删都触发全表重算（尤其图片尺寸读取）。重建后按文件路径恢复
+        选中行，保证增删/排序不会丢失多选状态。
         """
+        selected_paths = self._selected_file_paths()
         self.table.setUpdatesEnabled(False)
         self.table.setRowCount(0)
         self.table.setRowCount(len(self.files))
         new_cache = {}
         for row, file_path in enumerate(self.files):
             try:
-                mtime = os.path.getmtime(file_path)
+                stat = os.stat(file_path)
+                mtime = stat.st_mtime
+                size = stat.st_size
             except OSError as e:
                 print(f"Error stat file {file_path}: {e}")
                 mtime = None
+                size = None
             for col_idx, col in enumerate(self.columns):
-                cache_key = (file_path, mtime, col.id)
+                # 大小并入缓存键：FAT32 等文件系统 mtime 精度为 2 秒，
+                # 同秒内的内容变化仅靠 mtime 无法识别
+                cache_key = (file_path, mtime, size, col.id)
                 if cache_key in self._cell_cache:
                     text = self._cell_cache[cache_key]
                 else:
@@ -387,6 +429,7 @@ class FileListPanel(QWidget):
                 self.table.setItem(row, col_idx, item)
         self._cell_cache = new_cache
         self.table.setUpdatesEnabled(True)
+        self._restore_selection(selected_paths)
         # 切换水印可见性
         self.table_container.setCurrentIndex(0 if not self.files else 1)
 

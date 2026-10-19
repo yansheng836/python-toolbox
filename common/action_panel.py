@@ -35,7 +35,6 @@ class ActionPanel(Card):
                  cancel_text=None):
         super().__init__(parent, title="")  # 不显示卡片标题
 
-        self._button_text = button_text
         self._cancel_text = cancel_text or t("common.action_panel.button.cancel")
         self._running = False
 
@@ -49,6 +48,9 @@ class ActionPanel(Card):
 
         if button_text is None:
             button_text = t("common.action_panel.button.default")
+        # 缺省值必须写入实例属性：finish_task 会用 _button_text 恢复按钮文案，
+        # 若保留 None 会把按钮文本置空
+        self._button_text = button_text
         self._setup_content(button_text, status_text)
         # 初始样式统一走 update_theme，避免构造态与换肤后不一致
         self.update_theme(Theme.DARK)

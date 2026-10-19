@@ -18,7 +18,7 @@ from common.message_utils import (
     show_info, show_error, show_task_result, show_warning, show_question,
 )
 from common.action_panel import ActionPanel
-from common.utils import get_create_time, get_modify_time, WINDOWS_RESERVED_NAMES, get_combo_style, build_failure_detail
+from common.utils import get_create_time, get_modify_time, WINDOWS_RESERVED_NAMES, get_combo_style, build_failure_detail, get_current_theme
 from common.base_worker import BaseWorker, worker_cancelled
 from common.directory_drop_line_edit import DirectoryDropLineEdit
 from common.i18n import t, bind_combo
@@ -417,6 +417,7 @@ class FileDeduplicatorWidget(QWidget):
             t("plugin.file_deduplicator.placeholder.folder")
         )
         self.folder_display.directory_dropped.connect(self.on_folder_dropped)
+        self.folder_display.cleared.connect(self.on_folder_cleared)
         folder_layout.addWidget(self.folder_display)
 
         self.browse_btn = AnimatedButton(t("plugin.file_deduplicator.button.browse"))
@@ -564,7 +565,7 @@ class FileDeduplicatorWidget(QWidget):
         layout.addWidget(self.deletion_card)
 
         # 应用初始主题
-        self.apply_theme(Theme.DARK)
+        self.apply_theme(get_current_theme() or Theme.DARK)
 
     def apply_theme(self, theme):
         """应用主题到所有组件"""
@@ -712,6 +713,17 @@ class FileDeduplicatorWidget(QWidget):
         self.scan_panel.update_status(
             t("plugin.file_deduplicator.msg.folder_selected", dir=dir_path)
         )
+
+    def on_folder_cleared(self):
+        """清除已选文件夹，复位扫描/删除状态"""
+        self.selected_folder = ""
+        self.duplicates = {}
+        self.results_tree.clear()
+        self.scan_panel.btn.setEnabled(False)
+        self.scan_panel.update_status(
+            t("plugin.file_deduplicator.msg.select_folder_hint"))
+        self.delete_panel.btn.setEnabled(False)
+        self.stats_label.setText(t("plugin.file_deduplicator.msg.not_scanned"))
 
     def _is_busy(self):
         """是否有扫描/删除任务正在运行"""
@@ -1036,26 +1048,22 @@ class FileDeduplicatorWidget(QWidget):
         return f"{size:.2f} TB"
 
     def _has_copy_keyword(self, filename):
-        """检查文件名是否包含副本/备份关键字，返回 (是否包含, 优先级)"""
-        keywords = [
-            r'\(\d+\)',       # (1), (2), (3)...
-            '_copy',
-            '_backup',
-            '-copy',
-            '-backup',
-            '_副本',
-            '-副本',
-            ' - 副本',
-            '_备份',
-            '-备份',
-            '_copy_',
-            '-copy-',
-            '.temp',
+        """检查文件名是否包含副本/备份关键字
+
+        以扩展名前的 stem 判定：括号编号只认末尾的 1-3 位数字
+        （避免把 ``report (2023).pdf`` 这类合法文件名误判为副本），
+        其余关键字要求作为独立词段出现（由 ``_``/``-``/空格分隔）。
+        """
+        stem = os.path.splitext(filename)[0]
+        patterns = [
+            r'\(\d{1,3}\)$',                      # 末尾的 (1)/(2)... 副本标记
+            r'(?:^|[_\-\s])copy(?:$|[_\-\s])',
+            r'(?:^|[_\-\s])backup(?:$|[_\-\s])',
+            r'(?:^|[_\-\s])副本(?:$|[_\-\s])',
+            r'(?:^|[_\-\s])备份(?:$|[_\-\s])',
+            r'\.temp$',
         ]
-        for kw in keywords:
-            if re.search(kw, filename, re.IGNORECASE):
-                return True
-        return False
+        return any(re.search(p, stem, re.IGNORECASE) for p in patterns)
 
     def scan_finished(self, success, message):
         """扫描完成回调"""

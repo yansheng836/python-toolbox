@@ -27,7 +27,7 @@ from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STY
 from config import SPACING_SMALL
 
 from common.file_list_panel import FileListPanel
-from common.utils import IMAGE_COLUMNS, get_combo_style, get_lineedit_style
+from common.utils import IMAGE_COLUMNS, get_combo_style, get_lineedit_style, get_current_theme
 
 
 class CompressionWorker(BaseWorker):
@@ -153,6 +153,11 @@ class CompressionWorker(BaseWorker):
                 # PNG 为无损格式，quality 滑杆对其无意义；固定较高压缩级别，
                 # 避免旧映射在 quality=100 时取到 compress_level=0 反而变大（H10）
                 save_kwargs['compress_level'] = 9
+                save_kwargs['optimize'] = True
+            elif fmt in ('TIFF', 'TIF'):
+                # keep 模式保留 TIFF 时也要压缩，否则输出可能比源文件更大
+                save_kwargs['compression'] = 'tiff_lzw'
+            elif fmt == 'GIF':
                 save_kwargs['optimize'] = True
 
             img.save(output_path, fmt, exif=exif, **save_kwargs)
@@ -294,7 +299,7 @@ class ImageCompressor(ToolPlugin):
         layout.addWidget(self.action_panel)
 
         # 应用初始主题
-        self.update_theme(Theme.DARK)
+        self.update_theme(get_current_theme() or Theme.DARK)
         return widget
 
     def load_settings(self):

@@ -30,7 +30,7 @@ from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STY
 from config import SPACING_SMALL
 
 from common.file_list_panel import FileListPanel
-from common.utils import IMAGE_COLUMNS, Column, get_create_time, get_combo_style, get_lineedit_style, get_spinbox_style
+from common.utils import IMAGE_COLUMNS, Column, get_create_time, get_combo_style, get_lineedit_style, get_spinbox_style, get_current_theme
 
 MAX_DIMENSION = 60000  # Pillow 实际限制 65500，保守取值
 # 画布像素总量预算（宽×高）。RGBA 画布每像素约 4 字节，200M px 峰值约 800MB，
@@ -117,6 +117,17 @@ class ImageStitchWorker(BaseWorker):
             batch=batch_index + 1,
             batch_total=num_batches,
         ))
+
+    def _cancelled_message(self, saved_paths):
+        """取消结果消息：说明取消前已保存的批次，避免用户误以为没有产出"""
+        message = t("common.msg.task_cancelled")
+        if saved_paths:
+            message += t(
+                "plugin.image_stitcher.msg.cancelled_saved",
+                count=len(saved_paths),
+                paths="\n".join(saved_paths),
+            )
+        return message
 
     def run(self):
         try:
@@ -269,7 +280,8 @@ class ImageStitchWorker(BaseWorker):
                     x = 0
                     for i, (f, expected_w, expected_h) in enumerate(batch_info):
                         if self.is_cancelled():
-                            self.result.emit(False, t("common.msg.task_cancelled"))
+                            self.result.emit(
+                                False, self._cancelled_message(saved_paths))
                             return
                         global_idx = sum(len(b) for b in batches[:bi]) + i + 1
                         self._emit_processing_status(
@@ -292,7 +304,8 @@ class ImageStitchWorker(BaseWorker):
                     y = 0
                     for i, (f, expected_w, expected_h) in enumerate(batch_info):
                         if self.is_cancelled():
-                            self.result.emit(False, t("common.msg.task_cancelled"))
+                            self.result.emit(
+                                False, self._cancelled_message(saved_paths))
                             return
                         global_idx = sum(len(b) for b in batches[:bi]) + i + 1
                         self._emit_processing_status(
@@ -530,7 +543,7 @@ class ImageStitcher(ToolPlugin):
         layout.addWidget(self.settings_card)
 
         # 应用初始主题
-        self.update_theme(Theme.DARK)
+        self.update_theme(get_current_theme() or Theme.DARK)
 
         # 操作面板（按钮 + 进度条 + 状态标签）
         self.action_panel = ActionPanel(

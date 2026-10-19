@@ -46,6 +46,7 @@ import configparser
 import os
 import shutil
 import sys
+import uuid
 from pathlib import Path
 
 from PyQt6.QtCore import QByteArray, QSettings, QStandardPaths
@@ -251,7 +252,8 @@ class AppSettings:
     def _check_version(self):
         """配置文件版本高于当前程序时提示可能不兼容（仅警告，不阻断启动）"""
         try:
-            file_version = int(self._parser.get("meta", "config_version", fallback="0"))
+            file_version = int(self._parser.get(
+                "setting.meta", "config_version", fallback="0"))
         except ValueError:
             file_version = 0
         if file_version > CONFIG_VERSION:
@@ -305,7 +307,10 @@ class AppSettings:
                 # 备份失败不阻塞保存（.bak 仅是安全网），但要报告
                 print(f"警告：备份配置文件失败 {bak_path}：{e}")
 
-        tmp_path = Path(str(path) + ".tmp")
+        # 临时文件名带 pid + 随机后缀：并发/嵌套保存不会互相覆盖
+        tmp_path = Path(
+            f"{path}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp"
+        )
         try:
             with open(tmp_path, "w", encoding="utf-8") as f:
                 self._parser.write(f, space_around_delimiters=False)

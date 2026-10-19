@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from toolbox import ToolPlugin, Card, AnimatedButton, SelectableLabel, TITLE_STYLES, FONT_SIZE_14, Theme
 
 from common.file_list_panel import FileListPanel
-from common.utils import IMAGE_COLUMNS, Column, get_create_time, check_file_writable, get_combo_style, get_lineedit_style
+from common.utils import IMAGE_COLUMNS, Column, get_create_time, check_file_writable, get_combo_style, get_lineedit_style, get_current_theme
 
 
 class PDFWorker(BaseWorker):
@@ -506,7 +506,7 @@ class ImageToPDF(ToolPlugin):
         layout.addWidget(self.action_panel)
 
         # 应用初始主题
-        self.update_theme(Theme.DARK)
+        self.update_theme(get_current_theme() or Theme.DARK)
         return widget
 
     def load_settings(self):

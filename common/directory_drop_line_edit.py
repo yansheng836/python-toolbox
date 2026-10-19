@@ -3,19 +3,23 @@
 共享的目录拖拽输入框
 
 提供一个只读的 QLineEdit，支持从文件管理器拖入本地文件夹，
-拖入后发出 directory_dropped(path) 信号。
+拖入后发出 directory_dropped(path) 信号；用户可通过右键菜单或
+Delete/Backspace 清除已选目录，清除后发出 cleared 信号。
 """
 
 import os
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QLineEdit
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import QLineEdit, QMenu
+
+from common.i18n import t
 
 
 class DirectoryDropLineEdit(QLineEdit):
     """只读输入框，支持拖入本地文件夹"""
 
     directory_dropped = pyqtSignal(str)
+    cleared = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -58,3 +62,26 @@ class DirectoryDropLineEdit(QLineEdit):
         self.setText(directory)
         self.directory_dropped.emit(directory)
         event.acceptProposedAction()
+
+    def clear_directory(self):
+        """清除已选目录并发出 cleared 信号（空值时无操作）"""
+        if not self.text():
+            return
+        self.clear()
+        self.cleared.emit()
+
+    def keyPressEvent(self, event):
+        """只读输入框默认忽略 Delete/Backspace，这里用于清除已选目录"""
+        if event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
+            self.clear_directory()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def contextMenuEvent(self, event):
+        """右键菜单提供「清除」项（只读状态下仍可使用）"""
+        menu = QMenu(self)
+        clear_action = menu.addAction(t("common.button.clear_directory"))
+        clear_action.setEnabled(bool(self.text()))
+        clear_action.triggered.connect(self.clear_directory)
+        menu.exec(event.globalPos())

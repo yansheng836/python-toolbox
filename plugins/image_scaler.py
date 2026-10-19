@@ -27,7 +27,7 @@ from common.message_utils import show_task_result, show_warning
 from PyQt6.QtCore import pyqtSignal
 
 from common.file_list_panel import FileListPanel
-from common.utils import IMAGE_COLUMNS, get_combo_style, get_spinbox_style, get_lineedit_style
+from common.utils import IMAGE_COLUMNS, get_combo_style, get_spinbox_style, get_lineedit_style, get_current_theme
 from common.action_panel import ActionPanel
 from common.base_worker import BaseWorker, worker_cancelled
 from common.i18n import t, bind_combo
@@ -106,10 +106,17 @@ class ScalingWorker(BaseWorker):
                             f"{input_path.stem}_scaled{input_path.suffix}"
                         )
 
-                        if input_path.suffix.lower() in ['.jpg', '.jpeg']:
+                        suffix = input_path.suffix.lower()
+                        if suffix in ('.jpg', '.jpeg'):
                             scaled_img.save(output_file, "JPEG", quality=self.quality, exif=exif_bytes)
-                        elif input_path.suffix.lower() == '.png':
+                        elif suffix == '.webp':
+                            # WebP 同样支持有损质量参数，应用用户选择而非 Pillow 默认 80
+                            scaled_img.save(output_file, "WEBP", quality=self.quality, exif=exif_bytes)
+                        elif suffix == '.png':
                             scaled_img.save(output_file, "PNG", exif=exif_bytes)
+                        elif suffix in ('.tif', '.tiff'):
+                            # TIFF 的 quality 仅对 JPEG 压缩有效，这里用无损 LZW
+                            scaled_img.save(output_file, compression='tiff_lzw', exif=exif_bytes)
                         else:
                             scaled_img.save(output_file, exif=exif_bytes)
                     finally:
@@ -321,7 +328,7 @@ class ImageScalerWidget(QWidget):
         self.on_scale_type_changed()
 
         # 应用初始主题
-        self.apply_theme(Theme.DARK)
+        self.apply_theme(get_current_theme() or Theme.DARK)
 
     def on_scale_type_changed(self):
         scale_type = self.scale_type_combo.currentData()
