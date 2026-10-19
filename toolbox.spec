@@ -207,14 +207,37 @@ a = Analysis(
 )
 
 # 排除不需要的 Qt6 C++ DLL 和软件 OpenGL 回退
-# Qt6Pdf.dll — 项目使用 img2pdf/PyMuPDF，无需 Qt PDF 渲染引擎
-# Qt6Network.dll — 项目无任何网络功能，插件级别的依赖无关紧要
-# opengl32sw.dll — 多数 Windows 系统有硬件 OpenGL，无需软件回退
-_excluded_dlls = frozenset({'Qt6Pdf.dll', 'Qt6Network.dll', 'opengl32sw.dll'})
-a.binaries = [
-    entry for entry in a.binaries
-    if os.path.basename(entry[0]) not in _excluded_dlls
-]
+# 项目仅使用 QtCore/QtGui/QtWidgets —— Qml/Quick/Quick3D/Multimedia/Network/Pdf 等
+# 及其配套 DLL（含 FFmpeg 的 av* 系列）全部不打包
+_excluded_dll_prefixes = (
+    'Qt6Qml',           # 含 QmlModels/QmlWorkerScript/QmlMeta 等
+    'Qt6Quick',         # 含 Quick3D/QuickControls2/QuickDialogs2 等
+    'Qt6Labs',          # LabsQmlModels 等 Qml 实验模块
+    'Qt6Multimedia',    # 含 MultimediaQuick/MultimediaWidgets
+    'Qt6Pdf',           # 含 PdfQuick/PdfWidgets（项目用 img2pdf/PyMuPDF）
+    'Qt6Positioning',
+    'Qt6RemoteObjects',
+    'Qt6Sensors',
+    'Qt6StateMachine',
+    'Qt6WebChannel',
+    'Qt6Network',
+    'Qt6Designer',
+    'Qt6ShaderTools',
+    'Qt6Test',
+    'Qt6Xml',
+    'avcodec', 'avformat', 'avutil', 'swresample', 'swscale',  # FFmpeg（Multimedia 配套）
+    'd3dcompiler',      # Direct3D 着色器编译器（仅 Quick/OpenGL 用）
+    'opengl32sw',       # 软件 OpenGL 渲染回退（多数系统有硬件 OpenGL）
+)
+_excluded_dlls_exact = frozenset({'Qt6NetworkAuth.dll', 'Qt6Bluetooth.dll'})
+
+
+def _is_excluded_dll(path):
+    name = os.path.basename(path)
+    return name in _excluded_dlls_exact or name.startswith(_excluded_dll_prefixes)
+
+
+a.binaries = [entry for entry in a.binaries if not _is_excluded_dll(entry[0])]
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
