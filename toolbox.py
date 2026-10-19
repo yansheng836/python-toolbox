@@ -2137,7 +2137,7 @@ class ToolboxWindow(QMainWindow):
             self._tray_show_action = menu.addAction(t("tray.show"))
             self._tray_show_action.triggered.connect(self.show)
             self._tray_quit_action = menu.addAction(t("tray.quit"))
-            self._tray_quit_action.triggered.connect(QApplication.quit)
+            self._tray_quit_action.triggered.connect(self.quit_application)
             self.tray.setContextMenu(menu)
             self.tray.activated.connect(self.tray_activated)
             self.tray.show()
@@ -2147,7 +2147,7 @@ class ToolboxWindow(QMainWindow):
         self.file_menu = menubar.addMenu(t("menu.file"))
         self.exit_action = QAction(t("menu.exit"), self)
         self.exit_action.setShortcut('Ctrl+Q')
-        self.exit_action.triggered.connect(QApplication.quit)
+        self.exit_action.triggered.connect(self.quit_application)
         self.file_menu.addAction(self.exit_action)
 
         self.tools_menu = menubar.addMenu(t("menu.tools"))
@@ -2214,6 +2214,15 @@ class ToolboxWindow(QMainWindow):
         self.save_plugins_settings()
         self.save_geometry()
         event.accept()
+
+    def quit_application(self):
+        """菜单「退出」(Ctrl+Q) / 托盘「退出」统一入口
+
+        先 close() 触发 closeEvent 完成插件设置与窗口几何落盘，
+        再随最后窗口关闭退出事件循环；直接 QApplication.quit() 会
+        跳过 closeEvent，导致本次会话的配置改动丢失。
+        """
+        self.close()
 
     def save_plugins_settings(self):
         """把各插件控件值写入内存（仅 set），随 save_geometry 的 save() 一并落盘"""
