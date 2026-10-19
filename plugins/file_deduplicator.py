@@ -1189,11 +1189,20 @@ class FileDeduplicatorWidget(QWidget):
         self.delete_panel.finish_task(message)
         self.scan_panel.btn.setEnabled(True)
         self._set_inputs_enabled(True)
-        show_info(
-            self,
-            t("plugin.file_deduplicator.dialog.delete_result"),
-            message,
-        )
+        # 按 success 分流对话框类型：失败/取消走 show_error，避免用"信息"图标
+        # 装载失败明细误导用户对结果严重性的判断（H-B）
+        if success:
+            show_info(
+                self,
+                t("plugin.file_deduplicator.dialog.delete_result"),
+                message,
+            )
+        else:
+            show_error(
+                self,
+                t("plugin.file_deduplicator.dialog.error_title"),
+                message,
+            )
         # 根据勾选状态决定是否自动重新扫描
         if self.auto_rescan_checkbox.isChecked():
             self.start_scan()
