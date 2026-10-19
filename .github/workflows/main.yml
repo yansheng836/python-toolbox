@@ -210,17 +210,17 @@ jobs:
         run: |
           VERSION=$(python -c "import re; print(re.search(r'APP_VERSION\s*=\s*\"([^\"]+)\"', open('config.py', encoding='utf-8').read()).group(1))")
           DMG_NAME="工具箱ToolBox-v${VERSION}.dmg"
-          # 输出不能放在 srcfolder 内，否则 dmg 会把正在写入的自身递归打包导致体积翻倍
+          APP_FILE=$(find dist -name "*.app" -type d | head -1)
+          if [ -z "$APP_FILE" ]; then
+            echo "ERROR: No .app file found!"
+            exit 1
+          fi
+          # 只打 .app 本体；dist 里的裸可执行文件（PyInstaller onefile 残留）不能进 dmg
+          # 输出也不能放在 srcfolder 内，否则 dmg 会把正在写入的自身递归打包导致体积翻倍
           hdiutil create -volname "工具箱ToolBox-v${VERSION}" \
-            -srcfolder dist -ov -format UDZO "../${DMG_NAME}"
+            -srcfolder "$APP_FILE" -ov -format UDZO "../${DMG_NAME}"
           mv "../${DMG_NAME}" "dist/${DMG_NAME}"
           ls -l "dist/${DMG_NAME}"
-          # 挂载检查 dmg 内实际内容与体积
-          MNT=$(hdiutil attach "dist/${DMG_NAME}" -nobrowse -readonly | grep -oE '/Volumes/.*' | head -1)
-          echo "mounted: $MNT"
-          du -sh "$MNT"
-          find "$MNT" -type f -exec stat -f "%z %N" {} + | sort -rn | head -10
-          hdiutil detach "$MNT"
           if [ ! -f "dist/${DMG_NAME}" ]; then
             echo "ERROR: .dmg was not created!"
             exit 1
