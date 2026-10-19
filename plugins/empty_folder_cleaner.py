@@ -33,6 +33,10 @@ def _is_reserved_name(name: str) -> bool:
     return os.path.splitext(name)[0].upper() in WINDOWS_RESERVED_NAMES
 
 
+class _ScanCancelled(Exception):
+    """扫描被用户取消（H-A：让深度递归扫描可中断）"""
+
+
 def _is_junction(entry) -> bool:
     """判断目录项是否为 Windows junction（旧版本 Python 不支持时返回 False）"""
     checker = getattr(entry, "is_junction", None)
@@ -60,13 +64,20 @@ def _is_link_path(path: str) -> bool:
         return True
 
 
-def _scan_directory(directory: str) -> tuple[bool, list[str]]:
+def _scan_directory(directory: str, cancelled=None) -> tuple[bool, list[str]]:
     """递归判断目录是否为空，并收集其内部的最高层空目录候选
+
+    Args:
+        directory: 待扫描目录。
+        cancelled: 可选的可调用对象，返回真值时提前终止扫描（用于取消）。
+            Worker 传入 self.is_cancelled，实现扫描期间可取消（H-A）。
 
     Returns:
         (是否递归为空, 最高层空目录候选列表)。返回的候选列表不包含
         当前目录自身；当前目录是否作为候选由调用方决定。
     """
+    if cancelled is not None and cancelled():
+        raise _ScanCancelled
     try:
         with os.scandir(directory) as entries:
             entries = list(entries)
@@ -98,7 +109,7 @@ def _scan_directory(directory: str) -> tuple[bool, list[str]]:
             has_content = True
             continue
 
-        child_empty, child_candidates = _scan_directory(entry.path)
+        child_empty, child_candidates = _scan_directory(entry.path, cancelled)
         if child_empty:
             empty_children.append(os.path.abspath(entry.path))
         else:
@@ -114,10 +125,14 @@ def _scan_directory(directory: str) -> tuple[bool, list[str]]:
     return False, candidates
 
 
-def find_empty_folder_candidates(root_path: str) -> list[str]:
+def find_empty_folder_candidates(root_path: str, cancelled=None) -> list[str]:
     """查找根目录内部可删除的最高层递归空目录
 
     根目录本身始终保留，不会出现在结果中。结果路径为绝对路径且排序稳定。
+
+    Args:
+        cancelled: 可选可调用对象，返回真值时提前终止本轮扫描并抛出
+            _ScanCancelled（供 Worker 注入 is_cancelled 实现扫描可取消）。
     """
     root = os.path.abspath(os.fspath(root_path))
     if _is_link_path(root) or not os.path.isdir(root):
@@ -148,7 +163,7 @@ def find_empty_folder_candidates(root_path: str) -> list[str]:
             print(f"无法检查目录条目 {entry.path}: {exc}")
             continue
 
-        child_empty, child_candidates = _scan_directory(entry.path)
+        child_empty, child_candidates = _scan_directory(entry.path, cancelled)
         if child_empty:
             candidates.append(os.path.abspath(entry.path))
         else:
@@ -262,7 +277,12 @@ class EmptyFolderWorker(BaseWorker):
 
     def _run_scan(self):
         self.status.emit(t("plugin.empty_folder_cleaner.msg.worker_scanning"))
-        folders = find_empty_folder_candidates(self.root_path)
+        try:
+            folders = find_empty_folder_candidates(self.root_path, self.is_cancelled)
+        except _ScanCancelled:
+            # 用户取消：不再上报候选，直接按取消结束（H-A）
+            self.result.emit(False, t("common.msg.task_cancelled"))
+            return
         self.folders_found.emit(folders)
         self.progress.emit(100)
         self.result.emit(
@@ -278,6 +298,11 @@ class EmptyFolderWorker(BaseWorker):
         total = len(candidates)
 
         for index, candidate in enumerate(candidates, start=1):
+            if self.is_cancelled():
+                # 用户取消：报告已删除/失败进度后按取消结束（H-A）
+                self.deleted.emit(deleted, failed)
+                self.result.emit(False, t("common.msg.task_cancelled"))
+                return
             candidate_abs = os.path.abspath(os.fspath(candidate))
             if not _is_safe_candidate(self.root_path, candidate_abs):
                 print(f"跳过不安全的候选目录: {candidate_abs}")
@@ -598,6 +623,7 @@ class EmptyFolderCleanerWidget(QWidget):
         self.worker.folders_found.connect(self.show_candidates)
         self.worker.status.connect(self.scan_panel.update_status)
         self.worker.result.connect(self.scan_finished)
+        self.scan_panel.cancelled.connect(self.worker.cancel)  # H-A：扫描可取消
         self.worker.start()
 
     def show_candidates(self, candidates):
@@ -733,6 +759,7 @@ class EmptyFolderCleanerWidget(QWidget):
         self.worker.status.connect(self.delete_panel.update_status)
         self.worker.progress.connect(self.delete_panel.update_progress)
         self.worker.result.connect(self.delete_finished)
+        self.delete_panel.cancelled.connect(self.worker.cancel)  # H-A：删除可取消
         self.worker.start()
 
     def delete_finished(self, success, message):

@@ -764,6 +764,7 @@ class FileDeduplicatorWidget(QWidget):
         self.worker.duplicates_found.connect(self.show_duplicates)
         self.worker.result.connect(self.scan_finished)
         self.worker.error.connect(self.show_error)
+        self.scan_panel.cancelled.connect(self.worker.cancel)  # H-A：扫描可取消
         self.worker.start()
 
     def store_scan_sizes(self, sizes):
@@ -1170,6 +1171,7 @@ class FileDeduplicatorWidget(QWidget):
             self.worker.progress.connect(self.update_delete_progress)
             self.worker.status.connect(self.update_status)
             self.worker.result.connect(self.delete_finished)
+            self.delete_panel.cancelled.connect(self.worker.cancel)  # H-A：删除可取消
             self.worker.start()
 
     def update_delete_progress(self, done, total):
