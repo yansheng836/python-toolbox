@@ -69,7 +69,7 @@ def main():
     app_info = get_app_info()
     app_name = app_info["APP_NAME"]
     version = app_info["APP_VERSION"]
-    app_bundle_name = f"{app_name}.app"
+    app_bundle_name = f"{app_name}ToolBox-v{version}.app"  # 与 Windows 产物命名保持一致
     app_bundle_path = Path("dist") / app_bundle_name
 
     # 步骤 1: 生成版本信息
@@ -137,6 +137,7 @@ def main():
     print("     - PDF合并（多文件合并、拖拽排序）")
     print("     - PDF拆分（按页拆分、输出为图片或PDF）")
     print("     - 文件去重（哈希扫描、删除规则）")
+    print("     - 其他功能...")
     print("  4. 测试主题切换功能（深色/浅色模式）")
     print("  5. 测试窗口响应式布局（正常/最大化/全屏）")
     print("\n" + "="*60)

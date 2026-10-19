@@ -191,10 +191,10 @@ jobs:
           name: manual-docx
           path: dist/
 
-      - name: Package .app
+      - name: Package .dmg
         id: package
         run: |
-          echo "Packaging .app bundle with manual..."
+          echo "Packaging .dmg with manual..."
           VERSION="${GITHUB_REF#refs/tags/v}"
 
           APP_FILE=$(find dist -name "*.app" -type d | head -1)
@@ -205,25 +205,31 @@ jobs:
 
           APP_BASENAME="工具箱ToolBox-v${VERSION}.app"
           MANUAL_FILE=$(ls dist/manual-*.docx 2>/dev/null | head -1 || echo "")
-          ARCHIVE_NAME="工具箱ToolBox-mac-${VERSION}.tar.gz"
+          DMG_NAME="工具箱ToolBox-mac-${VERSION}.dmg"
 
           # Rename .app to match naming convention
           mv "$APP_FILE" "dist/${APP_BASENAME}"
 
-          echo "App: $APP_BASENAME"
-          echo "Manual: $MANUAL_FILE"
-          echo "Archive: $ARCHIVE_NAME"
-
-          cd dist
-          TAR_FILES="${APP_BASENAME}"
+          # Stage app (+ manual) and build .dmg with hdiutil (preinstalled on runners)
+          STAGING=$(mktemp -d)
+          cp -R "dist/${APP_BASENAME}" "${STAGING}/${APP_BASENAME}"
           if [ -n "$MANUAL_FILE" ]; then
-            TAR_FILES="${TAR_FILES} $(basename "$MANUAL_FILE")"
+            cp "$MANUAL_FILE" "${STAGING}/$(basename "$MANUAL_FILE")"
           fi
-          tar czf "../${ARCHIVE_NAME}" ${TAR_FILES}
-          cd ..
 
-          echo "archive_file=${ARCHIVE_NAME}" >> $GITHUB_OUTPUT
-          echo "OK: .app packaged successfully"
+          hdiutil create -volname "工具箱ToolBox-v${VERSION}" \
+            -srcfolder "${STAGING}" -ov -format UDZO "dist/${DMG_NAME}"
+          if [ ! -f "dist/${DMG_NAME}" ]; then
+            echo "ERROR: .dmg was not created!"
+            exit 1
+          fi
+
+          echo "App: ${APP_BASENAME}"
+          echo "Manual: ${MANUAL_FILE}"
+          echo "DMG: ${DMG_NAME}"
+
+          echo "archive_file=${DMG_NAME}" >> $GITHUB_OUTPUT
+          echo "OK: .dmg packaged successfully"
 
       - name: Upload macOS package to Release
         uses: softprops/action-gh-release@v3

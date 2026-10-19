@@ -85,17 +85,22 @@ def main():
     app_path = str(app_files[0])
     print(f"找到 .app: {app_path}")
 
-    # 从 config.py 读取版本号
+    # 从 config.py 读取应用名称和版本号
     config_path = Path("config.py")
     version = "0.0.0"
+    app_name = "工具箱"
     if config_path.exists():
         content = config_path.read_text(encoding="utf-8")
         import re
+        match = re.search(r'APP_NAME\s*=\s*"([^"]+)"', content)
+        if match:
+            app_name = match.group(1)
         match = re.search(r'APP_VERSION\s*=\s*"([^"]+)"', content)
         if match:
             version = match.group(1)
 
-    output_path = str(dist_dir / f"工具箱-v{version}.dmg")
+    # 与 Windows 产物命名保持一致：{APP_NAME}ToolBox-v{version}
+    output_path = str(dist_dir / f"{app_name}ToolBox-v{version}.dmg")
     print(f"输出: {output_path}")
 
     # 尝试使用 create-dmg（需要安装）

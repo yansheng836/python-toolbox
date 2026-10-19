@@ -281,7 +281,7 @@ if sys.platform == 'darwin':
 
     app = BUNDLE(
         exe,
-        name=f'{APP_NAME}.app',
+        name=f'{APP_NAME}ToolBox-v{APP_VERSION}.app',
         icon='favicon.ico',
         bundle_identifier='com.yansheng836.toolbox',
         info_plist={

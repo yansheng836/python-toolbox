@@ -198,12 +198,24 @@ jobs:
           python build_macos.py
           echo "OK: build_macos.py completed successfully"
 
+      - name: Build .dmg
+        run: |
+          VERSION=$(python scripts/get_version.py version)
+          DMG_NAME="工具箱ToolBox-v${VERSION}.dmg"
+          hdiutil create -volname "工具箱ToolBox-v${VERSION}" \
+            -srcfolder dist -ov -format UDZO "dist/${DMG_NAME}"
+          if [ ! -f "dist/${DMG_NAME}" ]; then
+            echo "ERROR: .dmg was not created!"
+            exit 1
+          fi
+          echo "DMG: ${DMG_NAME}"
+
       - name: Upload build artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
           name: toolbox-macos-${{ github.sha }}
           path: |
-            dist/*.app
+            dist/*.dmg
           retention-days: 30
           if-no-files-found: error
