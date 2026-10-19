@@ -411,7 +411,7 @@
   "plugin.file_deduplicator.warning.busy": "正在扫描或删除中，请等待当前操作完成",
   "plugin.pdf_merger.error.encrypted": "文件已加密，无法合并：\n{path}\n请先解除 PDF 密码保护后重试。",
   "plugin.pdf_splitter.error.encrypted": "文件已加密，无法拆分：\n{path}\n请先解除 PDF 密码保护后重试。",
-  "plugin.pdf_splitter.msg.skipped_locked": "\n{count} 个输出文件被占用，已跳过。",
+  "plugin.pdf_splitter.msg.skipped_failed": "\n{count} 个输出文件未能生成（被占用或该页损坏），已跳过。",
   "plugin.file_deduplicator.button.cancel_scan": "取消扫描",
   "plugin.file_deduplicator.label.use_trash": "删除到回收站",
   "plugin.file_deduplicator.msg.trash_unavailable": "（send2trash 未安装，无法使用）",

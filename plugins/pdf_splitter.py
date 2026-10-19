@@ -97,8 +97,14 @@ class PDFSplitWorker(BaseWorker):
                             continue
                         new_doc = fitz.open()
                         try:
-                            new_doc.insert_pdf(doc, from_page=i, to_page=end-1)
-                            new_doc.save(output_file)
+                            try:
+                                new_doc.insert_pdf(doc, from_page=i, to_page=end-1)
+                                new_doc.save(output_file)
+                            except Exception as e:
+                                # 单页拆分失败计入跳过，不中止整批（M-C）
+                                print(f"Skip failed split part: {output_file}: {e}")
+                                skipped += 1
+                                continue
                         finally:
                             # insert/save 抛异常也保证关闭 new_doc（M-B）
                             new_doc.close()
@@ -128,14 +134,21 @@ class PDFSplitWorker(BaseWorker):
                             pix = None
                             continue
                         # 统一经 PIL 保存：PyMuPDF 的 Pixmap.save 对 WebP 支持不稳定
-                        self._save_pixmap(pix, output_file)
+                        try:
+                            self._save_pixmap(pix, output_file)
+                        except Exception as e:
+                            # 单页转换失败计入跳过，不中止整批（M-C）
+                            print(f"Skip failed page {i+1}: {e}")
+                            skipped += 1
+                            pix = None
+                            continue
                         pix = None
                         count += 1
                         self.progress.emit(count)
                     msg = t("plugin.pdf_splitter.msg.convert_done", count=count)
 
                 if skipped:
-                    msg += t("plugin.pdf_splitter.msg.skipped_locked", count=skipped)
+                    msg += t("plugin.pdf_splitter.msg.skipped_failed", count=skipped)
                 self.result.emit(True, msg)
             finally:
                 # 任务异常 / 取消 / 加密提前返回都保证关闭 doc（M-B）

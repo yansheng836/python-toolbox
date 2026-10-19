@@ -411,7 +411,7 @@
   "plugin.file_deduplicator.warning.busy": "A scan or delete is in progress. Please wait for it to finish.",
   "plugin.pdf_merger.error.encrypted": "The file is password-protected and cannot be merged:\n{path}\nPlease remove the PDF password protection and try again.",
   "plugin.pdf_splitter.error.encrypted": "The file is password-protected and cannot be split:\n{path}\nPlease remove the PDF password protection and try again.",
-  "plugin.pdf_splitter.msg.skipped_locked": "\n{count} output file(s) were locked and skipped.",
+  "plugin.pdf_splitter.msg.skipped_failed": "\n{count} output file(s) could not be written (locked or page corrupted) and were skipped.",
   "plugin.file_deduplicator.button.cancel_scan": "Cancel Scan",
   "plugin.file_deduplicator.label.use_trash": "Move to Recycle Bin",
   "plugin.file_deduplicator.msg.trash_unavailable": " (send2trash not installed)",
