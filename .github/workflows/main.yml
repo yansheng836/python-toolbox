@@ -200,7 +200,7 @@ jobs:
 
       - name: Build .dmg
         run: |
-          VERSION=$(python scripts/get_version.py version)
+          VERSION=$(python -c "import re; print(re.search(r'APP_VERSION\s*=\s*\"([^\"]+)\"', open('config.py', encoding='utf-8').read()).group(1))")
           DMG_NAME="工具箱ToolBox-v${VERSION}.dmg"
           hdiutil create -volname "工具箱ToolBox-v${VERSION}" \
             -srcfolder dist -ov -format UDZO "dist/${DMG_NAME}"
