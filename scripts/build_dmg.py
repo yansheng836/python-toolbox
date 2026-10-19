@@ -58,10 +58,13 @@ def create_dmg_with_hdiutil(app_path: str, output_path: str):
         print(f"错误: {result.stderr}")
         return False
 
-    # 重命名
+    # dmg_temp 与 srcfolder 同目录时，hdiutil 会把正在写入的 dmg 自身递归打包进去，
+    # 导致体积接近翻倍——先写到上级临时目录再移回
+    final_temp = output_path + ".building"
     if os.path.exists(output_path):
         os.remove(output_path)
-    os.rename(dmg_temp, output_path)
+    os.rename(dmg_temp, final_temp)
+    os.replace(final_temp, output_path)
     return True
 
 

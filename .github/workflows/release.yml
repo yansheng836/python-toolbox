@@ -217,8 +217,10 @@ jobs:
             cp "$MANUAL_FILE" "${STAGING}/$(basename "$MANUAL_FILE")"
           fi
 
+          # 输出不能放在 srcfolder 内，否则 dmg 会把正在写入的自身递归打包导致体积翻倍
           hdiutil create -volname "工具箱ToolBox-v${VERSION}" \
-            -srcfolder "${STAGING}" -ov -format UDZO "dist/${DMG_NAME}"
+            -srcfolder "${STAGING}" -ov -format UDZO "${GITHUB_WORKSPACE}/${DMG_NAME}"
+          mv "${GITHUB_WORKSPACE}/${DMG_NAME}" "dist/${DMG_NAME}"
           if [ ! -f "dist/${DMG_NAME}" ]; then
             echo "ERROR: .dmg was not created!"
             exit 1
