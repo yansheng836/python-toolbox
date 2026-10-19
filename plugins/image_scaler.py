@@ -400,7 +400,9 @@ class ImageScalerWidget(QWidget):
         self.worker.start()
 
     def on_progress_updated(self, progress, current):
-        self.action_panel.update_progress(progress)
+        # 进度条最大值为文件数（start_task(len(files))），故喂 current(i+1)
+        # 而非 0-100 百分比，避免维度不一致导致进度条瞬间打满（M-A）
+        self.action_panel.update_progress(current)
         total = len(self.file_panel.get_files())
         self.action_panel.update_status(
             t("plugin.image_scaler.msg.progress", count=current, total=total)
