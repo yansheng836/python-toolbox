@@ -215,6 +215,12 @@ jobs:
             -srcfolder dist -ov -format UDZO "../${DMG_NAME}"
           mv "../${DMG_NAME}" "dist/${DMG_NAME}"
           ls -l "dist/${DMG_NAME}"
+          # 挂载检查 dmg 内实际内容与体积
+          MNT=$(hdiutil attach "dist/${DMG_NAME}" -nobrowse -readonly | grep -oE '/Volumes/.*' | head -1)
+          echo "mounted: $MNT"
+          du -sh "$MNT"
+          find "$MNT" -type f -exec stat -f "%z %N" {} + | sort -rn | head -10
+          hdiutil detach "$MNT"
           if [ ! -f "dist/${DMG_NAME}" ]; then
             echo "ERROR: .dmg was not created!"
             exit 1
