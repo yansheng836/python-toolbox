@@ -9,7 +9,7 @@ img2pdf>=0.6.3
 PyMuPDF>=1.28.2
 
 # Optional: move deleted files to the recycle bin (file deduplication)
-send2trash>=1.8.0
+send2trash>=2.1.0
 
 # Build Tool
 pyinstaller>=6.22.3
