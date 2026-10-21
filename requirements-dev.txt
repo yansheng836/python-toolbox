@@ -6,4 +6,4 @@ pytest>=8.0.0
 pytest-qt>=4.4.0
 
 # 静态检查
-ruff>=0.6.0
+ruff>=0.17.1
