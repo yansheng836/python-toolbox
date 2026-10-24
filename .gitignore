@@ -148,6 +148,7 @@ nt-mjs/nt.txt
 
 * 副本 *
 *.html
+!/.archify/**/*.html
 ~$*
 
 # SDD session scratch (review diffs, briefs, reports, ledger)
