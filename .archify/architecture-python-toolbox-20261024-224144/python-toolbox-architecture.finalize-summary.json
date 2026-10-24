@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\candidate.json",
+    "sha256": "9d23a86b5e1d1e627df3cee57c010065f2adc19ace9fbc7ee74a77f220e49468",
+    "bytes": 7889
+  },
+  "artifact": {
+    "path": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
+    "sha256": "b2cba2ec66ee81627e71c53b2b123052e1d237d4552d989ccc8075077561de7b",
+    "bytes": 837819
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.finalize.json",
+    "summaryReceipt": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.finalize-summary.json",
+    "browserCheckReceipt": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-24T13:59:22.219Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 9476,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  }
+}

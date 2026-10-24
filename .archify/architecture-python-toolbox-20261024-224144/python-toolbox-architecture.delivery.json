@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "d779edc6-bd0f-48f5-9735-2d6efa7697b3",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\candidate.json",
+  "output": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
+  "specification": {
+    "sha256": "9d23a86b5e1d1e627df3cee57c010065f2adc19ace9fbc7ee74a77f220e49468",
+    "bytes": 7889
+  },
+  "artifact": {
+    "sha256": "b2cba2ec66ee81627e71c53b2b123052e1d237d4552d989ccc8075077561de7b",
+    "bytes": 837819
+  }
+}

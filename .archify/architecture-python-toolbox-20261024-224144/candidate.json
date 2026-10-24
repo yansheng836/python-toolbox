@@ -1,0 +1,294 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "工具箱（python-toolbox）架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "output": ".archify/architecture-python-toolbox-20261024-224144/python-toolbox-architecture.html",
+    "repository": {
+      "url": "https://github.com/yansheng836/python-toolbox.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "3163f0edab530ca2d7f760e066f955ac023fcfb0"
+    }
+  },
+  "components": [
+    {
+      "id": "users",
+      "type": "external",
+      "label": "用户",
+      "sublabel": "拖拽文件 · 点击操作",
+      "pos": [40, 280],
+      "size": [110, 64]
+    },
+    {
+      "id": "main",
+      "type": "backend",
+      "label": "main.py",
+      "sublabel": "启动入口 · QApplication",
+      "pos": [210, 280],
+      "size": [120, 64],
+      "sources": [{ "path": "main.py", "line": 42, "end_line": 68 }]
+    },
+    {
+      "id": "window",
+      "type": "frontend",
+      "label": "ToolboxWindow",
+      "sublabel": "侧边栏 + QStackedWidget",
+      "pos": [390, 280],
+      "size": [160, 64],
+      "sources": [{ "path": "toolbox.py", "line": 1461, "end_line": 1512 }]
+    },
+    {
+      "id": "plugins",
+      "type": "backend",
+      "label": "功能插件 ×9",
+      "sublabel": "图片 / PDF / 文件处理",
+      "pos": [630, 280],
+      "size": [160, 64],
+      "sources": [{ "path": "config.py", "line": 20, "end_line": 112 }]
+    },
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "BaseWorker",
+      "sublabel": "QThread 后台任务",
+      "pos": [870, 280],
+      "size": [140, 64],
+      "sources": [{ "path": "common/base_worker.py", "line": 19, "end_line": 44 }]
+    },
+    {
+      "id": "output",
+      "type": "database",
+      "label": "输出文件",
+      "sublabel": "图片 / PDF / 清理结果",
+      "pos": [1090, 280],
+      "size": [140, 64],
+      "sources": [{ "path": "plugins/image_to_pdf.py", "line": 132 }]
+    },
+    {
+      "id": "config_store",
+      "type": "database",
+      "label": "config.ini",
+      "sublabel": "setting.* / plugin.*",
+      "pos": [40, 120],
+      "size": [140, 64],
+      "sources": [{ "path": "common/app_settings.py", "line": 23, "end_line": 42 }]
+    },
+    {
+      "id": "app_settings",
+      "type": "backend",
+      "label": "AppSettings",
+      "sublabel": "INI 原子读写",
+      "pos": [210, 120],
+      "size": [150, 64],
+      "sources": [
+        { "path": "common/app_settings.py", "line": 1, "end_line": 21 },
+        { "path": "common/app_settings.py", "line": 80 }
+      ]
+    },
+    {
+      "id": "theme",
+      "type": "backend",
+      "label": "Theme",
+      "sublabel": "深浅色颜色常量",
+      "pos": [390, 120],
+      "size": [130, 64],
+      "sources": [{ "path": "toolbox.py", "line": 55, "end_line": 116 }]
+    },
+    {
+      "id": "plugin_base",
+      "type": "backend",
+      "label": "ToolPlugin",
+      "sublabel": "插件抽象基类",
+      "pos": [630, 120],
+      "size": [160, 64],
+      "sources": [{ "path": "toolbox.py", "line": 316, "end_line": 395 }]
+    },
+    {
+      "id": "libs",
+      "type": "external",
+      "label": "处理库",
+      "sublabel": "Pillow · PyMuPDF · img2pdf",
+      "pos": [870, 120],
+      "size": [160, 64],
+      "sources": [{ "path": "common/utils.py", "line": 32, "end_line": 53 }]
+    },
+    {
+      "id": "i18n",
+      "type": "backend",
+      "label": "i18n",
+      "sublabel": "t() · language_changed",
+      "pos": [390, 460],
+      "size": [140, 64],
+      "sources": [
+        { "path": "common/i18n.py", "line": 47, "end_line": 60 },
+        { "path": "common/i18n.py", "line": 220, "end_line": 228 }
+      ]
+    },
+    {
+      "id": "common_ui",
+      "type": "frontend",
+      "label": "公共 UI 组件",
+      "sublabel": "FileListPanel · ActionPanel",
+      "pos": [620, 460],
+      "size": [190, 64],
+      "sources": [
+        { "path": "common/file_list_panel.py", "line": 19 },
+        { "path": "common/action_panel.py", "line": 16 },
+        { "path": "toolbox.py", "line": 117, "end_line": 225 }
+      ]
+    },
+    {
+      "id": "i18n_dicts",
+      "type": "database",
+      "label": "i18n/*.json",
+      "sublabel": "zh_CN · en 词典",
+      "pos": [390, 620],
+      "size": [140, 64],
+      "sources": [
+        { "path": "i18n/zh_CN.json" },
+        { "path": "i18n/en.json" }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "users-main",
+      "from": "users",
+      "to": "main",
+      "label": "启动",
+      "variant": "emphasis"
+    },
+    {
+      "id": "main-window",
+      "from": "main",
+      "to": "window",
+      "label": "构造",
+      "variant": "emphasis"
+    },
+    {
+      "id": "window-plugins",
+      "from": "window",
+      "to": "plugins",
+      "label": "动态加载",
+      "variant": "emphasis"
+    },
+    {
+      "id": "plugins-worker",
+      "from": "plugins",
+      "to": "worker",
+      "label": "启动任务",
+      "variant": "emphasis"
+    },
+    {
+      "id": "worker-output",
+      "from": "worker",
+      "to": "output",
+      "label": "写出文件",
+      "variant": "emphasis"
+    },
+    {
+      "id": "main-app-settings",
+      "from": "main",
+      "to": "app_settings",
+      "label": "创建",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "app-settings-config",
+      "from": "app_settings",
+      "to": "config_store",
+      "fromSide": "left",
+      "toSide": "right"
+    },
+    {
+      "id": "window-theme",
+      "from": "window",
+      "to": "theme",
+      "label": "应用主题",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "window-i18n",
+      "from": "window",
+      "to": "i18n",
+      "label": "翻译刷新",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "i18n-dicts",
+      "from": "i18n",
+      "to": "i18n_dicts",
+      "label": "加载词典",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "plugins-plugin-base",
+      "from": "plugins",
+      "to": "plugin_base",
+      "label": "继承",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "plugins-common-ui",
+      "from": "plugins",
+      "to": "common_ui",
+      "label": "复用组件",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "worker-libs",
+      "from": "worker",
+      "to": "libs",
+      "label": "调用处理库",
+      "fromSide": "top",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "入口与主窗口",
+      "items": [
+        "main.py 创建 QApplication 与 AppSettings，随后构造 ToolboxWindow",
+        "侧边栏支持折叠动画，QStackedWidget 承载首页与各插件页",
+        "内置 WelcomePage 功能卡片与 SettingsPlugin 设置页"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "插件系统",
+      "items": [
+        "config.py 的 PLUGIN_MODULES 是插件元数据单一数据源",
+        "load_plugins 用 importlib 动态导入，按 order 排序注册",
+        "9 个功能插件继承 ToolPlugin，统一实现 create_ui / update_theme / load_settings"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "后台与公共组件",
+      "items": [
+        "BaseWorker 继承 QThread，提供 progress / status / result 信号",
+        "长任务在后台线程执行，通过信号回传进度与结果",
+        "FileListPanel、ActionPanel、Card、SelectableLabel 等公共控件复用"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "配置与国际化",
+      "items": [
+        "AppSettings 原子写 config.ini：[setting.*] 全局、[plugin.<id>] 插件",
+        "插件设置仅在窗口关闭时随 save_geometry 统一落盘",
+        "i18n 用 JSON 词典 + language_changed 信号即时刷新界面"
+      ]
+    }
+  ]
+}
