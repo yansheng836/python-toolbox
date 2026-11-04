@@ -422,5 +422,7 @@
   "plugin.file_deduplicator.msg.delete_missing_skipped": "\nSkipped {count} file(s) that no longer exist",
   "plugin.file_deduplicator.msg.file_changed_skipped": "File contents changed, skipped",
   "plugin.file_deduplicator.msg.confirm_trash_note": "\n(Recycle Bin enabled — deleted files can be restored from the system Recycle Bin)",
-  "app.plugin_load_failed": "The following plugins failed to load and are unavailable:\n{details}"
+  "app.plugin_load_failed": "The following plugins failed to load and are unavailable:\n{details}",
+  "plugin.image_to_pdf.label.merge": "Merge into one PDF:",
+  "plugin.image_to_pdf.msg.saved_multi": "Generated {count} PDF(s), saved to:\n{dir}"
 }

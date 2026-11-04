@@ -73,5 +73,7 @@
   "plugin.image_format_converter.warning.no_files": "请先添加图片！",
   "plugin.image_format_converter.msg.converting": "正在转换: {name}",
   "plugin.image_format_converter.msg.success": "成功转换 {count} 张图片！",
-  "plugin.image_format_converter.error.convert_failed": "转换失败: {error}"
+  "plugin.image_format_converter.error.convert_failed": "转换失败: {error}",
+  "plugin.image_to_pdf.label.merge": "是否合并:",
+  "plugin.image_to_pdf.msg.saved_multi": "已生成 {count} 个PDF，保存在:\n{dir}"
 }

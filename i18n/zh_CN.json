@@ -422,5 +422,7 @@
   "plugin.file_deduplicator.msg.delete_missing_skipped": "\n跳过 {count} 个已不存在的文件",
   "plugin.file_deduplicator.msg.file_changed_skipped": "文件内容已变化，已跳过",
   "plugin.file_deduplicator.msg.confirm_trash_note": "\n（已启用回收站，删除后可在系统回收站中恢复）",
-  "app.plugin_load_failed": "以下插件加载失败，相关功能不可用：\n{details}"
+  "app.plugin_load_failed": "以下插件加载失败，相关功能不可用：\n{details}",
+  "plugin.image_to_pdf.label.merge": "是否合并:",
+  "plugin.image_to_pdf.msg.saved_multi": "已生成 {count} 个PDF，保存在:\n{dir}"
 }

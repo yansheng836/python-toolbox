@@ -39,13 +39,14 @@ class PDFWorker(BaseWorker):
     """PDF转换工作线程"""
     # 继承 BaseWorker 的标准信号：progress, status, result
 
-    def __init__(self, files, output, page_size, compress=True, quality=85):
+    def __init__(self, files, output, page_size, compress=True, quality=85, merge=True):
         super().__init__()
         self.files = files
         self.output = output
         self.page_size = page_size
         self.compress = compress
         self.quality = quality
+        self.merge = merge
 
     BATCH_SIZE = 50  # 每批处理图片数，控制内存占用
     PAGE_SIZES = {
@@ -129,9 +130,184 @@ class PDFWorker(BaseWorker):
             img.info['icc_profile'] = icc
         return img
 
+    def _individual_output_dir(self):
+        """推导独立模式的输出目录。"""
+        output = (self.output or "").strip()
+        if not output:
+            return None
+        if os.path.isdir(output):
+            return output
+        # 作为文件路径时取其所在目录（目录不存在时仍使用该目录）
+        d = os.path.dirname(output)
+        return d if d else None
+
+    def _individual_output_path(self, src_path):
+        """根据原图文件名派生单张 PDF 输出路径。"""
+        base = os.path.splitext(os.path.basename(src_path))[0]
+        out_dir = self._individual_output_dir()
+        if out_dir is None:
+            out_dir = os.path.dirname(src_path) or "."
+        os.makedirs(out_dir, exist_ok=True)
+        return os.path.join(out_dir, f"{base}.pdf")
+
+    def _convert_one_to_pdf(self, src_path, temp_files):
+        """将单张图片转换为一个独立 PDF，返回 (success, output_path, skipped_increment)。"""
+        out_path = self._individual_output_path(src_path)
+
+        # 预检查：目标文件是否被占用
+        ok, error = check_file_writable(out_path)
+        if not ok:
+            print(f"Error in image_to_pdf: {error}")
+            return False, out_path, 1
+
+        # 智能缩放需要最大宽度；单张模式下 max_width 即该图自身宽度
+        max_width = None
+        if self.page_size == "smart":
+            try:
+                max_width, _ = self._read_display_size(src_path)
+            except Exception as e:
+                print(f"Error in image_to_pdf: {e}")
+                return False, out_path, 1
+
+        try:
+            img = self._prepare_image(src_path, max_width)
+        except Exception as e:
+            print(f"Error in image_to_pdf: {e}")
+            return False, out_path, 1
+
+        temp_dir = os.path.dirname(out_path) or "."
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir, exist_ok=True)
+
+        jpeg_quality = self.quality if self.compress else 95
+        tmp_jpg = os.path.join(temp_dir, f".temp_{os.getpid()}_{time.time_ns()}_{id(img)}.jpg")
+        temp_files.add(tmp_jpg)
+
+        try:
+            icc = img.info.get('icc_profile')
+            save_options = {
+                'format': 'JPEG',
+                'quality': jpeg_quality,
+                'optimize': True,
+            }
+            if icc:
+                save_options['icc_profile'] = icc
+            if self.page_size in self.PAGE_SIZES:
+                save_options['dpi'] = (self.PDF_DPI, self.PDF_DPI)
+            img.save(tmp_jpg, **save_options)
+            img.close()
+
+            # 生成单页 PDF
+            if FITZ_AVAILABLE:
+                doc = fitz.open()
+                try:
+                    fitz_img = fitz.open(tmp_jpg)
+                    pdfbytes = fitz_img.convert_to_pdf()
+                    img_pdf = fitz.open("pdf", pdfbytes)
+                    doc.insert_pdf(img_pdf)
+                    img_pdf.close()
+                    fitz_img.close()
+                except Exception as e:
+                    print(f"Error opening JPEG {tmp_jpg}: {e}")
+                    doc.close()
+                    return False, out_path, 1
+                doc.save(out_path, garbage=0, deflate=False)
+                doc.close()
+            elif IMG2PDF_AVAILABLE:
+                try:
+                    with open(out_path, "wb") as f:
+                        f.write(img2pdf.convert([tmp_jpg]))
+                except Exception as e:
+                    print(f"Error creating PDF with img2pdf: {e}")
+                    return False, out_path, 1
+            else:
+                try:
+                    with Image.open(tmp_jpg) as src:
+                        src.convert('RGB').save(
+                            out_path, "PDF",
+                            resolution=(
+                                PDFWorker.PDF_DPI
+                                if self.page_size in PDFWorker.PAGE_SIZES
+                                else 100.0
+                            ),
+                        )
+                except Exception as e:
+                    print(f"Error creating PDF with PIL: {e}")
+                    return False, out_path, 1
+
+            if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+                return False, out_path, 1
+            return True, out_path, 0
+        finally:
+            # 清理临时 JPEG
+            try:
+                jpg_full = os.path.abspath(tmp_jpg)
+                if os.path.exists(jpg_full):
+                    os.remove(jpg_full)
+                temp_files.discard(tmp_jpg)
+            except OSError as e:
+                print(f"Error removing JPEG {tmp_jpg}: {e}")
+
+    def _run_individual(self):
+        temp_files = set()
+        try:
+            skipped = 0
+            processed_count = 0
+            self.status.emit(t("plugin.image_to_pdf.msg.processing"))
+            out_dir = self._individual_output_dir()
+            if out_dir is None and self.files:
+                out_dir = os.path.dirname(self.files[0]) or "."
+
+            for i, f in enumerate(self.files):
+                if self.is_cancelled():
+                    self.result.emit(False, t("common.msg.task_cancelled"))
+                    return
+                self.status.emit(t(
+                    "plugin.image_to_pdf.msg.batch",
+                    index=i + 1,
+                ))
+                success, out_path, inc = self._convert_one_to_pdf(f, temp_files)
+                skipped += inc
+                processed_count += 1
+                self.progress.emit(processed_count)
+                if not success:
+                    continue
+
+            if processed_count - skipped == 0:
+                self.result.emit(False, t("plugin.image_to_pdf.error.no_images_processed"))
+                return
+
+            msg = t("plugin.image_to_pdf.msg.saved_multi",
+                    count=processed_count - skipped, dir=out_dir)
+            if skipped > 0:
+                msg += t("plugin.image_to_pdf.msg.skipped", count=skipped)
+            self.progress.emit(processed_count)
+            self.result.emit(True, msg)
+        except Exception as e:
+            print(f"Error in image_to_pdf: {e}")
+            self.result.emit(False, t("plugin.image_to_pdf.error.convert_failed", error=str(e)))
+        finally:
+            for tf in list(temp_files):
+                try:
+                    tf_full = os.path.abspath(tf)
+                    if os.path.exists(tf_full):
+                        os.remove(tf_full)
+                except OSError as e:
+                    print(f"Error in image_to_pdf (cleanup): {e}")
+
     def run(self):
+        if not getattr(self, "merge", True):
+            self._run_individual()
+            return
         temp_files = set()  # 使用集合避免重复文件名导致的清理问题
         try:
+            # 合并模式下未指定输出文件：按第一个文件名派生 "文件名-合并.pdf"
+            if not (self.output or "").strip():
+                first = self.files[0]
+                base = os.path.splitext(os.path.basename(first))[0]
+                out_dir = os.path.dirname(first) or "."
+                os.makedirs(out_dir, exist_ok=True)
+                self.output = os.path.join(out_dir, f"{base}-合并.pdf")
             # ========= 预检查：目标文件是否被占用 =========
             ok, error = check_file_writable(self.output)
             if not ok:
@@ -392,6 +568,14 @@ class ImageToPDF(ToolPlugin):
                 self.file_panel.update_theme(theme)
             if hasattr(self, 'size_combo'):
                 self.size_combo.setStyleSheet(get_combo_style(theme))
+            if hasattr(self, 'compress_label'):
+                self.compress_label.setStyleSheet(f"color: {theme['text']};")
+            if hasattr(self, 'merge_label'):
+                self.merge_label.setStyleSheet(f"color: {theme['text']};")
+            if hasattr(self, 'quality_title_label'):
+                self.quality_title_label.setStyleSheet(f"color: {theme['text']};")
+            if hasattr(self, 'output_file_label'):
+                self.output_file_label.setStyleSheet(f"color: {theme['text']};")
             if hasattr(self, 'output_path'):
                 self.output_path.setStyleSheet(get_lineedit_style(theme))
             if hasattr(self, 'action_panel'):
@@ -407,6 +591,7 @@ class ImageToPDF(ToolPlugin):
         self.settings_card.title_label.setText(t("plugin.image_to_pdf.card.pdf_settings"))
         self.page_size_label.setText(t("plugin.image_to_pdf.label.page_size"))
         self.compress_label.setText(t("plugin.image_to_pdf.label.compress"))
+        self.merge_label.setText(t("plugin.image_to_pdf.label.merge"))
         self.quality_title_label.setText(t("plugin.image_to_pdf.label.quality"))
         self.output_file_label.setText(t("plugin.image_to_pdf.label.output_file"))
         self.output_path.setPlaceholderText(t("plugin.image_to_pdf.placeholder.output_file"))
@@ -464,11 +649,20 @@ class ImageToPDF(ToolPlugin):
         self.size_combo.setStyleSheet(get_combo_style(self.theme))
         settings_layout.addWidget(self.size_combo, 0, 1)
 
+        compress_merge_layout = QHBoxLayout()
         self.compress_label = SelectableLabel(t("plugin.image_to_pdf.label.compress"))
-        settings_layout.addWidget(self.compress_label, 1, 0)
+        compress_merge_layout.addWidget(self.compress_label)
         self.compress_check = QCheckBox()
         self.compress_check.setChecked(True)
-        settings_layout.addWidget(self.compress_check, 1, 1)
+        compress_merge_layout.addWidget(self.compress_check)
+        compress_merge_layout.addSpacing(20)
+        self.merge_label = SelectableLabel(t("plugin.image_to_pdf.label.merge"))
+        compress_merge_layout.addWidget(self.merge_label)
+        self.merge_check = QCheckBox()
+        self.merge_check.setChecked(False)
+        compress_merge_layout.addWidget(self.merge_check)
+        compress_merge_layout.addStretch()
+        settings_layout.addLayout(compress_merge_layout, 1, 0, 1, 2)
 
         self.quality_title_label = SelectableLabel(t("plugin.image_to_pdf.label.quality"))
         settings_layout.addWidget(self.quality_title_label, 2, 0)
@@ -512,12 +706,14 @@ class ImageToPDF(ToolPlugin):
     def load_settings(self):
         self.set_combo_by_data(self.size_combo, self.load_setting("page_size", "smart"))
         self.compress_check.setChecked(self.load_setting("compress", True, bool))
+        self.merge_check.setChecked(self.load_setting("merge", False, bool))
         self.quality_slider.setValue(self.load_setting("quality", 85, int))
         self.output_path.setText(self.load_setting("output_file", ""))
 
     def save_settings(self):
         self.save_setting("page_size", self.size_combo.currentData())
         self.save_setting("compress", 1 if self.compress_check.isChecked() else 0)
+        self.save_setting("merge", 1 if self.merge_check.isChecked() else 0)
         self.save_setting("quality", self.quality_slider.value())
         self.save_setting("output_file", self.output_path.text().strip())
 
@@ -540,20 +736,17 @@ class ImageToPDF(ToolPlugin):
             self._show_empty_warning(t("plugin.image_to_pdf.warning.no_files"))
             return
 
-        output = self.output_path.text()
-        if not output:
-            parent = self.widget if self.widget else None
-            output = get_save_file_name(
-                parent,
-                t("plugin.image_to_pdf.dialog.save_pdf"),
-                "",
-                t("plugin.image_to_pdf.filter.pdf"),
-            )
+        merge = self.merge_check.isChecked()
+        output = self.output_path.text().strip()
+
+        if merge:
             if not output:
-                return
-            if not output.endswith('.pdf'):
-                output += '.pdf'
-            self.output_path.setText(output)
+                first = files[0]
+                base = os.path.splitext(os.path.basename(first))[0]
+                out_dir = os.path.dirname(first) or "."
+                os.makedirs(out_dir, exist_ok=True)
+                output = os.path.join(out_dir, f"{base}-合并.pdf")
+                self.output_path.setText(output)
 
         if not (IMG2PDF_AVAILABLE or FITZ_AVAILABLE or PIL_AVAILABLE):
             parent = self.widget if self.widget else None
@@ -565,14 +758,15 @@ class ImageToPDF(ToolPlugin):
             )
             return
 
-        self.action_panel.start_task(len(files) + 1, status="")
+        self.action_panel.start_task(len(files) + (1 if merge else 0), status="")
 
         self.worker = PDFWorker(
             files,
             output,
             self.size_combo.currentData(),
             self.compress_check.isChecked(),
-            self.quality_slider.value()
+            self.quality_slider.value(),
+            merge,
         )
         self.worker.progress.connect(self.action_panel.update_progress)
         self.worker.status.connect(self.action_panel.update_status)
