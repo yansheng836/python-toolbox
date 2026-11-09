@@ -2,7 +2,7 @@
 -r requirements.txt
 
 # 测试
-pytest>=9.1.1
+pytest>=9.2.0
 pytest-qt>=4.4.0
 
 # 静态检查
