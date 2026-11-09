@@ -23,9 +23,9 @@ English \| [简体中文](README.md)
 | 🗜️ | **Image Compressor** | Batch-compress JPG/PNG/WebP with adjustable quality; supports format conversion |
 | 🔁 | **Image Format Converter** | Batch-convert between six formats: JPEG/PNG/WebP/BMP/TIFF/GIF |
 | 🧩 | **Image Stitcher** | Merge multiple images into one horizontally or vertically, with alignment options |
-| 🖨️ | **Image to PDF** | Combine multiple images into a single PDF; supports drag-and-drop reordering |
+| 🖨️ | **Image to PDF** | Combine multiple images into one PDF, or export one PDF per image; configurable page size, compression, and JPEG quality |
 | 🔍 | **Image Scaler** | Batch-resize images by percentage, width, or height |
-| 📚 | **PDF Merger** | Merge multiple PDFs into one; supports drag-and-drop reordering |
+| 📚 | **PDF Merger** | Merge multiple PDFs into one; reorder via move-up/move-down buttons |
 | ✂️ | **PDF Splitter** | Split a PDF into images or single-page PDFs; supports custom page counts |
 | 🧹 | **File Deduplicator** | Finds duplicate files by size pre-filtering + content hashing; supports rule-based sorting preview |
 | 🗑️ | **Empty Folder Cleaner** | Recursively find and delete completely empty folders, including nested empty directories |
@@ -38,7 +38,7 @@ English \| [简体中文](README.md)
 - 📊 **File list** — a consistent experience with add/remove/reorder/clear
 - 📈 **Progress display** — real-time progress and status updates
 - 🔌 **Fully offline** — everything runs locally; no data ever leaves your machine
-- 🧩 **Plugin extensibility** — drop a Python file into `plugins/` and it loads automatically
+- 🧩 **Plugin extensibility** — drop a Python file into `plugins/` and register it in `config.py`'s `PLUGIN_MODULES` to load it automatically
 - ↔️ **Collapsible sidebar** — toggle via the collapse button or the `Ctrl+B` shortcut
 - 🧭 **Navigation management** — reorder tools by dragging or hide them in Settings; the sidebar and home page update instantly
 - ↩️ **Reset to defaults** — restore language, theme, window layout, and more in one click
@@ -58,6 +58,7 @@ English \| [简体中文](README.md)
 | **PDF Merger** | ![PDF Merger](README.assets/PDF合并.png) |
 | **PDF Splitter** | ![PDF Splitter](README.assets/PDF拆分.png) |
 | **File Deduplicator** | ![File Deduplicator](README.assets/文件去重.png) |
+| **Empty Folder Cleaner** | ![Empty Folder Cleaner](README.assets/空文件夹清理.png) |
 | **Settings** | ![Settings](README.assets/设置.png) |
 
 ---
@@ -78,6 +79,8 @@ pip install -r requirements.txt
 | Pillow (PIL) | Image processing |
 | img2pdf | PDF conversion |
 | PyMuPDF (fitz) | PDF conversion |
+| send2trash | Move deleted files to the system recycle bin (used by file deduplication) |
+| pyinstaller | Build standalone executables (see "Building & Release") |
 
 ### 2. Run the Application
 
@@ -113,7 +116,7 @@ pyinstaller --upx-dir=/path/to/upx toolbox.spec
 
 1. Click "Image Format Converter" in the left sidebar
 2. Add images and pick a target format (JPEG / PNG / WebP / BMP / TIFF / GIF)
-3. Adjust the conversion quality
+3. Choose the output directory (defaults to the source image directory)
 4. Click "Start Conversion"
 
 ### Image Stitcher
@@ -121,16 +124,19 @@ pyinstaller --upx-dir=/path/to/upx toolbox.spec
 1. Click "Image Stitcher" in the left sidebar
 2. Add images (at least 2) and arrange their order
 3. Choose the stitch direction: horizontal / vertical
-4. Set the output image quality
-5. Click "Start Stitching"
+4. Choose the alignment (top/left, center, bottom/right, smart-scale) and background color
+5. Choose the output file path
+6. Click "Start Stitching"
 
 ### Image to PDF
 
 1. Click "Image to PDF" in the left sidebar
-2. Add images (drag-and-drop reordering supported)
-3. Choose the output quality (High / Standard / Compressed)
-4. Choose the output file path
-5. Click "Start Conversion"
+2. Add images (list order is the PDF order; reorder via move-up/move-down or sort buttons)
+3. Choose the page size (Auto-fit / A4 / A3 / Original size / Smart-scale)
+4. Check "Enable compression" and adjust the JPEG quality slider (1–100%)
+5. Set "Merge": checked combines all images into one PDF (requires an output file); unchecked generates one PDF per image (the output path is used as a directory)
+6. Choose the output path
+7. Click "Start Conversion"
 
 ### Image Scaler
 
@@ -142,17 +148,16 @@ pyinstaller --upx-dir=/path/to/upx toolbox.spec
 ### PDF Merger
 
 1. Click "PDF Merger" in the left sidebar
-2. Add PDF files (drag-and-drop reordering supported)
-3. Arrange the PDF order (move up / move down)
-4. Choose the output file path
-5. Click "Start Merge"
+2. Add PDF files (list order is the merge order; reorder via move-up/move-down or sort buttons)
+3. Choose the output file path
+4. Click "Start Merge"
 
 ### PDF Splitter
 
 1. Click "PDF Splitter" in the left sidebar
 2. Add one PDF file
 3. Choose the output format (single-page PDFs / images)
-4. Set the pages-per-file (single-page PDF mode) or the image format (image mode)
+4. Set the pages-per-file (single-page PDF mode) or the image format and quality slider (image mode)
 5. Click "Start Splitting"
 
 ### File Deduplicator
@@ -160,7 +165,7 @@ pyinstaller --upx-dir=/path/to/upx toolbox.spec
 1. Click "File Deduplicator" in the left sidebar
 2. Click "Browse" to choose a folder to scan (or drag a folder into the input box); scanning starts automatically (three-stage filtering: file size → quick hash → full hash, for a major speedup)
 3. Choose a deduplication rule and click "Sort by Rule" to preview keep/delete markers
-4. After reviewing, check the groups you want to clean up
+4. After reviewing, check the groups you want to clean up (optional: check "Move to recycle bin" so deleted files go to the system recycle bin and can be restored)
 5. Click "Delete Duplicates" and confirm
 
 ### Empty Folder Cleaner
@@ -177,7 +182,7 @@ pyinstaller --upx-dir=/path/to/upx toolbox.spec
 
 ## Plugin Development
 
-ToolBox supports plugins. Drop a Python file into the `plugins/` directory and it will be loaded automatically.
+ToolBox supports plugins. After placing a Python file in the `plugins/` directory, register it in `config.py`'s `PLUGIN_MODULES`; at startup it is imported and registered automatically via `importlib` (a file placed in the directory but not registered will not be loaded).
 
 ### Creating a Plugin
 
@@ -204,7 +209,7 @@ class MyTool(ToolPlugin):
         return widget
 
     def update_theme(self, theme):
-        """Respond to theme switches (required)"""
+        """Respond to theme switches (the base class provides an empty default; override when the plugin has custom styling)"""
         pass
 ```
 
@@ -251,13 +256,15 @@ Static configuration lives in `config.py`:
 |---------|-------------|
 | `APP_NAME`, `APP_VERSION` | Application name and version |
 | `APP_DESCRIPTION`, `APP_COPYRIGHT` | Application description and copyright |
-| `APP_WEBSITE_URL` | Official website link |
-| `PLUGIN_MODULES` | Plugin list (name, icon, description, order) |
-| `UI_CONFIG` | Window size, sidebar width, and other UI settings |
-| `THEME_CONFIG` | Theme-related configuration |
-| `WELCOME_CONFIG` | Welcome page text content |
+| `APP_WEBSITE_URL`, `APP_UPDATE_URL`, `APP_ISSUE_URL` | Website, update-check, and issue-report links |
+| `PLUGIN_MODULES` | Plugin list (id, icon, description, order, module, and class name) |
+| `UI_CONFIG` | Window min/max size, sidebar width, corner radius, and other UI settings |
+| `SPACING_SMALL`, `SPACING_MEDIUM` | Shared spacing constants |
+| `FONT_SIZE_*`, `FONT_WEIGHT_*`, `TITLE_STYLES` | Font sizes, weights, and title styles |
 
-Edit `config.py` to customize the app's appearance and info without touching the main program.
+> Displayed UI text (window title, plugin names/descriptions, status messages, etc.) lives in `i18n/zh_CN.json` and `i18n/en.json`, read at runtime via `t()`. Editing `name`/`description` in `PLUGIN_MODULES` does not change translated text — update the i18n dictionaries accordingly.
+
+Edit `config.py` to adjust the version number, plugin icons/order/load configuration, window size, etc. UI copy must be updated in `i18n/*.json`.
 
 ### Runtime Configuration (config.ini)
 
@@ -307,7 +314,7 @@ The built EXE is located in the `dist/` directory.
 - [x] Image compression (batch, adjustable quality)
 - [x] Image format conversion (JPEG/PNG/WebP/BMP/TIFF/GIF)
 - [x] Image stitching (horizontal/vertical)
-- [x] Image to PDF (multi-image merge)
+- [x] Image to PDF (merge or one PDF per image)
 - [x] Image scaling (percentage / width / height)
 - [x] PDF merging (multi-file merge)
 - [x] PDF splitting (into images or single-page PDFs)
@@ -317,7 +324,7 @@ The built EXE is located in the `dist/` directory.
 - [x] Bilingual UI (Chinese/English)
 - [x] Navigation reorder and hide
 - [x] Reset to defaults
-- [x] Automatic plugin discovery and loading
+- [x] Automatic plugin import and registration (registered in `PLUGIN_MODULES`)
 
 ### Planned 🔨
 
