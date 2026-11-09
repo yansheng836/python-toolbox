@@ -137,20 +137,35 @@ git cliff --unreleased --tag v2.0.6 --prepend CHANGELOG.md
 
 ## 发布流程
 
+### 发版前需更新的内容
+
+每次发版前，按下表逐项更新（缺一会导致版本信息不一致）：
+
+| # | 文件 | 更新方式 | 说明 |
+|---|------|----------|------|
+| 1 | `config.py` | 手动编辑 `APP_VERSION` | 版本号单一数据源，所有产物命名/版本信息都从此派生 |
+| 2 | `version_info.txt` | 运行 `python generate_version_info.py` | 由 `config.py` 自动生成的 PyInstaller 版本信息；本地 `pyinstaller toolbox.spec` 直接读取仓库中的该文件，必须随版本号一起重新生成并提交 |
+| 3 | `CHANGELOG.md` | `git cliff --unreleased --tag vX.Y.Z --prepend CHANGELOG.md` 后人工润色 | 发版说明，需剔除内部重构/测试/CI 诊断等噪声，保留用户可见的 Added / Changed / Fixed / Dependencies |
+
+> `version_info.txt` 是生成物但纳入版本控制：CI 打包时会重新生成，但本地构建直接读取仓库版本，因此每次 bump 版本号后都要重新生成并提交，否则本地构建产物的版本元数据会落后于 `config.py`。
+
 ```bash
 # 1. 更新版本号（编辑 config.py 中的 APP_VERSION）
 
-# 2. 生成 changelog 草稿（自动分组 Added / Fixed / Dependencies / …）
-git cliff --unreleased --tag v2.0.6 --prepend CHANGELOG.md
+# 2. 重新生成 PyInstaller 版本信息文件（从 config.py 派生）
+python generate_version_info.py
 
-# 3. 人工润色 CHANGELOG.md（补充上下文细节、统一措辞）
+# 3. 生成 changelog 草稿（自动分组 Added / Fixed / Dependencies / …）
+git cliff --unreleased --tag v2.0.7 --prepend CHANGELOG.md
 
-# 4. 提交并打 tag
-git add config.py CHANGELOG.md
-git commit -m "chore: release v2.0.6"
-git tag v2.0.6
+# 4. 人工润色 CHANGELOG.md（补充上下文细节、统一措辞，剔除内部噪声）
 
-# 5. 推送到远程
+# 5. 提交并打 tag
+git add config.py version_info.txt CHANGELOG.md
+git commit -m "chore: release v2.0.7"
+git tag v2.0.7
+
+# 6. 推送到远程（触发 release.yml 构建）
 git push origin main --tags
 ```
 
