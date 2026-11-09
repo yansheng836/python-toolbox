@@ -120,7 +120,7 @@ jobs:
           draft: false
           prerelease: false
           # 重复发版/重跑时覆盖同名产物，避免资源已存在导致上传失败
-          overwrite: true
+          overwrite_files: true
 
   build-macos:
     runs-on: macos-latest
@@ -235,7 +235,7 @@ jobs:
           echo "Manual: ${MANUAL_FILE}"
           echo "DMG: ${DMG_NAME}"
 
-          echo "archive_file=${DMG_NAME}" >> $GITHUB_OUTPUT
+          echo "archive_file=dist/${DMG_NAME}" >> $GITHUB_OUTPUT
           echo "OK: .dmg packaged successfully"
 
       - name: Upload macOS package to Release
@@ -246,4 +246,4 @@ jobs:
           tag_name: ${{ github.ref_name }}
           files: ${{ steps.package.outputs.archive_file }}
           # 重复发版/重跑时覆盖同名产物，避免资源已存在导致上传失败
-          overwrite: true
+          overwrite_files: true
