@@ -119,6 +119,8 @@ jobs:
           files: ${{ steps.package_win.outputs.zip_file }}
           draft: false
           prerelease: false
+          # 重复发版/重跑时覆盖同名产物，避免资源已存在导致上传失败
+          overwrite: true
 
   build-macos:
     runs-on: macos-latest
@@ -207,8 +209,11 @@ jobs:
           MANUAL_FILE=$(ls dist/manual-*.docx 2>/dev/null | head -1 || echo "")
           DMG_NAME="工具箱ToolBox-mac-${VERSION}.dmg"
 
-          # Rename .app to match naming convention
-          mv "$APP_FILE" "dist/${APP_BASENAME}"
+          # build_macos.py 已按约定命名；仅在名称不符时重命名，避免 mv 把目录移入自身
+          APP_CURRENT="$(basename "$APP_FILE")"
+          if [ "$APP_CURRENT" != "$APP_BASENAME" ]; then
+            mv "$APP_FILE" "dist/${APP_BASENAME}"
+          fi
 
           # Stage app (+ manual) and build .dmg with hdiutil (preinstalled on runners)
           STAGING=$(mktemp -d)
@@ -240,3 +245,5 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           files: ${{ steps.package.outputs.archive_file }}
+          # 重复发版/重跑时覆盖同名产物，避免资源已存在导致上传失败
+          overwrite: true
