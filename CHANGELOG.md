@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/lang/zh-CN/).
 
+## [v2.0.7] - 2026-11-09
+
+### Added
+
+- 新增「空文件夹清理」插件：递归查找并删除完全为空的文件夹，支持多层空目录；仅用 `os.rmdir` 不删文件，跳过符号链接/junction
+- 新增中英双语界面：i18n 基础设施（`LanguageManager` + `t()`），按系统语言自动选择并支持设置页切换，附 `zh_CN`/`en` 词典与一致性校验脚本
+- 设置页新增「导航栏管理」：拖拽调整工具顺序、勾选隐藏，侧边栏与首页卡片即时同步
+- 设置页新增「恢复默认设置」：一键恢复语言、主题、窗口布局等
+- 插件设置项持久化与配置命名空间统一：插件设置存入 `[plugin.<id>]`，全局项存入 `setting.*`，旧版平铺节自动迁移
+- 图片转 PDF 新增「是否合并」选项：勾选时合并为一个 PDF，不勾选时每张图片生成独立 PDF
+- 统一 Worker 取消机制与失败聚合：长任务可取消，单文件失败不再中止整批
+- INI 配置持久化（`config.ini`）与旧 `QSettings` 注册表迁移；支持便携模式 `portable.flag`
+- 首次启动按系统语言自动设置界面语言并弹窗提示
+- 设置页关于模块超链接悬停显示目标地址
+
+### Changed
+
+- 主框架与全部插件文本接入 i18n 词典，语言切换实时重放
+- 信息性文本统一改用 `SelectableLabel` 支持选中复制
+- 提取 `BaseWorker`、样式生成器、目录检查、目录拖拽控件等共享组件
+- 为 `PLUGIN_MODULES` 增加稳定 `id`，插件字典键、导航、下拉项与表格列改用稳定 id/data
+- 文件列表表头与写权限检查复用共享实现
+
+### Fixed
+
+- 修复图片转 PDF 方向异常，统一图片处理模块的 EXIF 方向处理
+- 配置文件含非 UTF-8 字节时回退默认值而非崩溃；配置路径去掉组织名层
+- i18n 绑定器移除 `destroyed` 回调，消除多窗口销毁时的进程崩溃
+- 修复 H1-H12 高优先级缺陷、M1-M27 中严重度问题、L1-L30 低严重度问题
+- 删除类插件取消按钮接线与扫描可中断；去重删除完成按结果分流对话框
+- 图片转 PDF 失败聚合与空批不再全局中止；图片缩放进度条改用文件计数对齐最大值
+- PDF 合并/拆分异常路径释放 fitz 句柄；PDF 拆分单页失败计入跳过不中止整批
+- 任务取消不再按错误弹窗；send2trash 异常归入失败不中止整批删除
+- 菜单/托盘退出先 `close` 触发设置落盘（`QApplication.quit` 绕过 `closeEvent`）
+- 修复 macOS dmg 自包含膨胀：只打 `.app` 本体、输出到 dist 外再移入
+- 修复 GitHub Pages 居中块 Markdown 未解析、README 表格竖线转义
+
+### Dependencies
+
+- Pillow `>=12.3.0` → `>=13.0.0`
+- send2trash `>=1.8.0` → `>=2.1.0`
+- PyMuPDF `>=1.28.0` → `>=1.28.2`
+- pyinstaller `>=6.21.0` → `>=6.22.3`
+- pytest (dev) `>=8.0.0` → `>=9.1.1`
+
 ## [v2.0.6] - 2026-07-07
 
 ### Added
