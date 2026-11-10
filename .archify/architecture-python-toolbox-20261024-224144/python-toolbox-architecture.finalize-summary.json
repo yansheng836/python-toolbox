@@ -1,51 +1,70 @@
 {
   "schemaVersion": 1,
-  "ok": true,
+  "ok": false,
   "command": "finalize",
-  "status": "pass",
+  "status": "fail",
   "type": "architecture",
   "quality": "showcase",
   "specification": {
-    "path": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\candidate.json",
-    "sha256": "9d23a86b5e1d1e627df3cee57c010065f2adc19ace9fbc7ee74a77f220e49468",
-    "bytes": 7889
+    "path": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\candidate.json",
+    "sha256": "919b8aa4097704065cde108f2481ae49ffeaaf9a0decd08b33c1824714b42a07",
+    "bytes": 8147
   },
   "artifact": {
-    "path": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
-    "sha256": "b2cba2ec66ee81627e71c53b2b123052e1d237d4552d989ccc8075077561de7b",
-    "bytes": 837819
+    "path": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
+    "sha256": "3a586962aebc30605ccfc4addcb1f6ccb9ab1b7d910438247d4304b0497ddf18",
+    "bytes": 838303
   },
   "gates": {
     "validate": "pass",
     "deliver": "pass",
     "check": "pass",
-    "browser-check": "pass"
+    "browser-check": "fail"
   },
-  "diagnostics": [],
+  "failedStage": "browser-check",
+  "diagnostics": [
+    {
+      "code": "viewer/evidence-path-conflict",
+      "severity": "error",
+      "message": "browser-check will not replace the existing unowned evidence path \"F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.browser-check.json\".",
+      "subject": {
+        "artifact": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
+        "evidencePath": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.browser-check.json"
+      },
+      "evidence": {
+        "reason": {
+          "code": "ownership-sidecar-path-mismatch"
+        }
+      },
+      "supportedFixes": [
+        "move the conflicting file aside, or choose a separate --out-dir, then rerun browser-check"
+      ]
+    }
+  ],
   "diagnosticSummary": {
-    "total": 0,
-    "shown": 0,
+    "total": 1,
+    "shown": 1,
     "truncated": false
   },
   "evidence": {
-    "receipt": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.finalize.json",
-    "summaryReceipt": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.finalize-summary.json",
-    "browserCheckReceipt": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.browser-check.json"
+    "receipt": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.finalize.json",
+    "summaryReceipt": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.finalize-summary.json",
+    "browserCheckReceipt": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.browser-check.json"
   },
   "update": {
     "status": "current",
     "installedVersion": "3.2.0",
     "availableVersion": "3.2.0",
     "releaseNotes": null,
-    "checkedAt": "2026-10-24T13:59:22.219Z",
-    "source": "cache",
+    "checkedAt": "2026-11-10T02:41:41.780Z",
+    "source": "network",
     "noticeRequired": false,
     "noticeText": null
   },
   "visualReview": "not-requested",
-  "durationMs": 9476,
+  "durationMs": 2979,
   "browserCheck": {
     "requested": true,
-    "ran": true
+    "ran": false
   }
 }

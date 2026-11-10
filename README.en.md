@@ -8,7 +8,7 @@
 
 **Offline · Efficient · Beautiful** — a desktop toolbox for everyday file processing
 
-[Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Usage Guide](#usage-guide) · [Plugin Development](#plugin-development) · [User Manual](UserManual.en.md)
+[Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Usage Guide](#usage-guide) · [Plugin Development](#plugin-development) · [User Manual](UserManual.en.md) · [Architecture](https://yansheng836.github.io/python-toolbox/.archify/architecture-python-toolbox-20261024-224144/python-toolbox-architecture.html)
 
 English \| [简体中文](README.md)
 

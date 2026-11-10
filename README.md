@@ -8,7 +8,7 @@
 
 **离线 · 高效 · 美观** 的桌面工具集合
 
-[功能特色](#功能特色) · [截图预览](#截图预览) · [快速开始](#快速开始) · [使用指南](#使用指南) · [插件开发](#插件开发) · [用户手册](用户手册.md)
+[功能特色](#功能特色) · [截图预览](#截图预览) · [快速开始](#快速开始) · [使用指南](#使用指南) · [插件开发](#插件开发) · [用户手册](用户手册.md) · [架构图](https://yansheng836.github.io/python-toolbox/.archify/architecture-python-toolbox-20261024-224144/python-toolbox-architecture.html)
 
 简体中文 \| [English](README.en.md)
 

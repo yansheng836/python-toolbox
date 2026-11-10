@@ -1,20 +1,20 @@
 {
   "schemaVersion": 1,
-  "ok": true,
+  "ok": false,
   "command": "finalize",
-  "status": "pass",
+  "status": "fail",
   "type": "architecture",
   "quality": "showcase",
-  "startedAt": "2026-10-24T14:50:13.970Z",
+  "startedAt": "2026-11-10T02:41:41.108Z",
   "specification": {
-    "path": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\candidate.json",
-    "sha256": "9d23a86b5e1d1e627df3cee57c010065f2adc19ace9fbc7ee74a77f220e49468",
-    "bytes": 7889
+    "path": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\candidate.json",
+    "sha256": "919b8aa4097704065cde108f2481ae49ffeaaf9a0decd08b33c1824714b42a07",
+    "bytes": 8147
   },
   "artifact": {
-    "path": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
-    "sha256": "b2cba2ec66ee81627e71c53b2b123052e1d237d4552d989ccc8075077561de7b",
-    "bytes": 837819
+    "path": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
+    "sha256": "3a586962aebc30605ccfc4addcb1f6ccb9ab1b7d910438247d4304b0497ddf18",
+    "bytes": 838303
   },
   "stages": {
     "validate": {
@@ -23,16 +23,16 @@
       "durationMs": null,
       "execution": "embedded-in-deliver",
       "command": [
-        "F:\\ProgramFiles\\nodejs\\node.exe",
-        "C:\\Users\\Administrator\\.claude\\skills\\archify\\bin\\archify.mjs",
+        "F:\\software\\nvm\\nodejs\\node.exe",
+        "C:\\Users\\荷塘月色\\.claude\\skills\\archify\\bin\\archify.mjs",
         "deliver",
         "architecture",
-        "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\candidate.json",
-        "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
+        "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\candidate.json",
+        "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
         "--quality",
         "showcase",
         "--repo-root",
-        "G:\\Workspaces\\python-project\\python-toolbox",
+        "F:\\workspace\\python-project\\toolbox",
         "--json"
       ],
       "receipt": {
@@ -40,8 +40,8 @@
         "ok": true,
         "command": "validate",
         "specification": {
-          "sha256": "9d23a86b5e1d1e627df3cee57c010065f2adc19ace9fbc7ee74a77f220e49468",
-          "bytes": 7889
+          "sha256": "919b8aa4097704065cde108f2481ae49ffeaaf9a0decd08b33c1824714b42a07",
+          "bytes": 8147
         },
         "validation": {
           "checksPassed": 9,
@@ -56,35 +56,35 @@
     "deliver": {
       "status": "pass",
       "exitCode": 0,
-      "durationMs": 1789,
+      "durationMs": 1349,
       "command": [
-        "F:\\ProgramFiles\\nodejs\\node.exe",
-        "C:\\Users\\Administrator\\.claude\\skills\\archify\\bin\\archify.mjs",
+        "F:\\software\\nvm\\nodejs\\node.exe",
+        "C:\\Users\\荷塘月色\\.claude\\skills\\archify\\bin\\archify.mjs",
         "deliver",
         "architecture",
-        "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\candidate.json",
-        "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
+        "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\candidate.json",
+        "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
         "--quality",
         "showcase",
         "--repo-root",
-        "G:\\Workspaces\\python-project\\python-toolbox",
+        "F:\\workspace\\python-project\\toolbox",
         "--json"
       ],
       "receipt": {
         "schemaVersion": 1,
-        "receiptId": "d779edc6-bd0f-48f5-9735-2d6efa7697b3",
+        "receiptId": "a65d0d35-b3b8-4fb6-836b-5d4a26f2b1fd",
         "ok": true,
         "command": "deliver",
         "type": "architecture",
-        "input": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\candidate.json",
-        "output": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
+        "input": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\candidate.json",
+        "output": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
         "specification": {
-          "sha256": "9d23a86b5e1d1e627df3cee57c010065f2adc19ace9fbc7ee74a77f220e49468",
-          "bytes": 7889
+          "sha256": "919b8aa4097704065cde108f2481ae49ffeaaf9a0decd08b33c1824714b42a07",
+          "bytes": 8147
         },
         "artifact": {
-          "sha256": "b2cba2ec66ee81627e71c53b2b123052e1d237d4552d989ccc8075077561de7b",
-          "bytes": 837819
+          "sha256": "3a586962aebc30605ccfc4addcb1f6ccb9ab1b7d910438247d4304b0497ddf18",
+          "bytes": 838303
         },
         "validation": {
           "checksPassed": 9,
@@ -97,8 +97,8 @@
         "evidence": {
           "verified": true,
           "repository": "https://github.com/yansheng836/python-toolbox",
-          "revision": "3163f0edab530ca2d7f760e066f955ac023fcfb0",
-          "references": 18
+          "revision": "6b7d37067f0684514599634dcd67d047e5738ead",
+          "references": 20
         },
         "update": {
           "status": "unavailable",
@@ -116,20 +116,20 @@
     "check": {
       "status": "pass",
       "exitCode": 0,
-      "durationMs": 498,
+      "durationMs": 428,
       "command": [
-        "F:\\ProgramFiles\\nodejs\\node.exe",
-        "C:\\Users\\Administrator\\.claude\\skills\\archify\\bin\\archify.mjs",
+        "F:\\software\\nvm\\nodejs\\node.exe",
+        "C:\\Users\\荷塘月色\\.claude\\skills\\archify\\bin\\archify.mjs",
         "check",
-        "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
+        "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
         "--require-provenance"
       ],
       "receipt": {
         "ok": true,
-        "file": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
+        "file": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
         "artifact": {
-          "sha256": "b2cba2ec66ee81627e71c53b2b123052e1d237d4552d989ccc8075077561de7b",
-          "bytes": 837819
+          "sha256": "3a586962aebc30605ccfc4addcb1f6ccb9ab1b7d910438247d4304b0497ddf18",
+          "bytes": 838303
         },
         "checks": [
           {
@@ -257,732 +257,80 @@
           "issues": []
         },
         "provenance": "current",
-        "deliveryReceiptId": "d779edc6-bd0f-48f5-9735-2d6efa7697b3"
+        "deliveryReceiptId": "a65d0d35-b3b8-4fb6-836b-5d4a26f2b1fd"
       }
     },
     "browser-check": {
-      "status": "pass",
-      "exitCode": 0,
-      "durationMs": 5324,
+      "status": "fail",
+      "exitCode": 1,
+      "durationMs": 88,
       "command": [
-        "F:\\ProgramFiles\\nodejs\\node.exe",
-        "C:\\Users\\Administrator\\.claude\\skills\\archify\\bin\\archify.mjs",
+        "F:\\software\\nvm\\nodejs\\node.exe",
+        "C:\\Users\\荷塘月色\\.claude\\skills\\archify\\bin\\archify.mjs",
         "browser-check",
-        "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
+        "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
         "--json",
         "--require-provenance"
       ],
       "execution": "in-process",
       "receipt": {
         "schemaVersion": 1,
-        "ok": true,
+        "ok": false,
         "command": "browser-check",
         "evidenceKind": "automated-browser",
-        "status": "pass",
+        "status": "fail",
         "visualReview": "not-requested",
         "provenance": "current",
-        "deliveryReceiptId": "d779edc6-bd0f-48f5-9735-2d6efa7697b3",
+        "deliveryReceiptId": "a65d0d35-b3b8-4fb6-836b-5d4a26f2b1fd",
         "artifact": {
-          "path": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
-          "sha256": "b2cba2ec66ee81627e71c53b2b123052e1d237d4552d989ccc8075077561de7b",
-          "bytes": 837819
+          "path": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
+          "sha256": "3a586962aebc30605ccfc4addcb1f6ccb9ab1b7d910438247d4304b0497ddf18",
+          "bytes": 838303
         },
         "state": {
           "detail": "read",
           "motion": "still"
         },
         "chrome": {
-          "status": "available",
-          "executable": "C:\\Users\\Administrator\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe"
+          "status": "not-checked",
+          "executable": null
         },
-        "diagnostics": [],
+        "diagnostics": [
+          {
+            "code": "viewer/evidence-path-conflict",
+            "severity": "error",
+            "message": "browser-check will not replace the existing unowned evidence path \"F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.browser-check.json\".",
+            "subject": {
+              "artifact": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
+              "evidencePath": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.browser-check.json"
+            },
+            "evidence": {
+              "reason": {
+                "code": "ownership-sidecar-path-mismatch"
+              }
+            },
+            "supportedFixes": [
+              "move the conflicting file aside, or choose a separate --out-dir, then rerun browser-check"
+            ]
+          }
+        ],
         "containment": {
-          "status": "pass",
+          "status": "fail",
           "policy": "fit-or-reader-declared-readable-vertical-scroll",
-          "viewports": [
-            {
-              "width": 1440,
-              "height": 900,
-              "theme": "light",
-              "innerWidth": 1440,
-              "innerHeight": 900,
-              "scrollWidth": 1440,
-              "scrollHeight": 900,
-              "overflowX": false,
-              "overflowY": false,
-              "verticalScrollAccepted": false,
-              "overflowDisposition": "contained",
-              "readerLayout": "adaptive",
-              "readerOverflow": null,
-              "readerFit": "intrinsic-height",
-              "ok": true,
-              "readerWidth": 1290,
-              "diagramWidth": 1260,
-              "pageComposition": {
-                "bodyPaddingPx": 12,
-                "headerPx": 52,
-                "diagramChromePx": 78,
-                "svgPx": 746,
-                "cardsPx": 0,
-                "viewBoxHeight": 752
-              },
-              "viewBoxWidth": 1270,
-              "minimumProjectedNodeTextPx": 7.937007874015748,
-              "minimumProjectedNonEdgeTextPx": 8.036220472440945,
-              "minimumProjectedEdgeTextPx": 7.937007874015748,
-              "minimumProjectedNodeText": "启动",
-              "minimumProjectedNodeTextDetail": "edge",
-              "minimumProjectedNodeTextOwner": {
-                "kind": "edge",
-                "id": "users-main",
-                "from": "users",
-                "to": "main"
-              },
-              "minimumRequiredNodeTextPx": 6,
-              "readabilityOk": true,
-              "hasLegend": true,
-              "hasNavigationDock": true,
-              "legendDockIntersectionArea": 0,
-              "dockStageIntersectionArea": 0,
-              "dockStageGap": 10,
-              "requiredDockStageGap": 10,
-              "viewerChromeStageOk": true,
-              "viewerChromeReserve": 54,
-              "viewerChromeActive": true,
-              "viewerChromeOk": true,
-              "resolvedTheme": "light"
-            },
-            {
-              "width": 1600,
-              "height": 1000,
-              "theme": "light",
-              "innerWidth": 1600,
-              "innerHeight": 1000,
-              "scrollWidth": 1600,
-              "scrollHeight": 1000,
-              "overflowX": false,
-              "overflowY": false,
-              "verticalScrollAccepted": false,
-              "overflowDisposition": "contained",
-              "readerLayout": "adaptive",
-              "readerOverflow": null,
-              "readerFit": "intrinsic-height",
-              "ok": true,
-              "readerWidth": 1347,
-              "diagramWidth": 1317,
-              "pageComposition": {
-                "bodyPaddingPx": 64,
-                "headerPx": 60,
-                "diagramChromePx": 84,
-                "svgPx": 780,
-                "cardsPx": 0,
-                "viewBoxHeight": 752
-              },
-              "viewBoxWidth": 1270,
-              "minimumProjectedNodeTextPx": 8,
-              "minimumProjectedNonEdgeTextPx": 8.1,
-              "minimumProjectedEdgeTextPx": 8,
-              "minimumProjectedNodeText": "启动",
-              "minimumProjectedNodeTextDetail": "edge",
-              "minimumProjectedNodeTextOwner": {
-                "kind": "edge",
-                "id": "users-main",
-                "from": "users",
-                "to": "main"
-              },
-              "minimumRequiredNodeTextPx": 6,
-              "readabilityOk": true,
-              "hasLegend": true,
-              "hasNavigationDock": true,
-              "legendDockIntersectionArea": 0,
-              "dockStageIntersectionArea": 0,
-              "dockStageGap": 10,
-              "requiredDockStageGap": 10,
-              "viewerChromeStageOk": true,
-              "viewerChromeReserve": 54,
-              "viewerChromeActive": true,
-              "viewerChromeOk": true,
-              "resolvedTheme": "light"
-            },
-            {
-              "width": 1920,
-              "height": 1080,
-              "theme": "light",
-              "innerWidth": 1920,
-              "innerHeight": 1080,
-              "scrollWidth": 1920,
-              "scrollHeight": 1080,
-              "overflowX": false,
-              "overflowY": false,
-              "verticalScrollAccepted": false,
-              "overflowDisposition": "contained",
-              "readerLayout": "adaptive",
-              "readerOverflow": null,
-              "readerFit": "intrinsic-height",
-              "ok": true,
-              "readerWidth": 1482,
-              "diagramWidth": 1452,
-              "pageComposition": {
-                "bodyPaddingPx": 64,
-                "headerPx": 60,
-                "diagramChromePx": 84,
-                "svgPx": 860,
-                "cardsPx": 0,
-                "viewBoxHeight": 752
-              },
-              "viewBoxWidth": 1270,
-              "minimumProjectedNodeTextPx": 8,
-              "minimumProjectedNonEdgeTextPx": 8.1,
-              "minimumProjectedEdgeTextPx": 8,
-              "minimumProjectedNodeText": "启动",
-              "minimumProjectedNodeTextDetail": "edge",
-              "minimumProjectedNodeTextOwner": {
-                "kind": "edge",
-                "id": "users-main",
-                "from": "users",
-                "to": "main"
-              },
-              "minimumRequiredNodeTextPx": 6,
-              "readabilityOk": true,
-              "hasLegend": true,
-              "hasNavigationDock": true,
-              "legendDockIntersectionArea": 0,
-              "dockStageIntersectionArea": 0,
-              "dockStageGap": 10,
-              "requiredDockStageGap": 10,
-              "viewerChromeStageOk": true,
-              "viewerChromeReserve": 54,
-              "viewerChromeActive": true,
-              "viewerChromeOk": true,
-              "resolvedTheme": "light"
-            },
-            {
-              "width": 2048,
-              "height": 1320,
-              "theme": "light",
-              "innerWidth": 2048,
-              "innerHeight": 1320,
-              "scrollWidth": 2048,
-              "scrollHeight": 1320,
-              "overflowX": false,
-              "overflowY": false,
-              "verticalScrollAccepted": false,
-              "overflowDisposition": "contained",
-              "readerLayout": "adaptive",
-              "readerOverflow": null,
-              "readerFit": "intrinsic-height",
-              "ok": true,
-              "readerWidth": 1877,
-              "diagramWidth": 1827,
-              "pageComposition": {
-                "bodyPaddingPx": 64,
-                "headerPx": 68,
-                "diagramChromePx": 94,
-                "svgPx": 1082,
-                "cardsPx": 0,
-                "viewBoxHeight": 752
-              },
-              "viewBoxWidth": 1270,
-              "minimumProjectedNodeTextPx": 8,
-              "minimumProjectedNonEdgeTextPx": 8.1,
-              "minimumProjectedEdgeTextPx": 8,
-              "minimumProjectedNodeText": "启动",
-              "minimumProjectedNodeTextDetail": "edge",
-              "minimumProjectedNodeTextOwner": {
-                "kind": "edge",
-                "id": "users-main",
-                "from": "users",
-                "to": "main"
-              },
-              "minimumRequiredNodeTextPx": 6,
-              "readabilityOk": true,
-              "hasLegend": true,
-              "hasNavigationDock": true,
-              "legendDockIntersectionArea": 0,
-              "dockStageIntersectionArea": 0,
-              "dockStageGap": 10,
-              "requiredDockStageGap": 10,
-              "viewerChromeStageOk": true,
-              "viewerChromeReserve": 44,
-              "viewerChromeActive": true,
-              "viewerChromeOk": true,
-              "resolvedTheme": "light"
-            }
-          ]
+          "viewports": []
         },
         "themeStates": {
-          "status": "pass",
-          "viewports": [
-            {
-              "width": 1440,
-              "height": 900,
-              "requestedTheme": "light",
-              "resolvedTheme": "light",
-              "ok": true
-            },
-            {
-              "width": 1600,
-              "height": 1000,
-              "requestedTheme": "light",
-              "resolvedTheme": "light",
-              "ok": true
-            },
-            {
-              "width": 1920,
-              "height": 1080,
-              "requestedTheme": "light",
-              "resolvedTheme": "light",
-              "ok": true
-            },
-            {
-              "width": 2048,
-              "height": 1320,
-              "requestedTheme": "light",
-              "resolvedTheme": "light",
-              "ok": true
-            },
-            {
-              "width": 1440,
-              "height": 900,
-              "requestedTheme": "dark",
-              "resolvedTheme": "dark",
-              "ok": true
-            },
-            {
-              "width": 2048,
-              "height": 1320,
-              "requestedTheme": "dark",
-              "resolvedTheme": "dark",
-              "ok": true
-            }
-          ]
+          "status": "fail",
+          "viewports": []
         },
         "readability": {
-          "status": "pass",
+          "status": "fail",
           "minimumProjectedNodeTextPx": 6,
-          "viewports": [
-            {
-              "width": 1440,
-              "height": 900,
-              "theme": "light",
-              "innerWidth": 1440,
-              "innerHeight": 900,
-              "scrollWidth": 1440,
-              "scrollHeight": 900,
-              "overflowX": false,
-              "overflowY": false,
-              "verticalScrollAccepted": false,
-              "overflowDisposition": "contained",
-              "readerLayout": "adaptive",
-              "readerOverflow": null,
-              "readerFit": "intrinsic-height",
-              "ok": true,
-              "readerWidth": 1290,
-              "diagramWidth": 1260,
-              "pageComposition": {
-                "bodyPaddingPx": 12,
-                "headerPx": 52,
-                "diagramChromePx": 78,
-                "svgPx": 746,
-                "cardsPx": 0,
-                "viewBoxHeight": 752
-              },
-              "viewBoxWidth": 1270,
-              "minimumProjectedNodeTextPx": 7.937007874015748,
-              "minimumProjectedNonEdgeTextPx": 8.036220472440945,
-              "minimumProjectedEdgeTextPx": 7.937007874015748,
-              "minimumProjectedNodeText": "启动",
-              "minimumProjectedNodeTextDetail": "edge",
-              "minimumProjectedNodeTextOwner": {
-                "kind": "edge",
-                "id": "users-main",
-                "from": "users",
-                "to": "main"
-              },
-              "minimumRequiredNodeTextPx": 6,
-              "readabilityOk": true,
-              "hasLegend": true,
-              "hasNavigationDock": true,
-              "legendDockIntersectionArea": 0,
-              "dockStageIntersectionArea": 0,
-              "dockStageGap": 10,
-              "requiredDockStageGap": 10,
-              "viewerChromeStageOk": true,
-              "viewerChromeReserve": 54,
-              "viewerChromeActive": true,
-              "viewerChromeOk": true,
-              "resolvedTheme": "light"
-            },
-            {
-              "width": 1600,
-              "height": 1000,
-              "theme": "light",
-              "innerWidth": 1600,
-              "innerHeight": 1000,
-              "scrollWidth": 1600,
-              "scrollHeight": 1000,
-              "overflowX": false,
-              "overflowY": false,
-              "verticalScrollAccepted": false,
-              "overflowDisposition": "contained",
-              "readerLayout": "adaptive",
-              "readerOverflow": null,
-              "readerFit": "intrinsic-height",
-              "ok": true,
-              "readerWidth": 1347,
-              "diagramWidth": 1317,
-              "pageComposition": {
-                "bodyPaddingPx": 64,
-                "headerPx": 60,
-                "diagramChromePx": 84,
-                "svgPx": 780,
-                "cardsPx": 0,
-                "viewBoxHeight": 752
-              },
-              "viewBoxWidth": 1270,
-              "minimumProjectedNodeTextPx": 8,
-              "minimumProjectedNonEdgeTextPx": 8.1,
-              "minimumProjectedEdgeTextPx": 8,
-              "minimumProjectedNodeText": "启动",
-              "minimumProjectedNodeTextDetail": "edge",
-              "minimumProjectedNodeTextOwner": {
-                "kind": "edge",
-                "id": "users-main",
-                "from": "users",
-                "to": "main"
-              },
-              "minimumRequiredNodeTextPx": 6,
-              "readabilityOk": true,
-              "hasLegend": true,
-              "hasNavigationDock": true,
-              "legendDockIntersectionArea": 0,
-              "dockStageIntersectionArea": 0,
-              "dockStageGap": 10,
-              "requiredDockStageGap": 10,
-              "viewerChromeStageOk": true,
-              "viewerChromeReserve": 54,
-              "viewerChromeActive": true,
-              "viewerChromeOk": true,
-              "resolvedTheme": "light"
-            },
-            {
-              "width": 1920,
-              "height": 1080,
-              "theme": "light",
-              "innerWidth": 1920,
-              "innerHeight": 1080,
-              "scrollWidth": 1920,
-              "scrollHeight": 1080,
-              "overflowX": false,
-              "overflowY": false,
-              "verticalScrollAccepted": false,
-              "overflowDisposition": "contained",
-              "readerLayout": "adaptive",
-              "readerOverflow": null,
-              "readerFit": "intrinsic-height",
-              "ok": true,
-              "readerWidth": 1482,
-              "diagramWidth": 1452,
-              "pageComposition": {
-                "bodyPaddingPx": 64,
-                "headerPx": 60,
-                "diagramChromePx": 84,
-                "svgPx": 860,
-                "cardsPx": 0,
-                "viewBoxHeight": 752
-              },
-              "viewBoxWidth": 1270,
-              "minimumProjectedNodeTextPx": 8,
-              "minimumProjectedNonEdgeTextPx": 8.1,
-              "minimumProjectedEdgeTextPx": 8,
-              "minimumProjectedNodeText": "启动",
-              "minimumProjectedNodeTextDetail": "edge",
-              "minimumProjectedNodeTextOwner": {
-                "kind": "edge",
-                "id": "users-main",
-                "from": "users",
-                "to": "main"
-              },
-              "minimumRequiredNodeTextPx": 6,
-              "readabilityOk": true,
-              "hasLegend": true,
-              "hasNavigationDock": true,
-              "legendDockIntersectionArea": 0,
-              "dockStageIntersectionArea": 0,
-              "dockStageGap": 10,
-              "requiredDockStageGap": 10,
-              "viewerChromeStageOk": true,
-              "viewerChromeReserve": 54,
-              "viewerChromeActive": true,
-              "viewerChromeOk": true,
-              "resolvedTheme": "light"
-            },
-            {
-              "width": 2048,
-              "height": 1320,
-              "theme": "light",
-              "innerWidth": 2048,
-              "innerHeight": 1320,
-              "scrollWidth": 2048,
-              "scrollHeight": 1320,
-              "overflowX": false,
-              "overflowY": false,
-              "verticalScrollAccepted": false,
-              "overflowDisposition": "contained",
-              "readerLayout": "adaptive",
-              "readerOverflow": null,
-              "readerFit": "intrinsic-height",
-              "ok": true,
-              "readerWidth": 1877,
-              "diagramWidth": 1827,
-              "pageComposition": {
-                "bodyPaddingPx": 64,
-                "headerPx": 68,
-                "diagramChromePx": 94,
-                "svgPx": 1082,
-                "cardsPx": 0,
-                "viewBoxHeight": 752
-              },
-              "viewBoxWidth": 1270,
-              "minimumProjectedNodeTextPx": 8,
-              "minimumProjectedNonEdgeTextPx": 8.1,
-              "minimumProjectedEdgeTextPx": 8,
-              "minimumProjectedNodeText": "启动",
-              "minimumProjectedNodeTextDetail": "edge",
-              "minimumProjectedNodeTextOwner": {
-                "kind": "edge",
-                "id": "users-main",
-                "from": "users",
-                "to": "main"
-              },
-              "minimumRequiredNodeTextPx": 6,
-              "readabilityOk": true,
-              "hasLegend": true,
-              "hasNavigationDock": true,
-              "legendDockIntersectionArea": 0,
-              "dockStageIntersectionArea": 0,
-              "dockStageGap": 10,
-              "requiredDockStageGap": 10,
-              "viewerChromeStageOk": true,
-              "viewerChromeReserve": 44,
-              "viewerChromeActive": true,
-              "viewerChromeOk": true,
-              "resolvedTheme": "light"
-            }
-          ]
+          "viewports": []
         },
         "viewerChrome": {
-          "status": "pass",
-          "viewports": [
-            {
-              "width": 1440,
-              "height": 900,
-              "theme": "light",
-              "innerWidth": 1440,
-              "innerHeight": 900,
-              "scrollWidth": 1440,
-              "scrollHeight": 900,
-              "overflowX": false,
-              "overflowY": false,
-              "verticalScrollAccepted": false,
-              "overflowDisposition": "contained",
-              "readerLayout": "adaptive",
-              "readerOverflow": null,
-              "readerFit": "intrinsic-height",
-              "ok": true,
-              "readerWidth": 1290,
-              "diagramWidth": 1260,
-              "pageComposition": {
-                "bodyPaddingPx": 12,
-                "headerPx": 52,
-                "diagramChromePx": 78,
-                "svgPx": 746,
-                "cardsPx": 0,
-                "viewBoxHeight": 752
-              },
-              "viewBoxWidth": 1270,
-              "minimumProjectedNodeTextPx": 7.937007874015748,
-              "minimumProjectedNonEdgeTextPx": 8.036220472440945,
-              "minimumProjectedEdgeTextPx": 7.937007874015748,
-              "minimumProjectedNodeText": "启动",
-              "minimumProjectedNodeTextDetail": "edge",
-              "minimumProjectedNodeTextOwner": {
-                "kind": "edge",
-                "id": "users-main",
-                "from": "users",
-                "to": "main"
-              },
-              "minimumRequiredNodeTextPx": 6,
-              "readabilityOk": true,
-              "hasLegend": true,
-              "hasNavigationDock": true,
-              "legendDockIntersectionArea": 0,
-              "dockStageIntersectionArea": 0,
-              "dockStageGap": 10,
-              "requiredDockStageGap": 10,
-              "viewerChromeStageOk": true,
-              "viewerChromeReserve": 54,
-              "viewerChromeActive": true,
-              "viewerChromeOk": true,
-              "resolvedTheme": "light"
-            },
-            {
-              "width": 1600,
-              "height": 1000,
-              "theme": "light",
-              "innerWidth": 1600,
-              "innerHeight": 1000,
-              "scrollWidth": 1600,
-              "scrollHeight": 1000,
-              "overflowX": false,
-              "overflowY": false,
-              "verticalScrollAccepted": false,
-              "overflowDisposition": "contained",
-              "readerLayout": "adaptive",
-              "readerOverflow": null,
-              "readerFit": "intrinsic-height",
-              "ok": true,
-              "readerWidth": 1347,
-              "diagramWidth": 1317,
-              "pageComposition": {
-                "bodyPaddingPx": 64,
-                "headerPx": 60,
-                "diagramChromePx": 84,
-                "svgPx": 780,
-                "cardsPx": 0,
-                "viewBoxHeight": 752
-              },
-              "viewBoxWidth": 1270,
-              "minimumProjectedNodeTextPx": 8,
-              "minimumProjectedNonEdgeTextPx": 8.1,
-              "minimumProjectedEdgeTextPx": 8,
-              "minimumProjectedNodeText": "启动",
-              "minimumProjectedNodeTextDetail": "edge",
-              "minimumProjectedNodeTextOwner": {
-                "kind": "edge",
-                "id": "users-main",
-                "from": "users",
-                "to": "main"
-              },
-              "minimumRequiredNodeTextPx": 6,
-              "readabilityOk": true,
-              "hasLegend": true,
-              "hasNavigationDock": true,
-              "legendDockIntersectionArea": 0,
-              "dockStageIntersectionArea": 0,
-              "dockStageGap": 10,
-              "requiredDockStageGap": 10,
-              "viewerChromeStageOk": true,
-              "viewerChromeReserve": 54,
-              "viewerChromeActive": true,
-              "viewerChromeOk": true,
-              "resolvedTheme": "light"
-            },
-            {
-              "width": 1920,
-              "height": 1080,
-              "theme": "light",
-              "innerWidth": 1920,
-              "innerHeight": 1080,
-              "scrollWidth": 1920,
-              "scrollHeight": 1080,
-              "overflowX": false,
-              "overflowY": false,
-              "verticalScrollAccepted": false,
-              "overflowDisposition": "contained",
-              "readerLayout": "adaptive",
-              "readerOverflow": null,
-              "readerFit": "intrinsic-height",
-              "ok": true,
-              "readerWidth": 1482,
-              "diagramWidth": 1452,
-              "pageComposition": {
-                "bodyPaddingPx": 64,
-                "headerPx": 60,
-                "diagramChromePx": 84,
-                "svgPx": 860,
-                "cardsPx": 0,
-                "viewBoxHeight": 752
-              },
-              "viewBoxWidth": 1270,
-              "minimumProjectedNodeTextPx": 8,
-              "minimumProjectedNonEdgeTextPx": 8.1,
-              "minimumProjectedEdgeTextPx": 8,
-              "minimumProjectedNodeText": "启动",
-              "minimumProjectedNodeTextDetail": "edge",
-              "minimumProjectedNodeTextOwner": {
-                "kind": "edge",
-                "id": "users-main",
-                "from": "users",
-                "to": "main"
-              },
-              "minimumRequiredNodeTextPx": 6,
-              "readabilityOk": true,
-              "hasLegend": true,
-              "hasNavigationDock": true,
-              "legendDockIntersectionArea": 0,
-              "dockStageIntersectionArea": 0,
-              "dockStageGap": 10,
-              "requiredDockStageGap": 10,
-              "viewerChromeStageOk": true,
-              "viewerChromeReserve": 54,
-              "viewerChromeActive": true,
-              "viewerChromeOk": true,
-              "resolvedTheme": "light"
-            },
-            {
-              "width": 2048,
-              "height": 1320,
-              "theme": "light",
-              "innerWidth": 2048,
-              "innerHeight": 1320,
-              "scrollWidth": 2048,
-              "scrollHeight": 1320,
-              "overflowX": false,
-              "overflowY": false,
-              "verticalScrollAccepted": false,
-              "overflowDisposition": "contained",
-              "readerLayout": "adaptive",
-              "readerOverflow": null,
-              "readerFit": "intrinsic-height",
-              "ok": true,
-              "readerWidth": 1877,
-              "diagramWidth": 1827,
-              "pageComposition": {
-                "bodyPaddingPx": 64,
-                "headerPx": 68,
-                "diagramChromePx": 94,
-                "svgPx": 1082,
-                "cardsPx": 0,
-                "viewBoxHeight": 752
-              },
-              "viewBoxWidth": 1270,
-              "minimumProjectedNodeTextPx": 8,
-              "minimumProjectedNonEdgeTextPx": 8.1,
-              "minimumProjectedEdgeTextPx": 8,
-              "minimumProjectedNodeText": "启动",
-              "minimumProjectedNodeTextDetail": "edge",
-              "minimumProjectedNodeTextOwner": {
-                "kind": "edge",
-                "id": "users-main",
-                "from": "users",
-                "to": "main"
-              },
-              "minimumRequiredNodeTextPx": 6,
-              "readabilityOk": true,
-              "hasLegend": true,
-              "hasNavigationDock": true,
-              "legendDockIntersectionArea": 0,
-              "dockStageIntersectionArea": 0,
-              "dockStageGap": 10,
-              "requiredDockStageGap": 10,
-              "viewerChromeStageOk": true,
-              "viewerChromeReserve": 44,
-              "viewerChromeActive": true,
-              "viewerChromeOk": true,
-              "resolvedTheme": "light"
-            }
-          ]
+          "status": "fail",
+          "viewports": []
         },
         "captures": {
           "status": "not-requested",
@@ -992,30 +340,50 @@
         "sidecars": {
           "receipt": "python-toolbox-architecture.browser-check.json",
           "files": []
-        }
+        },
+        "error": "browser-check will not replace the existing unowned evidence path \"F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.browser-check.json\"."
       }
     }
   },
   "browserCheck": {
     "requested": true,
-    "ran": true
+    "ran": false
   },
-  "diagnostics": [],
+  "diagnostics": [
+    {
+      "code": "viewer/evidence-path-conflict",
+      "severity": "error",
+      "message": "browser-check will not replace the existing unowned evidence path \"F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.browser-check.json\".",
+      "subject": {
+        "artifact": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.html",
+        "evidencePath": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.browser-check.json"
+      },
+      "evidence": {
+        "reason": {
+          "code": "ownership-sidecar-path-mismatch"
+        }
+      },
+      "supportedFixes": [
+        "move the conflicting file aside, or choose a separate --out-dir, then rerun browser-check"
+      ]
+    }
+  ],
   "evidence": {
-    "receipt": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.finalize.json",
-    "summaryReceipt": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.finalize-summary.json",
-    "browserCheckReceipt": "G:\\Workspaces\\python-project\\python-toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.browser-check.json"
+    "receipt": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.finalize.json",
+    "summaryReceipt": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.finalize-summary.json",
+    "browserCheckReceipt": "F:\\workspace\\python-project\\toolbox\\.archify\\architecture-python-toolbox-20261024-224144\\python-toolbox-architecture.browser-check.json"
   },
   "visualReview": "not-requested",
-  "finishedAt": "2026-10-24T14:50:23.446Z",
-  "durationMs": 9476,
+  "failedStage": "browser-check",
+  "finishedAt": "2026-11-10T02:41:44.087Z",
+  "durationMs": 2979,
   "update": {
     "status": "current",
     "installedVersion": "3.2.0",
     "availableVersion": "3.2.0",
     "releaseNotes": null,
-    "checkedAt": "2026-10-24T13:59:22.219Z",
-    "source": "cache",
+    "checkedAt": "2026-11-10T02:41:41.780Z",
+    "source": "network",
     "noticeRequired": false,
     "noticeText": null
   }

@@ -10,7 +10,7 @@
       "url": "https://github.com/yansheng836/python-toolbox.git",
       "provider": "github",
       "link_mode": "web",
-      "revision": "3163f0edab530ca2d7f760e066f955ac023fcfb0"
+      "revision": "6b7d37067f0684514599634dcd67d047e5738ead"
     }
   },
   "components": [
@@ -47,7 +47,11 @@
       "sublabel": "图片 / PDF / 文件处理",
       "pos": [630, 280],
       "size": [160, 64],
-      "sources": [{ "path": "config.py", "line": 20, "end_line": 112 }]
+      "sources": [
+        { "path": "config.py", "line": 20, "end_line": 112 },
+        { "path": "plugins/image_to_pdf.py", "line": 153, "end_line": 220 },
+        { "path": "plugins/image_to_pdf.py", "line": 298, "end_line": 312 }
+      ]
     },
     {
       "id": "worker",
@@ -65,7 +69,10 @@
       "sublabel": "图片 / PDF / 清理结果",
       "pos": [1090, 280],
       "size": [140, 64],
-      "sources": [{ "path": "plugins/image_to_pdf.py", "line": 132 }]
+      "sources": [
+        { "path": "plugins/image_to_pdf.py", "line": 153, "end_line": 220 },
+        { "path": "plugins/image_to_pdf.py", "line": 496, "end_line": 510 }
+      ]
     },
     {
       "id": "config_store",
@@ -269,7 +276,8 @@
       "items": [
         "config.py 的 PLUGIN_MODULES 是插件元数据单一数据源",
         "load_plugins 用 importlib 动态导入，按 order 排序注册",
-        "9 个功能插件继承 ToolPlugin，统一实现 create_ui / update_theme / load_settings"
+        "9 个功能插件继承 ToolPlugin，统一实现 create_ui / update_theme / load_settings",
+        "图片转 PDF 支持合并为一个文件，或为每张图片分别生成 PDF"
       ]
     },
     {
