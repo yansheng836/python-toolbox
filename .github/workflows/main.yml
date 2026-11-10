@@ -15,13 +15,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      # 清理 runner 预装工具链释放磁盘，避免 PyInstaller 产物写满磁盘
-      - name: Maximize Runner Space
-        uses: justinthelaw/maximize-github-runner-space@v0.12.4
-        with:
-          cleanup-profile: max
-          skip-components: cached-python
-
       - name: Set up Python 3.12
         uses: actions/setup-python@v7
         with:
@@ -231,8 +224,18 @@ jobs:
           fi
           # 只打 .app 本体；dist 里的裸可执行文件（PyInstaller onefile 残留）不能进 dmg
           # 输出也不能放在 srcfolder 内，否则 dmg 会把正在写入的自身递归打包导致体积翻倍
-          hdiutil create -volname "工具箱ToolBox-v${VERSION}" \
-            -srcfolder "$APP_FILE" -ov -format UDZO "../${DMG_NAME}"
+          # 两步法：先建固定大小读写 DMG，避免 -srcfolder 自动估算偏小导致挂载卷写满
+          APP_KB=$(du -sk "$APP_FILE" | awk '{print $1}')
+          SIZE_MB=$(( (APP_KB * 3 / 2 / 1024) + 50 ))
+          if [ "$SIZE_MB" -lt 200 ]; then SIZE_MB=200; fi
+          TMP_DMG="dist/.${VERSION}-tmp.dmg"
+          MOUNT="/Volumes/toolbox-build"
+          hdiutil create -size "${SIZE_MB}m" -fs HFS+ -volname "工具箱ToolBox-v${VERSION}" -ov "$TMP_DMG"
+          hdiutil attach "$TMP_DMG" -mountpoint "$MOUNT"
+          cp -R "$APP_FILE" "$MOUNT/"
+          hdiutil detach "$MOUNT"
+          hdiutil convert "$TMP_DMG" -format UDZO -o "../${DMG_NAME}"
+          rm -f "$TMP_DMG"
           mv "../${DMG_NAME}" "dist/${DMG_NAME}"
           ls -l "dist/${DMG_NAME}"
           if [ ! -f "dist/${DMG_NAME}" ]; then
