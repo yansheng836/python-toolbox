@@ -13,10 +13,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
+
+      # 清理 runner 预装工具链释放磁盘，避免 PyInstaller 产物写满磁盘
+      - name: Maximize Runner Space
+        uses: justinthelaw/maximize-github-runner-space@v0.12.4
+        with:
+          cleanup-profile: max
+          skip-components: cached-python
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           architecture: 'x64'
@@ -121,10 +128,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
+
+      # 清理 runner 预装工具链释放磁盘，避免 DMG 打包时磁盘写满
+      - name: Maximize Runner Space
+        uses: justinthelaw/maximize-github-runner-space@v0.12.4
+        with:
+          cleanup-profile: max
+          skip-components: cached-python
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: 'pip'
