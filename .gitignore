@@ -153,3 +153,6 @@ nt-mjs/nt.txt
 
 # SDD session scratch (review diffs, briefs, reports, ledger)
 .superpowers/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

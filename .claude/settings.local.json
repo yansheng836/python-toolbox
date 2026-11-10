@@ -38,7 +38,12 @@
       "Bash(pip show *)",
       "Bash(awk '{print $1 \">=\" $2}')",
       "Bash(rm -rf build/)",
-      "Bash(rm -rf build)"
+      "Bash(rm -rf build)",
+      "Bash(trail:*)",
+      "Bash(graft:*)",
+      "Bash(npx graft:*)",
+      "Bash(graft-dev:*)",
+      "Bash(node dist/cli.js:*)"
     ]
   },
   "hooks": {
@@ -51,7 +56,87 @@
             "command": "bash -c \"case \\$CLAUDE_TOOL_INPUT in *rm*-rf*dist*|*rm*-rf*./dist*) echo '====== ERROR: 禁止删除 dist/ 目录下的内容 ======'; exit 1;; esac\""
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.trail/hook.cjs\" pre-bash || exit 0",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.trail/hook.cjs\" post-edit || exit 0",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|mcp__graft__|mcp__trail__|Read|Grep|Glob|Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.trail/hook.cjs\" tool-savings || exit 0",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.trail/hook.cjs\" prompt || exit 0",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.trail/hook.cjs\" post-bash-fail || exit 0",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.trail/hook.cjs\" stop || exit 0",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.trail/hook.cjs\" session-end || exit 0",
+            "timeout": 5
+          }
+        ]
       }
     ]
-  }
+  },
+  "footerLinksRegexes": [
+    "graft/[\\w./-]+\\.md"
+  ]
 }
