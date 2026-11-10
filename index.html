@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工具箱 ToolBox</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --bg-card: #1e293b;
+    --text: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border: #334155;
+    --accent: #6366f1;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f8fafc;
+      --bg-card: #ffffff;
+      --text: #0f172a;
+      --text-secondary: #64748b;
+      --border: #e2e8f0;
+      --accent: #4f46e5;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  main {
+    width: 100%;
+    max-width: 640px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 36px;
+  }
+  h1 { margin: 0 0 8px; font-size: 28px; }
+  .subtitle { margin: 0 0 28px; color: var(--text-secondary); }
+  .links { display: flex; flex-direction: column; gap: 12px; }
+  a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    text-decoration: none;
+    transition: border-color .15s, background .15s;
+  }
+  a:hover { border-color: var(--accent); background: rgba(99, 102, 241, 0.08); }
+  a .label { font-weight: 600; }
+  a .desc { color: var(--text-secondary); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🧰 工具箱 ToolBox</h1>
+  <p class="subtitle">离线 · 高效 · 美观 的桌面工具集合</p>
+  <nav class="links">
+    <a href=".archify/architecture-python-toolbox-20261024-224144/python-toolbox-architecture.html">
+      <span class="label">架构图</span>
+      <span class="desc">组件与数据流概览</span>
+    </a>
+    <a href="https://github.com/yansheng836/python-toolbox">
+      <span class="label">GitHub 仓库</span>
+      <span class="desc">源码 · 文档 · 发布</span>
+    </a>
+    <a href="https://github.com/yansheng836/python-toolbox#readme">
+      <span class="label">README</span>
+      <span class="desc">功能特色与快速开始</span>
+    </a>
+  </nav>
+</main>
+</body>
+</html>
