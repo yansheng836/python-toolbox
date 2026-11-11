@@ -6,7 +6,7 @@ Pillow>=13.0.0
 
 # PDF Conversion (multiple backends for reliability)
 img2pdf>=0.6.3
-PyMuPDF>=2.0
+PyMuPDF>=2.1
 
 # Optional: move deleted files to the recycle bin (file deduplication)
 send2trash>=2.1.0
